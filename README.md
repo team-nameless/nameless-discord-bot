@@ -22,11 +22,10 @@ main.py
 config.py <- It should be here
 """
 import nextcord
-from typing import Union, List
 
 TOKEN: str = "[bot-token-here]"
 
-# None for global commands
+# nextcord.utils.MISSING for global commands
 # List[int] for guilds
-GUILD_IDs: Union[nextcord.utils.MISSING | List[int]] = None
+GUILD_IDs = nextcord.utils.MISSING
 ```

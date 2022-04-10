@@ -1,3 +1,4 @@
 nextcord
 nextcord[voice]
 nextcord[speed]
+yt-dlp

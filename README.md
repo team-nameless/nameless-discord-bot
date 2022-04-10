@@ -22,10 +22,15 @@ main.py
 config.py <- It should be here
 """
 import nextcord
+from typing import List
 
+# Obviously, your bot token
 TOKEN: str = "[bot-token-here]"
 
 # nextcord.utils.MISSING for global commands
 # List[int] for guilds
 GUILD_IDs = nextcord.utils.MISSING
+
+# In case you need ext-based commands
+PREFIXES: List[str] = ["alongprefix."]
 ```

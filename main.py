@@ -18,7 +18,7 @@ logger.propagate = False
 logger.addHandler(handler)
 
 # Bot setup
-client = commands.AutoShardedBot(intents=nextcord.Intents.all(), command_prefix="alongprefixthatyouwillneverwanttouse")
+client = commands.AutoShardedBot(intents=nextcord.Intents.all(), command_prefix=config.PREFIXES)
 
 
 @client.event

@@ -1,0 +1,29 @@
+import nextcord
+from nextcord import SlashOption
+from nextcord.ext import commands
+
+from discord_together import DiscordTogether, discordTogetherMain
+
+import config
+
+
+class ActivitySlashCog(commands.Cog):
+    def __init__(self, bot: commands.AutoShardedBot) -> None:
+        self.bot = bot
+
+    @nextcord.slash_command(name="create", description="Create a embedded activity", guild_ids=config.GUILD_IDs)
+    async def create(self,
+                     interaction: nextcord.Interaction,
+                     choice: str = SlashOption(name="activity",
+                                               description="Your desired activity",
+                                               choices=discordTogetherMain.defaultApplications)):
+        await interaction.response.send_message("Generating link")
+
+        if not interaction.user.voice:
+            await interaction.edit_original_message(content="You need to be in a voice channel")
+            return
+
+        together: DiscordTogether = await DiscordTogether(config.TOKEN)
+        link: str = await together.create_link(interaction.user.voice.channel.id, choice)
+
+        await interaction.edit_original_message(content=f"Here is your link: {link}")

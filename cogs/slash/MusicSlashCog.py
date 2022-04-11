@@ -9,11 +9,11 @@ from math import ceil
 import gc
 
 import nextcord
-from nextcord import Interaction, Embed, SlashOption
+from nextcord import Interaction, Embed, VoiceChannel, SlashOption
 from nextcord.ext import commands
 from yt_dlp import YoutubeDL
 
-from config import Config
+from config import GUILD_IDs
 
 
 ytdlopts = {
@@ -308,7 +308,7 @@ class MusicSlashCog(commands.Cog):
         except AttributeError:  # bot got kicked out
             await self.cleanup(player._guild)
 
-    @nextcord.slash_command(guild_ids=Config.GUILD_IDs, description="moozic command", force_global=True)
+    @nextcord.slash_command(guild_ids=GUILD_IDs, description="moozic command", force_global=True)
     async def music(interaction: nextcord.Interaction):
         pass
 

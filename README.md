@@ -1,3 +1,4 @@
+
 # :D
 :warning: Don't try to understand this.
 ```shell
@@ -5,10 +6,12 @@
 # https://stackoverflow.com/questions/21530577/fatal-error-python-h-no-such-file-or-directory
 # And: sudo apt install python3.x-distutils -y
 
-# Install core requirements
+# Install core dependencies
+# Bot won't work w/o them
 pip install -r requirements_core.txt
 
-# (Optional, only when contributing to code) install development dependencies
+# (Optional, only when contributing to code)
+# Install development dependencies
 pip install -r requirements_dev.txt 
 ```
 
@@ -24,8 +27,7 @@ config.py <- It should be here
 import nextcord
 from typing import List
 
-
-class Config: 
+class Config:
     # Obviously, your bot token
     TOKEN: str = "[bot-token-here]"
     
@@ -33,6 +35,6 @@ class Config:
     # List[int] for guilds
     GUILD_IDs = nextcord.utils.MISSING
     
-    # In case you need ext-based commands
+    # In case you need text-based commands
     PREFIXES: List[str] = ["alongprefix."]
 ```

@@ -9,7 +9,7 @@ from math import ceil
 import gc
 
 import nextcord
-from nextcord import Interaction, Embed, VoiceChannel, SlashOption
+from nextcord import Interaction, Embed, SlashOption
 from nextcord.ext import commands
 from yt_dlp import YoutubeDL
 

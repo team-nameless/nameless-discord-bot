@@ -5,7 +5,7 @@ import nextcord
 from nextcord.ext import commands
 
 import cogs
-import config
+from config import Config
 import customs
 
 # Logging setup
@@ -18,7 +18,7 @@ logger.propagate = False
 logger.addHandler(handler)
 
 # Bot setup
-client = commands.AutoShardedBot(intents=nextcord.Intents.all(), command_prefix=config.PREFIXES)
+client = commands.AutoShardedBot(intents=nextcord.Intents.all(), command_prefix=Config.PREFIXES)
 
 
 @client.event
@@ -36,4 +36,4 @@ client.add_cog(cogs.slash.OwnerSlashCog(client))
 client.add_cog(cogs.slash.MusicSlashCog(client))
 client.add_cog(cogs.slash.ActivitySlashCog(client))
 
-client.run(config.TOKEN)
+client.run(Config.TOKEN)

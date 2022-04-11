@@ -42,16 +42,18 @@ color = (0xdb314b, 0xdb3a4c, 0xdb424d, 0xdb354b)
 def timeconv(time):
     return strftime("%H:%M:%S", gmtime(time))
 
-def embed_(**kwargs):
+def embed_(footer, thumbnail, **kwargs):
 
-    embed = nextcord.Embed(title=kwargs['title'], color=choice(color),
-                          description=kwargs['description'])
+    embed = nextcord.Embed(color=choice(color), **kwargs)
 
-    if isinstance(kwargs['footer'], (int, float)):
-        time = timeconv(kwargs['footer'])
+    if isinstance(footer, (int, float)):
+        time = timeconv(footer)
         embed.set_footer(text=time)
     else:
-        embed.set_footer(text=kwargs['footer'])
+        embed.set_footer(text=footer)
+
+    if thumbnail:
+        embed.set_thumbnail(url=thumbnail)
 
     return embed
 
@@ -122,8 +124,12 @@ class YTDLSource(nextcord.PCMVolumeTransformer):
                     await msg.delete()
                     return
 
-                if len(view.children[0].values) == 1 and view.children[0].values[0] == 'All':
-                    values = (0, 1, 2, 3, 4)
+                if 'All' in view.children[0].values:
+                    values = [0, 1, 2, 3, 4]
+                    if len(view.children[0].values) > 1:
+                        for item in set(view.children[0].values):
+                            while item in values:
+                                values.remove(item)
                 else:
                     values = view.children[0].values
 
@@ -139,7 +145,9 @@ class YTDLSource(nextcord.PCMVolumeTransformer):
             if not imported:
                 await interaction.send(embed=embed_(title='Song added',
                         description=f"[{data['title']}]({data.get('webpage_url') or data.get('url')})",
-                        footer=data.get('duration') or 0)
+                        footer=data.get('duration') or 0,
+                        thumbnail=data['thumbnail']
+                    )
                 )
 
     @staticmethod
@@ -147,7 +155,8 @@ class YTDLSource(nextcord.PCMVolumeTransformer):
         return {'webpage_url': data.get('webpage_url') or data.get('url'),
                 'requester': user,
                 'title': data['title'],
-                'duration': data.get('duration') or 0
+                'duration': data.get('duration') or 0,
+                'thumbnail': data['thumbnail']
         }
 
     @classmethod
@@ -214,7 +223,8 @@ class MusicPlayer:
                     self.source = await self.queue.get()
 
                     self.np = embed_(title=f'Nowplaying', footer=f'Requested by {self.source["requester"]}',
-                                     description=f'[{self.source["title"]}]({self.source["webpage_url"]})')
+                                     description=f'[{self.source["title"]}]({self.source["webpage_url"]})',
+                                     thumbnail=self.source['thumbnail'])
                     await self._channel.send(embed=self.np)
 
                 self.current = await YTDLSource.regather_stream(self.source, loop=self.client.loop)

@@ -1,3 +1,3 @@
 from .OwnerSlashCog import *
 from .TestSlashCog import *
-from .ActivitySlashCog import *
+from .MusicSlashCog import *

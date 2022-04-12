@@ -4,14 +4,14 @@ from nextcord.ext import commands
 
 from discord_together import DiscordTogether, discordTogetherMain
 
-from config import Config
+import config
 
 
 class ActivitySlashCog(commands.Cog):
     def __init__(self, bot: commands.AutoShardedBot) -> None:
         self.bot = bot
 
-    @nextcord.slash_command(name="create", description="Create a embedded activity", guild_ids=Config.GUILD_IDs)
+    @nextcord.slash_command(name="create", description="Create a embedded activity", guild_ids=config.GUILD_IDs)
     async def create(self,
                      interaction: nextcord.Interaction,
                      choice: str = SlashOption(name="activity",
@@ -23,7 +23,7 @@ class ActivitySlashCog(commands.Cog):
             await interaction.edit_original_message(content="You need to be in a voice channel")
             return
 
-        together: DiscordTogether = await DiscordTogether(Config.TOKEN)
+        together: DiscordTogether = await DiscordTogether(config.TOKEN)
         link: str = await together.create_link(interaction.user.voice.channel.id, choice)
 
         await interaction.edit_original_message(content=f"Here is your link: {link}")

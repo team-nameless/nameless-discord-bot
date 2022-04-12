@@ -1,7 +1,14 @@
+import datetime
+
 from sqlalchemy.orm import declarative_base
 from sqlalchemy import *
 
 Base = declarative_base()
+
+# Migration cheat code:
+# alembic revision --autogenerate -m "Message here"
+# alembic upgrade head
+# In case of fire: https://www.learndatasci.com/tutorials/using-databases-python-postgres-sqlalchemy-and-alembic/
 
 
 class DbUser(Base):
@@ -21,3 +28,4 @@ class DbGuild(Base):
     goodbye_channel_id: int = Column(BigInteger, name="GoodbyeChannelId")
     welcome_message: str = Column(UnicodeText, name="WelcomeMessage")
     goodbye_message: str = Column(UnicodeText, name="GoodbyeMessage")
+    radio_start_time: datetime.datetime = Column(DateTime, name="RadioStartTime")

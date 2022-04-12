@@ -42,6 +42,13 @@ async def on_ready():
 async def on_error(event_name: str, *args, **kwargs):
     log_nextcord.error(msg=f"[{event_name}] We have gone under a crisis!!!", *args, exc_info=True, extra={**kwargs})
 
+
+@client.event
+async def close():
+    log_sql_engine.warning(msg="Shutting down engine")
+    log_sql_pool.warning(msg="Shutting down pool")
+    globals.crud_database.close_all_sessions()
+
 # Please DO NOT add TestSlashCog in code, even if your mom told you so.
 # client.add_cog(cogs.slash.TestSlashCog(client))
 client.add_cog(cogs.slash.OwnerSlashCog(client))

@@ -4,6 +4,7 @@ import nextcord
 from typing import Optional
 
 from sqlalchemy.util import IdentitySet
+from sqlalchemy.orm.session import close_all_sessions
 
 from customs import Utility
 from config import Config
@@ -78,3 +79,6 @@ class CRUD:
                     - Swyrin
         """
         self.session.commit()
+
+    def close_all_sessions(self) -> None:
+        close_all_sessions()

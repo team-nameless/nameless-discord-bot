@@ -1,7 +1,7 @@
 import nextcord
 from nextcord.ext import commands
 
-import config
+from config import Config
 
 
 class TestSlashCog(commands.Cog):
@@ -14,11 +14,11 @@ class TestSlashCog(commands.Cog):
         self.bot = bot
 
     # https://github.com/nextcord/nextcord/blob/master/examples/application_commands/sub_commands.py
-    @nextcord.slash_command(name="parent", description="This is a parent command", guild_ids=config.GUILD_IDs)
+    @nextcord.slash_command(name="parent", description="This is a parent command", guild_ids=Config.GUILD_IDs)
     async def parent(self, interaction: nextcord.Interaction):
         pass
 
-    @nextcord.slash_command(name="top-command", description="Describe a top level command", guild_ids=config.GUILD_IDs)
+    @nextcord.slash_command(name="top-command", description="Describe a top level command", guild_ids=Config.GUILD_IDs)
     async def my_top_command(self, interaction: nextcord.Interaction) -> None:
         """ /top-command """
         await interaction.response.send_message("Hello from top level command!", ephemeral=True)

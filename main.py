@@ -7,6 +7,7 @@ from nextcord.ext import commands
 import cogs
 from config import Config
 import customs
+import globals
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
@@ -33,6 +34,7 @@ client = commands.AutoShardedBot(intents=nextcord.Intents.all(), command_prefix=
 
 @client.event
 async def on_ready():
+    globals.crud_database.init()
     log_nextcord.info(msg=f"Logged in as {client.user} (ID: {client.user.id})")
 
 

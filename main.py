@@ -5,9 +5,8 @@ import nextcord
 from nextcord.ext import commands
 
 import cogs
-import config
+from config import Config
 import customs
-import database.crud
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
@@ -29,12 +28,11 @@ log_sql_engine.addHandler(handler)
 log_sql_pool.addHandler(handler)
 
 # Bot setup
-client = commands.AutoShardedBot(intents=nextcord.Intents.all(), command_prefix=config.PREFIXES)
+client = commands.AutoShardedBot(intents=nextcord.Intents.all(), command_prefix=Config.PREFIXES)
 
 
 @client.event
 async def on_ready():
-    database.crud.init()
     log_nextcord.info(msg=f"Logged in as {client.user} (ID: {client.user.id})")
 
 
@@ -47,4 +45,4 @@ async def on_error(event_name: str, *args, **kwargs):
 client.add_cog(cogs.slash.OwnerSlashCog(client))
 client.add_cog(cogs.slash.MusicSlashCog(client))
 
-client.run(config.TOKEN)
+client.run(Config.TOKEN)

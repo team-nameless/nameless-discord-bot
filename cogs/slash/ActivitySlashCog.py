@@ -11,16 +11,15 @@ class ActivitySlashCog(commands.Cog):
     def __init__(self, bot: commands.AutoShardedBot) -> None:
         self.bot = bot
 
-    @nextcord.slash_command(name="activity", description="Embedded activity commands", guild_ids=Config.GUILD_IDs)
+    @nextcord.slash_command(description="Embedded activity commands", guild_ids=Config.GUILD_IDs)
     async def activity(self, _: nextcord.Interaction):
         pass
 
-    @activity.subcommand(name="create", description="Create a embedded activity")
+    @activity.subcommand(description="Create a embedded activity")
     async def create(self,
                      interaction: nextcord.Interaction,
-                     choice: str = SlashOption(name="activity",
-                                               description="Your desired activity",
-                                               choices=discordTogetherMain.defaultApplications)):
+                     activity: str = SlashOption(description="Your desired activity",
+                                                 choices=discordTogetherMain.defaultApplications)):
         await interaction.response.send_message("Generating link")
 
         if not interaction.user.voice:
@@ -28,6 +27,6 @@ class ActivitySlashCog(commands.Cog):
             return
 
         together: DiscordTogether = await DiscordTogether(Config.TOKEN)
-        link: str = await together.create_link(interaction.user.voice.channel.id, choice)
+        link: str = await together.create_link(interaction.user.voice.channel.id, activity)
 
         await interaction.edit_original_message(content=f"Here is your link: {link}")

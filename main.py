@@ -57,7 +57,11 @@ async def on_member_join(member: nextcord.Member):
     if db_guild.is_welcome_enabled:
         if db_guild.welcome_message != "":
             if the_channel := member.guild.get_channel(db_guild.welcome_channel_id) is not None:
-                await the_channel.send(content=db_guild.welcome_message)
+                await the_channel.send(content=db_guild.welcome_message
+                                       .replace("{guild}", f"{member.guild=}")
+                                       .replace("{name}", member.display_name)
+                                       .replace("{tag}", member.discriminator)
+                                       .replace("{@user}", member.mention))
 
 
 @client.event
@@ -67,11 +71,15 @@ async def on_member_remove(member: nextcord.Member):
     if db_guild.is_goodbye_enabled:
         if db_guild.goodbye_message != "":
             if the_channel := member.guild.get_channel(db_guild.goodbye_channel_id) is not None:
-                await the_channel.send(content=db_guild.goodbye_message)
+                await the_channel.send(content=db_guild.goodbye_message
+                                       .replace("{guild}", f"{member.guild=}")
+                                       .replace("{name}", member.display_name)
+                                       .replace("{tag}", member.discriminator))
 
 
 client.add_cog(cogs.slash.OwnerSlashCog(client))
 client.add_cog(cogs.slash.MusicSlashCog(client))
 client.add_cog(cogs.slash.ActivitySlashCog(client))
 client.add_cog(cogs.slash.ModeratorSlashCog(client))
+client.add_cog(cogs.slash.ConfigSlashCog(client))
 client.run(Config.TOKEN)

@@ -12,4 +12,4 @@ class OwnerSlashCog(commands.Cog):
     @application_checks.is_owner()
     async def shutdown(self, interaction: nextcord.Interaction) -> None:
         await interaction.response.send_message("Bye owo!")
-        exit(-1)
+        self.bot.loop.stop()

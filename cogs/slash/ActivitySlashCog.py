@@ -11,7 +11,11 @@ class ActivitySlashCog(commands.Cog):
     def __init__(self, bot: commands.AutoShardedBot) -> None:
         self.bot = bot
 
-    @nextcord.slash_command(name="create", description="Create a embedded activity", guild_ids=Config.GUILD_IDs)
+    @nextcord.slash_command(name="activity", description="Embedded activity commands", guild_ids=Config.GUILD_IDs)
+    async def activity(self, _: nextcord.Interaction):
+        pass
+
+    @activity.subcommand(name="create", description="Create a embedded activity")
     async def create(self,
                      interaction: nextcord.Interaction,
                      choice: str = SlashOption(name="activity",

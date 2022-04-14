@@ -42,7 +42,7 @@ color = (0xdb314b, 0xdb3a4c, 0xdb424d, 0xdb354b)
 def timeconv(time):
     return strftime("%H:%M:%S", gmtime(time))
 
-def embed_(footer, thumbnail, **kwargs):
+def embed_(footer, thumbnail = None, **kwargs):
 
     embed = nextcord.Embed(color=choice(color), **kwargs)
 
@@ -93,7 +93,7 @@ class YTDLSource(nextcord.PCMVolumeTransformer):
         self.duration = data.get('duration')
         self.webpage_url = data.get('webpage_url')
         self.title = data.get('title')
-        self.thumbnail = None  # what
+        self.thumbnail = None
 
     @classmethod
     async def create_source(cls, interaction, search, loop, imported=False, picker=False):
@@ -146,7 +146,7 @@ class YTDLSource(nextcord.PCMVolumeTransformer):
                 await interaction.send(embed=embed_(title='Song added',
                         description=f"[{data['title']}]({data.get('webpage_url') or data.get('url')})",
                         footer=data.get('duration') or 0,
-                        thumbnail=data['thumbnail']
+                        thumbnail=data.get('thumbnail') or None
                     )
                 )
 
@@ -156,7 +156,7 @@ class YTDLSource(nextcord.PCMVolumeTransformer):
                 'requester': user,
                 'title': data['title'],
                 'duration': data.get('duration') or 0,
-                'thumbnail': data['thumbnail']
+                'thumbnail': data.get('thumbnail') or None
         }
 
     @classmethod

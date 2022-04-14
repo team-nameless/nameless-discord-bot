@@ -49,8 +49,6 @@ async def close():
     log_sql_pool.warning(msg="Shutting down pool")
     globals.CRUD.close_all_sessions()
 
-# Please DO NOT add TestSlashCog in code, even if your mom told you so.
-# client.add_cog(cogs.slash.TestSlashCog(client))
 client.add_cog(cogs.slash.OwnerSlashCog(client))
 client.add_cog(cogs.slash.MusicSlashCog(client))
 client.add_cog(cogs.slash.ActivitySlashCog(client))

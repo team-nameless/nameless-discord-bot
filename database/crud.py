@@ -47,29 +47,29 @@ class CRUD:
         """
         Base.metadata.create_all(self.engine)
 
-    def get_or_create_user_record(self, user: nextcord.User) -> DbUser:
+    def get_or_create_user_record(self, user: nextcord.User) -> tuple[DbUser, bool]:
         """
         Get an existing user record, create a new record if one doesn't exist.
         :param user: User entity of nextcord.
-        :return: User record in database.
+        :return: User record in database. True if the returned record is the new one, False otherwise.
         """
         u = self.__get_user_record(user)
         if not u:
-            return self.__create_user_record(user)
+            return self.__create_user_record(user), True
         else:
-            return u
+            return u, False
 
-    def get_or_create_guild_record(self, guild: nextcord.Guild) -> DbGuild:
+    def get_or_create_guild_record(self, guild: nextcord.Guild) -> tuple[DbGuild, bool]:
         """
         Get an existing guild record, create a new record if one doesn't exist.
         :param guild: Guild entity of nextcord.
-        :return: Guild record in database.
+        :return: Guild record in database. True if the returned record is the new one, False otherwise.
         """
         g = self.__get_guild_record(guild)
         if not g:
-            return self.__create_guild_record(guild)
+            return self.__create_guild_record(guild), True
         else:
-            return g
+            return g, False
 
     def __get_user_record(self, user: nextcord.User) -> Optional[DbUser]:
         return self.session.query(DbUser).filter_by(id=user.id).one_or_none()

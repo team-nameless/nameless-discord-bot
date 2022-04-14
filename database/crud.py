@@ -82,6 +82,7 @@ class CRUD:
 
         if not self.session.query(DbUser).filter_by(id=user.id).one_or_none():
             self.session.add(decoy_user)
+            self.save_changes()
             return decoy_user
         else:
             return self.session.query(DbUser).filter_by(id=user.id).one()
@@ -91,6 +92,7 @@ class CRUD:
 
         if not self.session.query(DbGuild).filter_by(id=guild.id).one_or_none():
             self.session.add(decoy_guild)
+            self.save_changes()
             return decoy_guild
         else:
             return self.session.query(DbGuild).filter_by(id=guild.id).one()

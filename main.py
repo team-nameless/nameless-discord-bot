@@ -47,7 +47,7 @@ async def on_error(event_name: str, *args, **kwargs):
 async def close():
     log_sql_engine.warning(msg="Shutting down engine")
     log_sql_pool.warning(msg="Shutting down pool")
-    globals.crud_database.close_all_sessions()
+    globals.CRUD.close_all_sessions()
 
 # Please DO NOT add TestSlashCog in code, even if your mom told you so.
 # client.add_cog(cogs.slash.TestSlashCog(client))

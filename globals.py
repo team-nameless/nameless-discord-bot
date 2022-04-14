@@ -1,4 +1,7 @@
-import database
+from database import CRUD
 
-crud_database = database.CRUD()
+crud = CRUD
+
+# DO NOT
+crud_database = crud()
 crud_database.init()

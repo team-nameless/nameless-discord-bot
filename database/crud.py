@@ -12,6 +12,9 @@ from .models import Base, DbUser, DbGuild
 
 
 class CRUD:
+    """
+    Basic CRUD operations required to make this project work.
+    """
     def __init__(self):
         self.engine = create_engine(Utility.get_db_url(), logging_name=Config.POSTGRES["db_name"])
         _session = sessionmaker(bind=self.engine)
@@ -27,7 +30,7 @@ class CRUD:
     @property
     def dirty(self) -> IdentitySet:
         """
-        The data that is modified, but not updated.
+        The data that is modified, but not updated to database.
         """
         return self.session.dirty
 
@@ -39,30 +42,71 @@ class CRUD:
         return self.session.new
 
     def init(self) -> None:
+        """
+        Normally you don't need to care about this.
+        """
         Base.metadata.create_all(self.engine)
 
-    def get_user_record(self, user: nextcord.User) -> Optional[DbUser]:
+    def get_or_create_user_record(self, user: nextcord.User) -> DbUser:
+        """
+        Get an existing user record, create a new record if one doesn't exist.
+        :param user: User entity of nextcord.
+        :return: User record in database.
+        """
+        u = self.__get_user_record(user)
+        if not u:
+            return self.__create_user_record(user)
+        else:
+            return u
+
+    def get_or_create_guild_record(self, guild: nextcord.Guild) -> DbGuild:
+        """
+        Get an existing guild record, create a new record if one doesn't exist.
+        :param guild: Guild entity of nextcord.
+        :return: Guild record in database.
+        """
+        g = self.__get_guild_record(guild)
+        if not g:
+            return self.__create_guild_record(guild)
+        else:
+            return g
+
+    def __get_user_record(self, user: nextcord.User) -> Optional[DbUser]:
         return self.session.query(DbUser).filter_by(id=user.id).one_or_none()
 
-    def get_guild_record(self, guild: nextcord.Guild) -> Optional[DbGuild]:
+    def __get_guild_record(self, guild: nextcord.Guild) -> Optional[DbGuild]:
         return self.session.query(DbGuild).filter_by(id=guild.id).one_or_none()
 
-    def create_user_record(self, user_record: DbUser) -> DbUser:
-        if not self.session.query(DbUser).filter_by(id=user_record.id).one_or_none():
-            self.session.add(user_record)
+    def __create_user_record(self, user: nextcord.User) -> DbUser:
+        decoy_user = DbUser(id=user.id)
 
-        return user_record
+        if not self.session.query(DbUser).filter_by(id=user.id).one_or_none():
+            self.session.add(decoy_user)
+            return decoy_user
+        else:
+            return self.session.query(DbUser).filter_by(id=user.id).one()
 
-    def create_guild_record(self, guild_record: DbGuild) -> DbGuild:
-        if not self.session.query(DbGuild).filter_by(id=guild_record.id).one_or_none():
-            self.session.add(guild_record)
+    def __create_guild_record(self, guild: nextcord.Guild) -> DbGuild:
+        decoy_guild = DbGuild(id=guild.id)
 
-        return guild_record
+        if not self.session.query(DbGuild).filter_by(id=guild.id).one_or_none():
+            self.session.add(decoy_guild)
+            return decoy_guild
+        else:
+            return self.session.query(DbGuild).filter_by(id=guild.id).one()
 
     def delete_guild_record(self, guild_record: DbGuild) -> None:
+        """
+        Delete a guild record from the database.
+        :param guild_record: Guild record to delete.
+        """
         self.session.delete(guild_record)
 
     def delete_user_record(self, user_record: DbUser) -> None:
+        """
+        Delete a user record from the database.
+        :param user_record: User record to delete.
+        """
         self.session.delete(user_record)
 
     def rollback(self) -> None:
@@ -80,5 +124,6 @@ class CRUD:
         """
         self.session.commit()
 
-    def close_all_sessions(self) -> None:
+    @staticmethod
+    def close_all_sessions() -> None:
         close_all_sessions()

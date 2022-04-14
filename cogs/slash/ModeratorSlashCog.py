@@ -108,7 +108,7 @@ class ModeratorSlashCog(commands.Cog):
     @application_checks.has_guild_permissions(ban_members=True)
     async def ban(self, interaction: nextcord.Interaction,
                   delete_message_days: int = SlashOption(description="Past message days to delete", default=0),
-                  reason: str = SlashOption(description="Ban reason", default="Rule violation")) -> None:
+                  reason: str = SlashOption(description="Ban reason", default="Rule violation")):
         if not 0 <= delete_message_days <= 7:
             await interaction.send(content="delete_message_days must satisfy 0 <= delete_message_days <= 7")
         else:
@@ -118,14 +118,14 @@ class ModeratorSlashCog(commands.Cog):
     @application_checks.bot_has_guild_permissions(kick_members=True)
     @application_checks.has_guild_permissions(kick_members=True)
     async def kick(self, interaction: nextcord.Interaction,
-                   reason: str = SlashOption(description="Kick reason", default="Rule violation")) -> None:
+                   reason: str = SlashOption(description="Kick reason", default="Rule violation")):
         await self.__generic_ban_kick(interaction, reason, "kick", interaction.guild.kick)
 
     @mod.subcommand(description="Add a warning to a member")
     @application_checks.has_guild_permissions(moderate_members=True)
     async def warn_add(self, interaction: nextcord.Interaction,
                        member: nextcord.Member = SlashOption(description="Target member"),
-                       reason: str = SlashOption(description="Reason to add", default="Rule violation")) -> None:
+                       reason: str = SlashOption(description="Reason to add", default="Rule violation")):
 
         async def zero_fn(i: nextcord.Interaction, m: nextcord.Member, r: str):
             pass
@@ -152,7 +152,7 @@ class ModeratorSlashCog(commands.Cog):
     @application_checks.has_guild_permissions(moderate_members=True)
     async def warn_remove(self, interaction: nextcord.Interaction,
                           member: nextcord.Member = SlashOption(description="Target member"),
-                          reason: str = SlashOption(description="Reason to remove", default="Good behavior")) -> None:
+                          reason: str = SlashOption(description="Reason to remove", default="Good behavior")):
 
         async def zero_fn(i: nextcord.Interaction, m: nextcord.Member, r: str):
             pass

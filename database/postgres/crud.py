@@ -8,12 +8,13 @@ from sqlalchemy.orm.session import close_all_sessions
 
 from customs import Utility
 from config import Config
-from .models import Base, DbUser, DbGuild
+from database.BaseCRUD import BaseCRUD
+from database.postgres.models import Base, DbUser, DbGuild
 
 
-class CRUD:
+class PostgreSqlCRUD(BaseCRUD):
     """
-    Basic CRUD operations required to make this project work.
+    Basic PostgreSQL CRUD operations required to make this project work.
     """
     def __init__(self):
         self.engine = create_engine(Utility.get_db_url(), logging_name=Config.POSTGRES["db_name"])

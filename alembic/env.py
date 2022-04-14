@@ -8,7 +8,7 @@ from alembic import context
 # Self-import
 import sys
 import os
-from database.models import Base
+from database.postgres.models import Base
 from customs import Utility
 
 # this is the Alembic Config object, which provides

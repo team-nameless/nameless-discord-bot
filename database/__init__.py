@@ -1,2 +1,2 @@
-from .models import *
-from .crud import *
+from .postgres.models import *
+from .postgres.crud import *

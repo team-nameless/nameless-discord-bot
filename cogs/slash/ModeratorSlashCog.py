@@ -4,8 +4,8 @@ from nextcord.ext import commands, application_checks
 
 from config import Config
 from customs import Utility
-from globals import crud_database
-from database.models import DbUser
+from globals import postgres_database
+from database.postgres.models import DbUser
 
 MUTE_ROLE_NAME = "you-are-muted"
 
@@ -56,14 +56,14 @@ class ModeratorSlashCog(commands.Cog):
                              zero_fn, three_fn, diff_fn):
         await interaction.response.defer()
 
-        u = crud_database.get_or_create_user_record(member)
+        u = postgres_database.get_or_create_user_record(member)
 
         if (u.warn_count == 0 and val < 0) or (u.warn_count == 3 and val > 0):
             await interaction.edit_original_message(content=f"The user already have {u.warn_count} warn(s).")
             return
 
         u.warn_count = DbUser.warn_count + val
-        crud_database.save_changes()
+        postgres_database.save_changes()
 
         if u.warn_count == 0:
             await zero_fn(interaction, member, reason)

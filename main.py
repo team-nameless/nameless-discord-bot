@@ -34,7 +34,7 @@ client = commands.AutoShardedBot(intents=nextcord.Intents.all(), command_prefix=
 
 @client.event
 async def on_ready():
-    globals.crud_database.init()
+    globals.postgres_database.init()
     log_nextcord.info(msg=f"Logged in as {client.user} (ID: {client.user.id})")
 
 
@@ -47,7 +47,28 @@ async def on_error(event_name: str, *args, **kwargs):
 async def close():
     log_sql_engine.warning(msg="Shutting down engine")
     log_sql_pool.warning(msg="Shutting down pool")
-    globals.CRUD.close_all_sessions()
+    globals.PostgreSqlCRUD.close_all_sessions()
+
+
+@client.event
+async def on_member_join(member: nextcord.Member):
+    db_guild, _ = globals.postgres_database.get_or_create_guild_record(member.guild)
+
+    if db_guild.is_welcome_enabled:
+        if db_guild.welcome_message != "":
+            if the_channel := member.guild.get_channel(db_guild.welcome_channel_id) is not None:
+                await the_channel.send(content=db_guild.welcome_message)
+
+
+@client.event
+async def on_member_remove(member: nextcord.Member):
+    db_guild, _ = globals.postgres_database.get_or_create_guild_record(member.guild)
+
+    if db_guild.is_goodbye_enabled:
+        if db_guild.goodbye_message != "":
+            if the_channel := member.guild.get_channel(db_guild.goodbye_channel_id) is not None:
+                await the_channel.send(content=db_guild.goodbye_message)
+
 
 client.add_cog(cogs.slash.OwnerSlashCog(client))
 client.add_cog(cogs.slash.MusicSlashCog(client))

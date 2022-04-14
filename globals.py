@@ -1,7 +1,7 @@
-from database import CRUD
+from database import PostgreSqlCRUD
 
-crud = CRUD
+postgres = PostgreSqlCRUD
 
 # DO NOT
-crud_database = crud()
-crud_database.init()
+postgres_database = postgres()
+postgres_database.init()

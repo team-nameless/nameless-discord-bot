@@ -1,21 +1,22 @@
 import nextcord
-from nextcord.ext import commands
+from nextcord import SlashOption
+from nextcord.ext import commands, application_checks
 
 from config import Config
 
 
 class TestSlashCog(commands.Cog):
     """
-    This cog is reserved for my future developments
-
-    Copypaste from https://gist.github.com/AbstractUmbra/a9c188797ae194e592efe05fa129c57f
+    - This cog is reserved for my future developments
+    - Copypasta:
+    https://gist.github.com/AbstractUmbra/a9c188797ae194e592efe05fa129c57f
+    https://github.com/nextcord/nextcord/blob/master/examples/application_commands/sub_commands.py
     """
     def __init__(self, bot: commands.AutoShardedBot) -> None:
         self.bot = bot
 
-    # https://github.com/nextcord/nextcord/blob/master/examples/application_commands/sub_commands.py
     @nextcord.slash_command(description="This is a parent command", guild_ids=Config.GUILD_IDs)
-    async def parent(self, interaction: nextcord.Interaction):
+    async def parent(self, _: nextcord.Interaction):
         pass
 
     @nextcord.slash_command(description="Describe a top level command", guild_ids=Config.GUILD_IDs)

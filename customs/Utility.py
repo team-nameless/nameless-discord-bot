@@ -10,6 +10,7 @@ class Utility:
     """
     List of utilities that aid the further developments of this project.
     """
+
     @staticmethod
     def get_db_url() -> str:
         """
@@ -27,7 +28,9 @@ class Utility:
         return f"postgresql+psycopg2://{username}{quote_plus(real_password, safe=':')}@{host}:{port}/{db_name}"
 
     @staticmethod
-    def message_waiter(interaction: nextcord.Interaction) -> Callable[[nextcord.Message], bool]:
+    def message_waiter(
+        interaction: nextcord.Interaction,
+    ) -> Callable[[nextcord.Message], bool]:
         """
         Message waiter to use with Client.wait_for("message", ...).
 
@@ -37,13 +40,19 @@ class Utility:
         :param interaction: Current interaction context.
         :return: The waiter function.
         """
+
         def message_checker(message: nextcord.Message) -> bool:
-            return message.author.id == interaction.user.id and interaction.channel_id == message.channel.id
+            return (
+                message.author.id == interaction.user.id
+                and interaction.channel_id == message.channel.id
+            )
+
         return message_checker
 
     @staticmethod
-    async def get_or_create_role(interaction: nextcord.Interaction,
-                                 name: str, reason: str) -> tuple[nextcord.Role, bool]:
+    async def get_or_create_role(
+        interaction: nextcord.Interaction, name: str, reason: str
+    ) -> tuple[nextcord.Role, bool]:
         """
         Get or create new role.
         :param interaction: Current interaction context.

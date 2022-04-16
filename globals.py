@@ -20,5 +20,7 @@ if Config.LAB:
 
 logging.basicConfig(level=base_logging_level)
 handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(customs.ColoredFormatter("[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s"))
+handler.setFormatter(
+    customs.ColoredFormatter("[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s")
+)
 logging.getLogger().handlers[:] = [handler]

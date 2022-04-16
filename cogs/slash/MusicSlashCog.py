@@ -26,16 +26,16 @@ ytdlopts = {
     "extract_flat": "in_playlist",
     "no_warnings": True,
     "default_search": "ytsearch5",
-    "source_address": "0.0.0.0"
+    "source_address": "0.0.0.0",
 }
 
 ffmpegopts = {
     "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
-    "options": "-vn"
+    "options": "-vn",
 }
 
 ytdl = YoutubeDL(ytdlopts)
-color = (0xdb314b, 0xdb3a4c, 0xdb424d, 0xdb354b)
+color = (0xDB314B, 0xDB3A4C, 0xDB424D, 0xDB354B)
 
 
 def timeconv(time):
@@ -67,12 +67,23 @@ class InvalidVoiceChannel(VoiceConnectionError):
 
 class Dropdown(nextcord.ui.Select):
     def __init__(self, data=None):
-        options = [nextcord.SelectOption(label="Select all", value="All",
-                                         description="Selected items from above will be excluded from playlist")]
+        options = [
+            nextcord.SelectOption(
+                label="Select all",
+                value="All",
+                description="Selected items from above will be excluded from playlist",
+            )
+        ]
         for index, item in enumerate(data):
-            options.append(nextcord.SelectOption(label=item["title"], description=item["url"], value=str(int)))
+            options.append(
+                nextcord.SelectOption(
+                    label=item["title"], description=item["url"], value=str(int)
+                )
+            )
 
-        super().__init__(placeholder="owo", min_values=1, max_values=len(options), options=options)
+        super().__init__(
+            placeholder="owo", min_values=1, max_values=len(options), options=options
+        )
 
     async def callback(self, interaction: Interaction):
         self._view.stop()
@@ -91,7 +102,9 @@ class YTDLSource(nextcord.PCMVolumeTransformer):
         self.thumbnail = None  # what
 
     @classmethod
-    async def create_source(cls, interaction, search, loop, imported=False, picker=False):
+    async def create_source(
+        cls, interaction, search, loop, imported=False, picker=False
+    ):
 
         loop = loop or asyncio.get_event_loop()
 
@@ -109,7 +122,9 @@ class YTDLSource(nextcord.PCMVolumeTransformer):
                 view = nextcord.ui.View(timeout=30)
                 view.add_item(Dropdown(data["entries"]))
 
-                msg = await interaction.send("Pick a song, or multiple ones if you want.", view=view)
+                msg = await interaction.send(
+                    "Pick a song, or multiple ones if you want.", view=view
+                )
 
                 if await view.wait():
                     await msg.edit(content="Timeout!", view=None, delete_after=10)
@@ -128,8 +143,13 @@ class YTDLSource(nextcord.PCMVolumeTransformer):
                 else:
                     values = view.children[0].values
 
-                await msg.edit(view=None, embed=Embed(title=f"Added {len(values)} songs",
-                                                      description=f"Requested by {interaction.user}"))
+                await msg.edit(
+                    view=None,
+                    embed=Embed(
+                        title=f"Added {len(values)} songs",
+                        description=f"Requested by {interaction.user}",
+                    ),
+                )
 
                 for i in values:
                     yield cls.to_value(data["entries"][int(i)], interaction.user)
@@ -138,21 +158,24 @@ class YTDLSource(nextcord.PCMVolumeTransformer):
             yield cls.to_value(data, interaction.user)
 
             if not imported:
-                await interaction.send(embed=embed_(title="Song added",
-                                                    description=f"[{data['title']}]({data.get('webpage_url') or data.get('url')})",
-                                                    footer=data.get("duration") or 0,
-                                                    thumbnail=data["thumbnail"]
-                                                    )
-                                       )
+                await interaction.send(
+                    embed=embed_(
+                        title="Song added",
+                        description=f"[{data['title']}]({data.get('webpage_url') or data.get('url')})",
+                        footer=data.get("duration") or 0,
+                        thumbnail=data["thumbnail"],
+                    )
+                )
 
     @staticmethod
     def to_value(data, user):
-        return {"webpage_url": data.get("webpage_url") or data.get("url"),
-                "requester": user,
-                "title": data["title"],
-                "duration": data.get("duration") or 0,
-                "thumbnail": data["thumbnail"]
-                }
+        return {
+            "webpage_url": data.get("webpage_url") or data.get("url"),
+            "requester": user,
+            "title": data["title"],
+            "duration": data.get("duration") or 0,
+            "thumbnail": data["thumbnail"],
+        }
 
     @classmethod
     async def regather_stream(cls, data, loop):
@@ -163,12 +186,30 @@ class YTDLSource(nextcord.PCMVolumeTransformer):
         data = await loop.run_in_executor(None, to_run)
         data = ytdl.sanitize_info(data)
 
-        return cls(nextcord.FFmpegPCMAudio(data["url"], **ffmpegopts), data=data, requester=requester)
+        return cls(
+            nextcord.FFmpegPCMAudio(data["url"], **ffmpegopts),
+            data=data,
+            requester=requester,
+        )
 
 
 class MusicPlayer:
-    __slots__ = ("interaction", "_loop", "client", "_guild", "_channel", "_cog", "queue",
-                 "next", "current", "np", "volume", "totaldura", "task", "source")
+    __slots__ = (
+        "interaction",
+        "_loop",
+        "client",
+        "_guild",
+        "_channel",
+        "_cog",
+        "queue",
+        "next",
+        "current",
+        "np",
+        "volume",
+        "totaldura",
+        "task",
+        "source",
+    )
 
     def __init__(self, interaction: Interaction, cog=None):
         self.client = interaction.client
@@ -208,16 +249,25 @@ class MusicPlayer:
                 if not self._loop or self.source is None:
                     self.source = await self.queue.get()
 
-                    self.np = embed_(title=f"Nowplaying", footer=f"Requested by {self.source['requester']}",
-                                     description=f"[{self.source['title']}]({self.source['webpage_url']})",
-                                     thumbnail=self.source['thumbnail'])
+                    self.np = embed_(
+                        title=f"Nowplaying",
+                        footer=f"Requested by {self.source['requester']}",
+                        description=f"[{self.source['title']}]({self.source['webpage_url']})",
+                        thumbnail=self.source["thumbnail"],
+                    )
                     await self._channel.send(embed=self.np)
 
-                self.current = await YTDLSource.regather_stream(self.source, loop=self.client.loop)
+                self.current = await YTDLSource.regather_stream(
+                    self.source, loop=self.client.loop
+                )
                 self.current.volume = self.volume
 
-                self._guild.voice_client.play(self.current,
-                                              after=lambda _: self.client.loop.call_soon_threadsafe(self.next.set))
+                self._guild.voice_client.play(
+                    self.current,
+                    after=lambda _: self.client.loop.call_soon_threadsafe(
+                        self.next.set
+                    ),
+                )
 
                 self.totaldura -= self.source["duration"]
 
@@ -226,8 +276,9 @@ class MusicPlayer:
                 return self.destroy(self._guild)
 
             except Exception as e:
-                return await self._channel.send(f"There was an error processing your song.\n"
-                                                f"```css\n[{e}]\n```")
+                return await self._channel.send(
+                    f"There was an error processing your song.\n" f"```css\n[{e}]\n```"
+                )
 
             finally:
                 await self.next.wait()
@@ -289,7 +340,7 @@ class MusicSlashCog(commands.Cog):
             if len(player._guild.voice_client.channel.members) == 1:  # If bot is alone
                 if player._guild.voice_client.channel.members[0].id == self.bot.id:
                     await self.cleanup(player._guild)
-                    await player._channel.send("Hic. Don\"t leave me alone :cry:")
+                    await player._channel.send('Hic. Don"t leave me alone :cry:')
         except AttributeError:  # bot got kicked out
             await self.cleanup(player._guild)
 
@@ -298,15 +349,22 @@ class MusicSlashCog(commands.Cog):
         pass
 
     @music.subcommand(description="Connect to voice channel")
-    async def connect(self, interaction: Interaction,
-                      channel: nextcord.abc.GuildChannel = SlashOption(name="channel", description="Join where?",
-                                                                       channel_types=[nextcord.ChannelType.voice])
-                      ):
+    async def connect(
+        self,
+        interaction: Interaction,
+        channel: nextcord.abc.GuildChannel = SlashOption(
+            name="channel",
+            description="Join where?",
+            channel_types=[nextcord.ChannelType.voice],
+        ),
+    ):
         if not channel:
             try:
                 channel = interaction.user.voice.channel
             except AttributeError:
-                await interaction.send("No channel to join. Please either specify a valid channel or join one.")
+                await interaction.send(
+                    "No channel to join. Please either specify a valid channel or join one."
+                )
                 raise InvalidVoiceChannel
 
         vc = interaction.guild.voice_client
@@ -322,16 +380,22 @@ class MusicSlashCog(commands.Cog):
             try:
                 await channel.connect()
             except asyncio.TimeoutError:
-                raise VoiceConnectionError(f"Connecting to channel: <{channel}> timed out.")
+                raise VoiceConnectionError(
+                    f"Connecting to channel: <{channel}> timed out."
+                )
 
         self.get_player(interaction)
         await interaction.send(f"Connected to: **{channel}**", delete_after=20)
 
     @music.subcommand(description="placeholder")
-    async def play(self, interaction: Interaction,
-                   url=SlashOption(description="URL go brrrrr", required=True),
-                   picker: bool = SlashOption(description="Show a dropdown menu", required=False, default=False)
-                   ):
+    async def play(
+        self,
+        interaction: Interaction,
+        url=SlashOption(description="URL go brrrrr", required=True),
+        picker: bool = SlashOption(
+            description="Show a dropdown menu", required=False, default=False
+        ),
+    ):
 
         await interaction.response.defer()
 
@@ -344,8 +408,9 @@ class MusicSlashCog(commands.Cog):
 
         player = self.get_player(interaction)
 
-        async for source in YTDLSource.create_source(interaction, url, loop=self.bot.loop,
-                                                     picker=picker):  # async yield {"webpage_url"....}
+        async for source in YTDLSource.create_source(
+            interaction, url, loop=self.bot.loop, picker=picker
+        ):  # async yield {"webpage_url"....}
             player.totaldura += source["duration"]
             await player.queue.put(source)
 
@@ -354,10 +419,14 @@ class MusicSlashCog(commands.Cog):
         vc: nextcord.VoiceClient = interaction.guild.voice_client
 
         if not vc or not vc.is_connected():
-            return await interaction.send("I am currently not in any voice chat!", delete_after=20)
+            return await interaction.send(
+                "I am currently not in any voice chat!", delete_after=20
+            )
 
         if vc.source is None:
-            return await interaction.send("I am not currently playing anything!", delete_after=20)
+            return await interaction.send(
+                "I am not currently playing anything!", delete_after=20
+            )
 
         if vc.is_paused():
             vc.resume()
@@ -373,7 +442,9 @@ class MusicSlashCog(commands.Cog):
         vc: nextcord.VoiceClient = interaction.guild.voice_client
 
         if not vc or not vc.is_connected():
-            return await interaction.send("I am not currently playing anything!", delete_after=20)
+            return await interaction.send(
+                "I am not currently playing anything!", delete_after=20
+            )
 
         if vc.is_paused():
             pass
@@ -392,7 +463,9 @@ class MusicSlashCog(commands.Cog):
         vc: nextcord.VoiceClient = interaction.guild.voice_client
 
         if not vc or not vc.is_connected():
-            return await interaction.send("I am not currently playing anything!", delete_after=20)
+            return await interaction.send(
+                "I am not currently playing anything!", delete_after=20
+            )
 
         player = self.get_player(interaction)
 
@@ -404,13 +477,15 @@ class MusicSlashCog(commands.Cog):
             await interaction.send("Disabled looping the current song!")
 
     @music.subcommand(description="placeholder")
-    async def queue_info(self, interaction,
-                         page: int = SlashOption(required=False, default=1)
-                         ):
+    async def queue_info(
+        self, interaction, page: int = SlashOption(required=False, default=1)
+    ):
         vc = interaction.guild.voice_client
 
         if not vc or not vc.is_connected():
-            return await interaction.send("I am not currently connected to voice!", delete_after=20)
+            return await interaction.send(
+                "I am not currently connected to voice!", delete_after=20
+            )
 
         player = self.get_player(interaction)
         if player.queue.empty():
@@ -442,14 +517,19 @@ class MusicSlashCog(commands.Cog):
 
         vc = interaction.guild.voice_client
         if not vc or not vc.is_connected():
-            return await interaction.send("I am not currently connected to voice!", delete_after=20)
+            return await interaction.send(
+                "I am not currently connected to voice!", delete_after=20
+            )
 
         i = i - 1
         j = j - 1
 
         player = self.get_player(interaction)
         if i < len(player.queue._queue) and j < len(player.queue._queue):
-            player.queue._queue[i], player.queue._queue[j] = player.queue._queue[j], player.queue._queue[i]
+            player.queue._queue[i], player.queue._queue[j] = (
+                player.queue._queue[j],
+                player.queue._queue[i],
+            )
             await interaction.send("✅")
         else:
             await interaction.send("Out of index!")
@@ -461,7 +541,9 @@ class MusicSlashCog(commands.Cog):
 
         player = self.get_player(interaction)
         if not vc or not vc.is_connected():
-            return await interaction.send("I am not currently connected to voice!", delete_after=20)
+            return await interaction.send(
+                "I am not currently connected to voice!", delete_after=20
+            )
 
         if player.queue.empty():
             return await interaction.send("There are no more queued songs to shuffle.")
@@ -480,7 +562,9 @@ class MusicSlashCog(commands.Cog):
 
         del player.queue._queue[index - 1]
 
-        await interaction.send(f"**`{interaction.user}`**: Removed `{title}` from queue")
+        await interaction.send(
+            f"**`{interaction.user}`**: Removed `{title}` from queue"
+        )
 
     @music.subcommand(description="placeholder")
     async def now_playing(self, interaction: Interaction):
@@ -488,7 +572,9 @@ class MusicSlashCog(commands.Cog):
         vc = interaction.guild.voice_client
 
         if not vc or not vc.is_connected():
-            return await interaction.send("I am not currently connected to voice!", delete_after=20)
+            return await interaction.send(
+                "I am not currently connected to voice!", delete_after=20
+            )
 
         player = self.get_player(interaction)
         if not player.current:
@@ -501,7 +587,9 @@ class MusicSlashCog(commands.Cog):
         vc = interaction.guild.voice_client
 
         if not vc or not vc.is_connected():
-            return await interaction.send("I am not currently connected to voice!", delete_after=10)
+            return await interaction.send(
+                "I am not currently connected to voice!", delete_after=10
+            )
 
         if not 0 < vol < 201:
             return await interaction.send("Please enter a value between 1 and 200.")
@@ -519,7 +607,9 @@ class MusicSlashCog(commands.Cog):
         vc = interaction.guild.voice_client
 
         if not vc or not vc.is_connected():
-            return await interaction.send("I am not currently playing anything!", delete_after=10)
+            return await interaction.send(
+                "I am not currently playing anything!", delete_after=10
+            )
 
         await self.cleanup(interaction.guild)
         await interaction.send("byeee")
@@ -529,7 +619,9 @@ class MusicSlashCog(commands.Cog):
         vc = interaction.guild.voice_client
 
         if not vc or not vc.is_connected():
-            return await interaction.send("I am not currently playing anything!", delete_after=10)
+            return await interaction.send(
+                "I am not currently playing anything!", delete_after=10
+            )
 
         player = self.get_player(interaction)
         if not player.current:

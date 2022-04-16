@@ -28,4 +28,6 @@ class DbGuild(Base):
     goodbye_channel_id: int = Column(BigInteger, name="GoodbyeChannelId", default=0)
     welcome_message: str = Column(UnicodeText, name="WelcomeMessage", default="")
     goodbye_message: str = Column(UnicodeText, name="GoodbyeMessage", default="")
-    radio_start_time: datetime.datetime = Column(DateTime, name="RadioStartTime", default=datetime.datetime.min)
+    radio_start_time: datetime.datetime = Column(
+        DateTime, name="RadioStartTime", default=datetime.datetime.min
+    )

@@ -16,8 +16,11 @@ class PostgreSqlCRUD(BaseCRUD):
     """
     Basic PostgreSQL CRUD operations required to make this project work.
     """
+
     def __init__(self):
-        self.engine = create_engine(Utility.get_db_url(), logging_name=Config.POSTGRES["db_name"])
+        self.engine = create_engine(
+            Utility.get_db_url(), logging_name=Config.POSTGRES["db_name"]
+        )
         _session = sessionmaker(bind=self.engine)
         self.session = _session()
 

@@ -10,6 +10,13 @@ client = commands.AutoShardedBot(intents=nextcord.Intents.all(), command_prefix=
 @client.event
 async def on_ready():
     postgres_database.init()
+    logging.info(msg="Setting presence")
+    await client.change_presence(status=Config.STATUS["user_status"],
+                                 activity=nextcord.Activity(
+                                     type=Config.STATUS["type"],
+                                     name=Config.STATUS["name"],
+                                     url=Config.STATUS["url"] if Config.STATUS["url"] else None
+                                 ))
     logging.info(msg=f"Logged in as {client.user} (ID: {client.user.id})")
 
 

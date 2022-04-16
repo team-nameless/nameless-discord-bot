@@ -60,6 +60,12 @@ class OsuSlashCog(commands.Cog):
         self.bot = bot
         self.api = OssapiV2(Config.OSU["client_id"], Config.OSU["client_secret"])
 
+        # Workaround for logging dupe
+        self.api.log.propagate = False
+        self.api.log.parent.propagate = False
+        self.api.log.handlers[:] = [globals.handler]
+        self.api.log.parent.handlers[:] = [globals.handler]
+
     @nextcord.slash_command(description="osu! commands", guild_ids=Config.GUILD_IDs)
     async def osu(self, _: nextcord.Interaction):
         pass

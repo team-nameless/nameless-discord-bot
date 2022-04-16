@@ -4,7 +4,6 @@ from nextcord.ext import commands
 import cogs
 from globals import *
 
-# Bot setup
 client = commands.AutoShardedBot(intents=nextcord.Intents.all(), command_prefix=Config.PREFIXES)
 
 

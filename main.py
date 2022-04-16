@@ -53,6 +53,9 @@ async def on_member_remove(member: nextcord.Member):
                                        .replace("{name}", member.display_name)
                                        .replace("{tag}", member.discriminator))
 
+if Config.LAB:
+    client.add_cog(cogs.slash.ExperimentalSlashCog(client))
+    client.add_cog(cogs.message.ExperimentalMessageCog(client))
 
 client.add_cog(cogs.slash.OwnerSlashCog(client))
 client.add_cog(cogs.slash.MusicSlashCog(client))

@@ -4,3 +4,5 @@ nextcord[speed]
 yt-dlp
 sqlalchemy
 psycopg2-binary
+nextcord-paginator
+nextcord-ext-menus

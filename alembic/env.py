@@ -21,7 +21,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-config.set_main_option('sqlalchemy.url', Utility.get_postgres_db_url())
+config.set_main_option('sqlalchemy.url', Utility.get_db_url())
 
 # add your model's MetaData object here
 # for 'autogenerate' support

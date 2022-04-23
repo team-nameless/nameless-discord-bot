@@ -12,20 +12,22 @@ class Utility:
     """
 
     @staticmethod
-    def get_postgres_db_url() -> str:
+    def get_db_url() -> str:
         """
-        Get the PostgreSQL database connection URL based on the config.py content.
+        Get the database connection URL based on the config.py content.
 
-        :return: PostgreSQL database connection URL
+        :return: Database connection URL
         """
         postgres = Config.DATABASE
+        dialect: str = postgres["dialect"]
+        driver: str = "" if not postgres["driver"] else f"+{postgres['driver']}"
         username: str = postgres["username"]
-        password = postgres["password"]
+        password: str = "" if not postgres["password"] else f":{postgres['password']}"
         host: str = postgres["host"]
         port: int = postgres["port"]
         db_name: str = postgres["db_name"]
-        real_password: str = "" if password == "" else f":{password}"
-        return f"postgresql+psycopg2://{username}{quote_plus(real_password, safe=':')}@{host}:{port}/{db_name}"
+        
+        return f"{dialect}{quote_plus(driver, safe='+')}://{username}{quote_plus(password, safe=':')}@{host}:{port}/{db_name}"
 
     @staticmethod
     def message_waiter(

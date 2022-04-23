@@ -1,16 +1,17 @@
 # nameless
 
-A rewrite of [Lilia-#master](https://github.com/Lilia-Workshop/Lilia/tree/master), in python. More extensibility, less proprietary. Keep the original Lilia mindset.
+A rewrite of [Lilia-#master](https://github.com/Lilia-Workshop/Lilia/tree/master) and an extension of [nameless](https://github.com/FoxeiZ/nameless), in python. More extensibility, less proprietary. Keep the original Lilia mindset.
 
-[![CodeFactor](https://www.codefactor.io/repository/github/lilia-workshop/nameless/badge)](https://www.codefactor.io/repository/github/lilia-workshop/nameless)
+[![CodeFactor](https://www.codefactor.io/repository/github/lilia-workshop/lilia/badge/new)](https://www.codefactor.io/repository/github/lilia-workshop/lilia/overview/new)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 > ⚠️ This project goes through continuous development 24/7 so **please don't** expect this to work properly.
 
 # Before you get your hands dirty
+
 ```shell
 # TYPE IN ORDER
-# Tested with Python 3.10 w/ Ubuntu 20.04
+# Tested with Python 3.10 w/ Ubuntu 22.04
 sudo apt update
 sudo apt install postgresql postgresql-contrib -y
 sudo -i -u postgres
@@ -39,6 +40,7 @@ pip install -r requirements_dev.txt
 ```
 
 # Config file `config.py`
+
 ```python
 # config.py
 """
@@ -81,6 +83,12 @@ class Config:
     # Your database
     # Watch above for guide
     POSTGRES: Dict[str, Any] = {
+        # If you have any other DBMS that you like, feel free to use
+        # As long as SQLAlchemy supports it
+        # https://docs.sqlalchemy.org/en/14/core/engines.html
+        "dialect": "postgresql",
+        "driver": "psycopg2"
+
         "username": "[role-name]",
         "password": "[password]",
         "host": "localhost",

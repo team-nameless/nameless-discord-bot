@@ -106,5 +106,6 @@ class Config:
 ```
 
 # Credits
+
 ![Me](https://img.shields.io/badge/%E2%9D%A4%EF%B8%8FMade%20with%20love%20by-Swyrin%237193-red?style=for-the-badge&logo=discord)
 ![Python God](https://img.shields.io/badge/Python%20God-C%C3%A1o%20trong%20s%C3%A1ng%238029-blue?style=for-the-badge&logo=python)

@@ -1,0 +1,10 @@
+nextcord
+nextcord[voice]
+nextcord[speed]
+nextcord-ext-activities
+yt-dlp
+sqlalchemy
+psycopg2-binary
+nextcord-paginator
+ossapi
+wavelink

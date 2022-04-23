@@ -18,7 +18,7 @@ class CRUD:
 
     def __init__(self):
         self.engine = create_engine(
-            Utility.get_postgres_db_url(), logging_name=Config.DATABASE["db_name"]
+            Utility.get_db_url(), logging_name=Config.DATABASE["db_name"]
         )
         _session = sessionmaker(bind=self.engine)
         self.session = _session()

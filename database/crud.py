@@ -1,13 +1,13 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-import nextcord
 from typing import Optional
 
-from sqlalchemy.util import IdentitySet
+import nextcord
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import close_all_sessions
+from sqlalchemy.util import IdentitySet
 
-from customs import Utility
 from config import Config
+from customs import Utility
 from .models import Base, DbUser, DbGuild
 
 

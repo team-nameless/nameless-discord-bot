@@ -1,14 +1,14 @@
 import datetime
 from typing import Optional, List
 
-from nextcord_paginator import Paginator
-from ossapi import *
 import nextcord
 from nextcord import Color, SlashOption
 from nextcord.ext import commands
+from nextcord_paginator import Paginator
+from ossapi import *
 
-from config import Config
 import globals
+from config import Config
 from customs import Utility
 
 osu_modes = {"osu": "Osu", "taiko": "Taiko", "fruits": "Fruits", "mania": "Mania"}

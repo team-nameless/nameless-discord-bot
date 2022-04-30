@@ -1,9 +1,10 @@
 import datetime
 
-from sqlalchemy.orm import declarative_base
 from sqlalchemy import *
+from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
+
 
 # Migration cheat code:
 # alembic revision --autogenerate -m "Message here"

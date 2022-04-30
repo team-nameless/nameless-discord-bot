@@ -4,8 +4,8 @@ from nextcord.ext import commands, application_checks
 
 from config import Config
 from customs import Utility
-from globals import crud_database
 from database.models import DbUser
+from globals import crud_database
 
 MUTE_ROLE_NAME = "you-are-muted"
 

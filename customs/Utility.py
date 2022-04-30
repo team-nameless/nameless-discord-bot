@@ -1,9 +1,9 @@
 from typing import Callable
+from urllib.parse import quote_plus as qp
 
 import nextcord
 
 from config import Config
-from urllib.parse import quote_plus
 
 
 class Utility:

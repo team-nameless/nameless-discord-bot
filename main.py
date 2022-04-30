@@ -11,6 +11,7 @@ client = commands.AutoShardedBot(
 crud_database.init()
 start_time = datetime.now()
 
+
 @client.event
 async def on_ready():
     logging.info(msg="Setting presence")
@@ -22,7 +23,7 @@ async def on_ready():
             url=Config.STATUS["url"] if Config.STATUS["url"] else None,
         ),
     )
-    
+
     logging.info(msg=f"Logged in as {client.user} (ID: {client.user.id})")
 
 

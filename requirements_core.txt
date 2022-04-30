@@ -8,3 +8,5 @@ psycopg2-binary
 nextcord-paginator
 ossapi
 wavelink
+pymongo
+pymongo[srv]

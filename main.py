@@ -8,7 +8,6 @@ client = commands.AutoShardedBot(
     intents=nextcord.Intents.all(), command_prefix=Config.PREFIXES
 )
 
-crud_database.init()
 start_time = datetime.now()
 
 
@@ -41,7 +40,7 @@ async def on_error(event_name: str, *args, **kwargs):
 async def close():
     logging.warning(msg="Shutting down engine")
     logging.warning(msg="Shutting down pool")
-    CRUD.close_all_sessions()
+    crud_database.close_all_sessions()
 
 
 @client.event

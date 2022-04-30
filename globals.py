@@ -8,9 +8,7 @@ from config import Config
 from database import CRUD
 
 # Database setup
-crud = CRUD
-crud_database = crud()
-crud_database.init()
+crud_database = CRUD()
 
 # Logging setup
 base_logging_level: logging = logging.INFO

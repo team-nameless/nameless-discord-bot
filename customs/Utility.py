@@ -30,6 +30,26 @@ class Utility:
         return f"{dialect}{qp(driver, safe='+')}://{username}{qp(password, safe=':')}@{host}:{port}/{db_name}"
 
     @staticmethod
+    def get_mongo_db_url() -> str:
+        """
+        Get the MongoDB database connection URL based on the config.py content.
+
+        :return: MongoDB database connection URL
+        """
+        mongo = Config.MONGODB
+        db_name = mongo["db_name"]
+        username = mongo["username"]
+        password = mongo["password"]
+        host = mongo["host"]
+        port = mongo["port"]
+
+        if mongo["is_atlas"]:
+            cluster_name = mongo["cluster_name"]
+            return f"mongodb+srv://{qp(username)}:{qp(password)}@{cluster_name}.spdhq.mongodb.net/{db_name}"
+        else:
+            return f"mongodb://{qp(username)}:{qp(password)}@{host}:{port}/{db_name}"
+
+    @staticmethod
     def message_waiter(
         interaction: nextcord.Interaction,
     ) -> Callable[[nextcord.Message], bool]:

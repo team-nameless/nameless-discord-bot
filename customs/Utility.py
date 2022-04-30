@@ -26,8 +26,8 @@ class Utility:
         host: str = postgres["host"]
         port: int = postgres["port"]
         db_name: str = postgres["db_name"]
-        
-        return f"{dialect}{quote_plus(driver, safe='+')}://{username}{quote_plus(password, safe=':')}@{host}:{port}/{db_name}"
+
+        return f"{dialect}{qp(driver, safe='+')}://{username}{qp(password, safe=':')}@{host}:{port}/{db_name}"
 
     @staticmethod
     def message_waiter(

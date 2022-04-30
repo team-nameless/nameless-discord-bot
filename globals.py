@@ -1,11 +1,11 @@
 # Low-cost DI
-from datetime import datetime
-import sys
-
-from config import Config
-import customs
-from database import CRUD
 import logging
+import sys
+from datetime import datetime
+
+import customs
+from config import Config
+from database import CRUD
 
 # Database setup
 crud = CRUD

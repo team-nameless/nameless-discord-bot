@@ -1,13 +1,13 @@
 from typing import Optional
 
 import nextcord
+import pymongo
 from pymongo.collection import Collection
 from pymongo.database import Database
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import close_all_sessions
 from sqlalchemy.util import IdentitySet
-import pymongo
 
 from config import Config
 from customs import Utility
@@ -82,8 +82,8 @@ class CRUD:
         u = self.__get_user_record(user)
         if not u:
             return self.__create_user_record(user), True
-        else:
-            return u, False
+
+        return u, False
 
     def get_or_create_guild_record(self, guild: nextcord.Guild) -> tuple[DbGuild, bool]:
         """
@@ -94,16 +94,16 @@ class CRUD:
         g = self.__get_guild_record(guild)
         if not g:
             return self.__create_guild_record(guild), True
-        else:
-            return g, False
+
+        return g, False
 
     def __get_user_record(self, user: nextcord.User) -> Optional[DbUser]:
         if self.is_mongo:
             record = self.mongo_users.find_one({"id": user.id})
             if record:
                 return DbUser.from_dict(dict(record))
-            else:
-                return None
+
+            return None
 
         return self.session.query(DbUser).filter_by(id=user.id).one_or_none()
 
@@ -112,8 +112,8 @@ class CRUD:
             record = self.mongo_guilds.find_one({"id": guild.id})
             if record:
                 return DbGuild.from_dict(dict(record))
-            else:
-                return None
+
+            return None
 
         return self.session.query(DbGuild).filter_by(id=guild.id).one_or_none()
 
@@ -128,8 +128,8 @@ class CRUD:
                 self.session.add(decoy_user)
                 self.save_changes()
                 return decoy_user
-            else:
-                return self.session.query(DbUser).filter_by(id=user.id).one()
+
+            return self.session.query(DbUser).filter_by(id=user.id).one()
 
     def __create_guild_record(self, guild: nextcord.Guild) -> DbGuild:
         decoy_guild = DbGuild(_id=guild.id)
@@ -142,8 +142,8 @@ class CRUD:
                 self.session.add(decoy_guild)
                 self.save_changes()
                 return decoy_guild
-            else:
-                return self.session.query(DbGuild).filter_by(id=guild.id).one()
+
+            return self.session.query(DbGuild).filter_by(id=guild.id).one()
 
     def delete_guild_record(self, guild_record: DbGuild) -> None:
         """

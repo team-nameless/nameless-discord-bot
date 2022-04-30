@@ -1,6 +1,8 @@
 # nameless
 
-A rewrite of [Lilia-#master](https://github.com/Lilia-Workshop/Lilia/tree/master) and an extension of [nameless](https://github.com/FoxeiZ/nameless), in python. More extensibility, less proprietary. Keep the original Lilia mindset.
+A rewrite of [Lilia-#master](https://github.com/Lilia-Workshop/Lilia/tree/master) and an extension
+of [nameless](https://github.com/FoxeiZ/nameless), in python. More extensibility, less proprietary. Keep the original
+Lilia mindset.
 
 [![CodeFactor](https://www.codefactor.io/repository/github/lilia-workshop/lilia/badge/new)](https://www.codefactor.io/repository/github/lilia-workshop/lilia/overview/new)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -82,13 +84,13 @@ class Config:
     
     # Your database
     # Watch above for guide
-    POSTGRES: Dict[str, Any] = {
+    DATABASE: Dict[str, Any] = {
         # If you have any other DBMS that you like, feel free to use
-        # As long as SQLAlchemy supports it
-        # https://docs.sqlalchemy.org/en/14/core/engines.html
+        # As long as SQLAlchemy supports it - https://docs.sqlalchemy.org/en/14/core/engines.html
+        # I will PostgreSQL for the sake of this guide
+        
         "dialect": "postgresql",
-        "driver": "psycopg2"
-
+        "driver": "psycopg2",
         "username": "[role-name]",
         "password": "[password]",
         "host": "localhost",

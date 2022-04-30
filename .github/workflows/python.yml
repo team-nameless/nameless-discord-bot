@@ -36,20 +36,8 @@ jobs:
       - name: Create dummy config file
         run: |
           mv config.example.py config.py
-          
-      - name: Setup node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '16'
-
-      - name: Run Pyright
-        uses: jakebailey/pyright-action@v1
-        with:
-          version: '1.1.237'
-          warnings: false
-          no-comments: ${{ matrix.python-version != '3.x' }}
 
       - name: Run black
         if: ${{ always() && steps.install-deps.outcome == 'success' }}
         run: |
-          black --check . --safe
+          black . --safe

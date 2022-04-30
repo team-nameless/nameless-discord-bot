@@ -36,6 +36,11 @@ jobs:
       - name: Create dummy config file
         run: |
           mv config.example.py config.py
+          
+      - name: Setup node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
 
       - name: Run black
         if: ${{ always() && steps.install-deps.outcome == 'success' }}

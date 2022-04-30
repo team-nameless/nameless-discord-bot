@@ -1,3 +1,3 @@
 from .ColoredFormatter import *
-from .Utility import *
 from .MongoMonitor import *
+from .Utility import *

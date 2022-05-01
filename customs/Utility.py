@@ -51,7 +51,9 @@ class Utility:
             return f"mongodb://{username}{password}{at}{host}{port}/"
 
     @staticmethod
-    def message_waiter(ctx: commands.Context) -> Callable[[discord.Message], bool]:
+    def message_waiter(
+        interaction: discord.Interaction,
+    ) -> Callable[[discord.Message], bool]:
         """
         Message waiter to use with Client.wait_for("message", ...).
 
@@ -72,7 +74,7 @@ class Utility:
 
     @staticmethod
     async def get_or_create_role(
-        name: str, reason: str, ctx: commands.Context
+        interaction: discord.Interaction, name: str, reason: str
     ) -> tuple[discord.Role, bool]:
         """
         Get or create new role.

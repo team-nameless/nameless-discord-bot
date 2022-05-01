@@ -37,17 +37,17 @@ class Utility:
         :return: MongoDB database connection URL
         """
         mongo = Config.MONGODB
-        db_name = mongo["db_name"]
-        username = mongo["username"]
-        password = mongo["password"]
+        username = mongo["username"] if mongo["username"] else ""
+        password = qp(f":{mongo['password']}") if mongo["password"] else ""
+        at = qp("@") if username else ""
         host = mongo["host"]
-        port = mongo["port"]
+        port = qp(f":{mongo['port']}") if mongo["port"] else ":27017"
 
         if mongo["is_atlas"]:
             cluster_name = mongo["cluster_name"]
-            return f"mongodb+srv://{qp(username)}:{qp(password)}@{cluster_name}.spdhq.mongodb.net/{db_name}"
+            return f"mongodb+srv://{username}{password}{at}{cluster_name}.spdhq.mongodb.net/"
         else:
-            return f"mongodb://{qp(username)}:{qp(password)}@{host}:{port}/{db_name}"
+            return f"mongodb://{username}{password}{at}{host}{port}/"
 
     @staticmethod
     def message_waiter(

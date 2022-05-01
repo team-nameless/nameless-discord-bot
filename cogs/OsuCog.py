@@ -96,7 +96,7 @@ class OsuCog(commands.Cog):
         await interaction.response.defer()
         dbu, _ = globals.crud_database.get_or_create_user_record(interaction.user)
         dbu.osu_username, dbu.osu_mode = username, mode
-        globals.crud_database.save_changes()
+        globals.crud_database.save_changes(user_record=dbu)
         await interaction.edit_original_message(content="Updated")
 
     @osu.subcommand(description="Force update a member's linked auto search data")
@@ -112,7 +112,7 @@ class OsuCog(commands.Cog):
         await interaction.response.defer()
         dbu, _ = globals.crud_database.get_or_create_user_record(member)
         dbu.osu_username, dbu.osu_mode = username, mode
-        globals.crud_database.save_changes()
+        globals.crud_database.save_changes(user_record=dbu)
         await interaction.edit_original_message(content="Updated")
 
     async def __generic_check(

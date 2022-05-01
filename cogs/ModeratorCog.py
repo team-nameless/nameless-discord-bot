@@ -4,7 +4,6 @@ from nextcord.ext import commands, application_checks
 
 from config import Config
 from customs import Utility
-from database.models import DbUser
 from globals import crud_database
 
 MUTE_ROLE_NAME = "you-are-muted"
@@ -78,8 +77,8 @@ class ModeratorCog(commands.Cog):
             )
             return
 
-        u.warn_count = DbUser.warn_count + val
-        crud_database.save_changes()
+        u.warn_count += val
+        crud_database.save_changes(user_record=u)
 
         if u.warn_count == 0:
             await zero_fn(interaction, member, reason)

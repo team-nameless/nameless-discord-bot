@@ -27,6 +27,7 @@ class ConfigCog(commands.Cog):
         await interaction.response.defer()
         dbg, _ = crud_database.get_or_create_guild_record(interaction.guild)
         dbg.welcome_message = message
+        crud_database.save_changes(guild_record=dbg)
         await interaction.edit_original_message(content="Done updating welcome message")
 
     @config.subcommand(description="Change goodbye message")
@@ -39,6 +40,7 @@ class ConfigCog(commands.Cog):
         await interaction.response.defer()
         dbg, _ = crud_database.get_or_create_guild_record(interaction.guild)
         dbg.goodbye_message = message
+        crud_database.save_changes(guild_record=dbg)
         await interaction.edit_original_message(content="Done updating goodbye message")
 
     @config.subcommand(description="Change welcome message dumping channel")
@@ -60,6 +62,7 @@ class ConfigCog(commands.Cog):
         await interaction.response.defer()
         dbg, _ = crud_database.get_or_create_guild_record(interaction.guild)
         dbg.goodbye_channel_id = channel.id
+        crud_database.save_changes(guild_record=dbg)
         await interaction.edit_original_message(
             content=f"Done updating welcome channel to {channel.mention}"
         )
@@ -83,6 +86,7 @@ class ConfigCog(commands.Cog):
         await interaction.response.defer()
         dbg, _ = crud_database.get_or_create_guild_record(interaction.guild)
         dbg.goodbye_channel_id = channel.id
+        crud_database.save_changes(guild_record=dbg)
         await interaction.edit_original_message(
             content=f"Done updating goodbye channel to {channel.mention}"
         )
@@ -92,7 +96,8 @@ class ConfigCog(commands.Cog):
     async def toggle_welcome(self, interaction: nextcord.Interaction):
         await interaction.response.defer()
         dbg, _ = crud_database.get_or_create_guild_record(interaction.guild)
-        dbg.is_welcome_enabled = not DbGuild.is_welcome_enabled
+        dbg.is_welcome_enabled = not dbg.is_welcome_enabled
+        crud_database.save_changes(guild_record=dbg)
         await interaction.edit_original_message(
             content=f"Welcome message sending is now "
             f"{'enabled' if dbg.is_welcome_enabled else 'disabled'}"
@@ -103,7 +108,8 @@ class ConfigCog(commands.Cog):
     async def toggle_goodbye(self, interaction: nextcord.Interaction):
         await interaction.response.defer()
         dbg, _ = crud_database.get_or_create_guild_record(interaction.guild)
-        dbg.is_goodbye_enabled = not DbGuild.is_goodbye_enabled
+        dbg.is_goodbye_enabled = not dbg.is_goodbye_enabled
+        crud_database.save_changes(guild_record=dbg)
         await interaction.edit_original_message(
             content=f"Goodbye message sending is now "
             f"{'enabled' if dbg.is_welcome_enabled else 'disabled'}"

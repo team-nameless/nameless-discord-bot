@@ -19,9 +19,11 @@ class Nameless(commands.AutoShardedBot):
         
         if Config.GUILD_IDs:
             for id in Config.GUILD_IDs:
+                logging.info(f"Syncing commands with guild id {id}")
                 sf = discord.Object(id)
                 await client.tree.sync(guild=sf)
         else:
+            logging.info(f"Syncing commands globally")
             await client.tree.sync()
         
         logging.info(msg="Setting presence")

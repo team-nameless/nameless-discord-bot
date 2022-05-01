@@ -1,6 +1,6 @@
 from typing import Optional
 
-import nextcord
+import discord
 import pymongo
 from pymongo.collection import Collection
 from pymongo.database import Database
@@ -45,6 +45,7 @@ class CRUD:
                 DbUser.__tablename__
             )
         else:
+            # print(Utility.get_db_url())
             self.engine = create_engine(
                 Utility.get_db_url(), logging_name=Config.DATABASE["db_name"]
             )
@@ -73,10 +74,10 @@ class CRUD:
         """
         return self.session.new
 
-    def get_or_create_user_record(self, user: nextcord.User) -> tuple[DbUser, bool]:
+    def get_or_create_user_record(self, user: discord.User) -> tuple[DbUser, bool]:
         """
         Get an existing user record, create a new record if one doesn't exist.
-        :param user: User entity of nextcord.
+        :param user: User entity of discord.
         :return: User record in database. True if the returned record is the new one, False otherwise.
         """
         u = self.__get_user_record(user)
@@ -85,10 +86,10 @@ class CRUD:
 
         return u, False
 
-    def get_or_create_guild_record(self, guild: nextcord.Guild) -> tuple[DbGuild, bool]:
+    def get_or_create_guild_record(self, guild: discord.Guild) -> tuple[DbGuild, bool]:
         """
         Get an existing guild record, create a new record if one doesn't exist.
-        :param guild: Guild entity of nextcord.
+        :param guild: Guild entity of discord.
         :return: Guild record in database. True if the returned record is the new one, False otherwise.
         """
         g = self.__get_guild_record(guild)
@@ -97,7 +98,7 @@ class CRUD:
 
         return g, False
 
-    def __get_user_record(self, user: nextcord.User) -> Optional[DbUser]:
+    def __get_user_record(self, user: discord.User) -> Optional[DbUser]:
         if self.is_mongo:
             record = self.mongo_users.find_one({"id": user.id})
             if record:
@@ -107,7 +108,7 @@ class CRUD:
 
         return self.session.query(DbUser).filter_by(id=user.id).one_or_none()
 
-    def __get_guild_record(self, guild: nextcord.Guild) -> Optional[DbGuild]:
+    def __get_guild_record(self, guild: discord.Guild) -> Optional[DbGuild]:
         if self.is_mongo:
             record = self.mongo_guilds.find_one({"id": guild.id})
             if record:
@@ -117,7 +118,7 @@ class CRUD:
 
         return self.session.query(DbGuild).filter_by(id=guild.id).one_or_none()
 
-    def __create_user_record(self, user: nextcord.User) -> DbUser:
+    def __create_user_record(self, user: discord.User) -> DbUser:
         decoy_user = DbUser(_id=user.id)
 
         if self.is_mongo:
@@ -131,7 +132,7 @@ class CRUD:
 
             return self.session.query(DbUser).filter_by(id=user.id).one()
 
-    def __create_guild_record(self, guild: nextcord.Guild) -> DbGuild:
+    def __create_guild_record(self, guild: discord.Guild) -> DbGuild:
         decoy_guild = DbGuild(_id=guild.id)
 
         if self.is_mongo:

@@ -1,7 +1,7 @@
 from typing import Callable
 from urllib.parse import quote_plus as qp
 
-import nextcord
+import discord
 
 from config import Config
 
@@ -18,16 +18,16 @@ class Utility:
 
         :return: Database connection URL
         """
-        postgres = Config.DATABASE
-        dialect: str = postgres["dialect"]
-        driver: str = "" if not postgres["driver"] else f"+{postgres['driver']}"
-        username: str = postgres["username"]
-        password: str = "" if not postgres["password"] else f":{postgres['password']}"
-        host: str = postgres["host"]
-        port: int = postgres["port"]
-        db_name: str = postgres["db_name"]
+        db = Config.DATABASE
+        dialect: str = db["dialect"]
+        driver: str = qp(f"+{db['driver']}", safe='+') if db["driver"] else ""
+        username: str = db["username"]
+        password: str = qp(f":{db['password']}", safe=':') if db["password"] else ""
+        host: str = db["host"]
+        port: int = db["port"]
+        db_name: str = db["db_name"]
 
-        return f"{dialect}{qp(driver, safe='+')}://{username}{qp(password, safe=':')}@{host}:{port}/{db_name}"
+        return f"{dialect}{driver}://{username}{password}@{host}:{port}/{db_name}"
 
     @staticmethod
     def get_mongo_db_url() -> str:
@@ -39,9 +39,9 @@ class Utility:
         mongo = Config.MONGODB
         username = mongo["username"] if mongo["username"] else ""
         password = qp(f":{mongo['password']}") if mongo["password"] else ""
-        at = qp("@") if username else ""
+        at = qp("@") if username and password else ""
         host = mongo["host"]
-        port = qp(f":{mongo['port']}") if mongo["port"] else ":27017"
+        port = qp(f":{mongo['port']}") if mongo["port"] else ""
 
         if mongo["is_atlas"]:
             cluster_name = mongo["cluster_name"]
@@ -51,19 +51,19 @@ class Utility:
 
     @staticmethod
     def message_waiter(
-        interaction: nextcord.Interaction,
-    ) -> Callable[[nextcord.Message], bool]:
+        interaction: discord.Interaction,
+    ) -> Callable[[discord.Message], bool]:
         """
         Message waiter to use with Client.wait_for("message", ...).
 
         Usages:
-            message: nextcord.Message = await bot.wait_for("message", check=wait_for)
+            message: discord.Message = await bot.wait_for("message", check=wait_for)
 
         :param interaction: Current interaction context.
         :return: The waiter function.
         """
 
-        def message_checker(message: nextcord.Message) -> bool:
+        def message_checker(message: discord.Message) -> bool:
             return (
                 message.author.id == interaction.user.id
                 and interaction.channel_id == message.channel.id
@@ -73,8 +73,8 @@ class Utility:
 
     @staticmethod
     async def get_or_create_role(
-        interaction: nextcord.Interaction, name: str, reason: str
-    ) -> tuple[nextcord.Role, bool]:
+        interaction: discord.Interaction, name: str, reason: str
+    ) -> tuple[discord.Role, bool]:
         """
         Get or create new role.
         :param interaction: Current interaction context.

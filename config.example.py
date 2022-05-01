@@ -1,6 +1,6 @@
 from typing import List, Any, Dict, Optional
 
-import nextcord
+import discord
 
 
 class Config:
@@ -12,11 +12,11 @@ class Config:
 
     STATUS: Dict[str, Any] = {
         # Allowed: watching, competing, playing, listening, streaming
-        "type": nextcord.ActivityType.watching,
+        "type": discord.ActivityType.watching,
         "name": "you",
         # Allowed: dnd, idle, online, invisible, offline
-        "user_status": nextcord.Status.dnd,
-        # if "type" is "nextcord.ActivityType.streaming"
+        "user_status": discord.Status.dnd,
+        # if "type" is "discord.ActivityType.streaming"
         "url": "",
     }
 

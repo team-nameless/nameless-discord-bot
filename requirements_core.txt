@@ -1,12 +1,9 @@
-nextcord
-nextcord[voice]
-nextcord[speed]
-nextcord-ext-activities
 yt-dlp
 sqlalchemy
 psycopg2-binary
-nextcord-paginator
 ossapi
 wavelink
 pymongo
 pymongo[srv]
+git+https://github.com/Rapptz/discord.py
+git+https://github.com/Rapptz/discord.py#egg=discord.py[voice]

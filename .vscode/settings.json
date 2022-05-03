@@ -1,0 +1,6 @@
+{
+	"python.linting.enabled": true,
+	"python.linting.pycodestyleEnabled": true,
+	"python.formatting.provider": "black",
+	"python.linting.pycodestyleArgs": ["--max-line-length=120"]
+}

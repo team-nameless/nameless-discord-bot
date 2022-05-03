@@ -1,10 +1,8 @@
 # nameless
 
-A rewrite of [Lilia-#master](https://github.com/Lilia-Workshop/Lilia/tree/master) and an extension
-of [nameless](https://github.com/FoxeiZ/nameless), in python. More extensibility, less proprietary. Keep the original
-Lilia mindset.
+A rewrite of [nameless](https://github.com/FoxeiZ/nameless), in python. More extensibility, less proprietary.
 
-[![CodeFactor](https://www.codefactor.io/repository/github/lilia-workshop/lilia/badge/new)](https://www.codefactor.io/repository/github/lilia-workshop/lilia/overview/new)
+[![CodeFactor](https://www.codefactor.io/repository/github/lilia-workshop/nameless/badge/main)](https://www.codefactor.io/repository/github/lilia-workshop/nameless/overview/main)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 > ⚠️ This project goes through continuous development 24/7 so **please don't** expect this to work properly.
@@ -52,7 +50,7 @@ customs/
 main.py
 config.py <- It should be here
 """
-from typing import List, Any, Dict
+from typing import List, Any, Dict, Optional
 import nextcord
 
 
@@ -84,7 +82,7 @@ class Config:
     
     # Your database
     # Watch above for guide
-    DATABASE: Dict[str, Any] = {
+    DATABASE: Optional[Dict[str, Any]] = {
         # If you have any other DBMS that you like, feel free to use
         # As long as SQLAlchemy supports it - https://docs.sqlalchemy.org/en/14/core/engines.html
         # I will PostgreSQL for the sake of this guide
@@ -97,6 +95,26 @@ class Config:
         "port": 5432,
         "db_name": "[db-name]",
     }
+    
+    # Specialized configurations for MongoDB.
+    # If both MONGODB and DATABASE options are provided, MONGO will be used.
+    # Passing None to either config will use THE OTHER CONFIG. If both are None, an error will be thrown.
+    MONGODB: Optional[Dict[str, Any]] = None
+    """
+    {
+        "username": "",
+        "password": "",
+        "db_name": "lilia",
+        
+        # For atlas
+        "is_atlas": False,
+        "cluster_name": "cluster0",
+        
+        # Else
+        "host": "localhost",
+        "port": None,
+    }
+    """
     
     # osu! client info
     # https://osu.ppy.sh/docs/index.html#registering-an-oauth-application

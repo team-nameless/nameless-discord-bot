@@ -1,131 +1,44 @@
 # nameless
 
-A rewrite of [nameless](https://github.com/FoxeiZ/nameless), in python. More extensibility, less proprietary.
+A rewrite of [original nameless*](https://github.com/FoxeiZ/nameless)
 
 [![CodeFactor](https://www.codefactor.io/repository/github/lilia-workshop/nameless/badge/main)](https://www.codefactor.io/repository/github/lilia-workshop/nameless/overview/main)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Python](https://badgen.net/badge/Python/3.10/)](https://python.org/)
 
-> ⚠️ This project goes through continuous development 24/7 so **please don't** expect this to work properly.
+----------------------------------------
 
-# Before you get your hands dirty
+## How to run this bot?
+
+- First, install `python3`, latest version preferred.
+- Second, create a virtual environment so your global `python3` won't be badly affected and activate it (most IDEs automatically activate it for you)
 
 ```shell
-# TYPE IN ORDER
-# Tested with Python 3.10 w/ Ubuntu 22.04
-sudo apt update
-sudo apt install postgresql postgresql-contrib -y
-sudo -i -u postgres
-createuser --interactive
-# Type your [role-name]
-# "y"
-psql -U postgres
-\password [role-name]
-# Type your [password]
-# Type your [password], again
-CREATE DATABASE [db-name];
-\q
-# Quit current terminal session
-sudo service postgresql start
+python3 -m venv venv
+source venv/bin/activate
+```
 
-# In case you are f- up sometimes
-# https://stackoverflow.com/questions/21530577/fatal-error-python-h-no-such-file-or-directory
-# And: sudo apt install python3.x-distutils -y
+- Third, install required dependencies:
 
-# Install core dependencies
+```shell
 pip install -r requirements_core.txt
-
-# (Optional, only when contributing to code)
-# Install development dependencies
-pip install -r requirements_dev.txt 
 ```
 
-# Config file `config.py`
+- After that, create a config file naming `config.py` and [fill it](https://github.com/Lilia-Workshop/nameless/wiki/config.py). Also [setup your database](https://github.com/Lilia-Workshop/nameless/wiki/Setup-database-(PostgreSQL)) (PostgreSQL for example, YMMV. We also support MongoDB/MongoDB Atlas).
 
-```python
-# config.py
-"""
-cogs/
-customs/
-[everything else]
-main.py
-config.py <- It should be here
-"""
-from typing import List, Any, Dict, Optional
-import nextcord
+- Lastly, run the `main.py` file:
 
-
-class Config:
-    # Enable more logging and experimental features
-    # Normally you don't want to set this to True
-    LAB: bool = False
-    
-    # Your Discord bot token
-    TOKEN: str = ""
-    
-    # List[str] if you need to register guild-only
-    # nextcord.utils.MISSING otherwise
-    GUILD_IDs = nextcord.utils.MISSING
-    
-    # Prefixes for text commands
-    PREFIXES: List[str] = ["alongprefix."]
-    
-    # Your Discord status
-    STATUS: Dict[str, Any] = {
-        # Allowed: watching, competing, playing, listening, streaming
-        "type": nextcord.ActivityType.watching,
-        "name": "you",
-        # Allowed: dnd, idle, online, invisible, offline
-        "user_status": nextcord.Status.dnd,
-        # if "type" is "nextcord.ActivityType.streaming"
-        "url": "",
-    }
-    
-    # Your database
-    # Watch above for guide
-    DATABASE: Optional[Dict[str, Any]] = {
-        # If you have any other DBMS that you like, feel free to use
-        # As long as SQLAlchemy supports it - https://docs.sqlalchemy.org/en/14/core/engines.html
-        # I will PostgreSQL for the sake of this guide
-        
-        "dialect": "postgresql",
-        "driver": "psycopg2",
-        "username": "[role-name]",
-        "password": "[password]",
-        "host": "localhost",
-        "port": 5432,
-        "db_name": "[db-name]",
-    }
-    
-    # Specialized configurations for MongoDB.
-    # If both MONGODB and DATABASE options are provided, MONGO will be used.
-    # Passing None to either config will use THE OTHER CONFIG. If both are None, an error will be thrown.
-    MONGODB: Optional[Dict[str, Any]] = None
-    """
-    {
-        "username": "",
-        "password": "",
-        "db_name": "lilia",
-        
-        # For atlas
-        "is_atlas": False,
-        "cluster_name": "cluster0",
-        
-        # Else
-        "host": "localhost",
-        "port": None,
-    }
-    """
-    
-    # osu! client info
-    # https://osu.ppy.sh/docs/index.html#registering-an-oauth-application
-    # don't even care about Redirect URL
-    OSU: Dict[str, Any] = {
-        "client_id": 0,
-        "client_secret": "",
-    }
+```shell
+python3 main.py
 ```
 
-# Credits
+## Contribution guide
+
+See [CONTRIBUTING.md](https://github.com/Lilia-Workshop/nameless/blob/main/CONTRIBUTING.md)
+
+----------------------------------------
+
+## Credits
 
 ![Me](https://img.shields.io/badge/%E2%9D%A4%EF%B8%8FMade%20with%20love%20by-Swyrin%237193-red?style=for-the-badge&logo=discord)
 ![Python God](https://img.shields.io/badge/Python%20God-C%C3%A1o%20trong%20s%C3%A1ng%238029-blue?style=for-the-badge&logo=python)

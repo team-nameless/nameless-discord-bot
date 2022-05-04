@@ -32,13 +32,24 @@ pip install -r requirements_core.txt
 python3 main.py
 ```
 
-## Contribution guide
+## Noice, your code is so cool, and I wanna contribute my parts on them!
 
 See [CONTRIBUTING.md](https://github.com/Lilia-Workshop/nameless/blob/main/CONTRIBUTING.md)
 
+## Oh look, there are branches!
+
+- `main`: Stable codes that is ready for production.
+- `dev`: Changes that might not backward-compatible with `main`, and will be pushed to production at a later time after careful testing and reviewing.
+- `feat/{name}`: New features that will be pushed to `dev`
+- `fix/{#}` or `fix/{name}`: Bug fixes that will be pushed to EITHER `main` OR `dev`, depending on its severity.
+
+## Hey! I wanna throw money at you!
+
+- Donations are not accepted at present, but we will put it into considerations. Anyways, thank you.
+
 ----------------------------------------
 
-## Credits
+## Credits (click on them to get to their GitHub profile)
 
 ![Me](https://img.shields.io/badge/%E2%9D%A4%EF%B8%8FMade%20with%20love%20by-Swyrin%237193-red?style=for-the-badge&logo=discord)
-![Python God](https://img.shields.io/badge/Python%20God-C%C3%A1o%20trong%20s%C3%A1ng%238029-blue?style=for-the-badge&logo=python)
+[![Python God](https://img.shields.io/badge/Python%20God-C%C3%A1o%20trong%20s%C3%A1ng%238029-blue?style=for-the-badge&logo=python)](https://github.com/FoxeiZ)

@@ -1,3 +1,4 @@
 pip-autoremove
 black
 alembic
+pycodestyle

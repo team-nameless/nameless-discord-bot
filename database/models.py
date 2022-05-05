@@ -1,4 +1,5 @@
 import datetime
+from abc import ABC, abstractmethod
 
 from sqlalchemy import *
 from sqlalchemy.orm import declarative_base
@@ -6,14 +7,15 @@ from sqlalchemy.orm import declarative_base
 Base = declarative_base()
 
 
-class MongoABC:
-    pass
+class MongoABC(ABC):
+    @staticmethod
+    @abstractmethod
+    def from_dict(d: dict):
+        pass
 
-
-# Migration cheat code:
-# alembic revision --autogenerate -m "Message here"
-# alembic upgrade head
-# In case of fire: https://www.learndatasci.com/tutorials/using-databases-python-postgres-sqlalchemy-and-alembic/
+    @abstractmethod
+    def to_dict(self) -> dict:
+        pass
 
 
 class DbUser(Base, MongoABC):

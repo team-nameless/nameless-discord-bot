@@ -20,9 +20,9 @@ class Utility:
         """
         db = Config.DATABASE
         dialect: str = db["dialect"]
-        driver: str = qp(f"+{db['driver']}", safe='+') if db["driver"] else ""
+        driver: str = qp(f"+{db['driver']}", safe="+") if db["driver"] else ""
         username: str = db["username"]
-        password: str = qp(f":{db['password']}", safe=':') if db["password"] else ""
+        password: str = qp(f":{db['password']}", safe=":") if db["password"] else ""
         host: str = db["host"]
         port: int = db["port"]
         db_name: str = db["db_name"]

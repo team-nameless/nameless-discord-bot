@@ -124,13 +124,13 @@ class CRUD:
         if self.is_mongo:
             self.mongo_users.insert_one(decoy_user.to_dict())
             return decoy_user
-        else:
-            if not self.session.query(DbUser).filter_by(id=user.id).one_or_none():
-                self.session.add(decoy_user)
-                self.save_changes()
-                return decoy_user
 
-            return self.session.query(DbUser).filter_by(id=user.id).one()
+        if not self.session.query(DbUser).filter_by(id=user.id).one_or_none():
+            self.session.add(decoy_user)
+            self.save_changes()
+            return decoy_user
+
+        return self.session.query(DbUser).filter_by(id=user.id).one()
 
     def __create_guild_record(self, guild: discord.Guild) -> DbGuild:
         decoy_guild = DbGuild(_id=guild.id)
@@ -138,13 +138,13 @@ class CRUD:
         if self.is_mongo:
             self.mongo_guilds.insert_one(decoy_guild.to_dict())
             return decoy_guild
-        else:
-            if not self.session.query(DbGuild).filter_by(id=guild.id).one_or_none():
-                self.session.add(decoy_guild)
-                self.save_changes()
-                return decoy_guild
 
-            return self.session.query(DbGuild).filter_by(id=guild.id).one()
+        if not self.session.query(DbGuild).filter_by(id=guild.id).one_or_none():
+            self.session.add(decoy_guild)
+            self.save_changes()
+            return decoy_guild
+
+        return self.session.query(DbGuild).filter_by(id=guild.id).one()
 
     def delete_guild_record(self, guild_record: DbGuild) -> None:
         """

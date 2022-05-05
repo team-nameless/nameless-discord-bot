@@ -45,7 +45,7 @@ See [CONTRIBUTING.md](https://github.com/Lilia-Workshop/nameless/blob/main/CONTR
 
 ## Hey! I wanna throw money at you!
 
-- Donations are not accepted at present, but we will put it into considerations. Anyways, thank you.
+- Oh, thank you for your generosity! You can look for the sponsor button or some link at the sidebar, any value is appreciated.
 
 ----------------------------------------
 

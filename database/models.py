@@ -1,5 +1,4 @@
 import datetime
-from abc import ABC, abstractmethod
 
 from sqlalchemy import *
 from sqlalchemy.orm import declarative_base
@@ -7,18 +6,16 @@ from sqlalchemy.orm import declarative_base
 Base = declarative_base()
 
 
-class MongoABC(ABC):
+class Mongo:
     @staticmethod
-    @abstractmethod
     def from_dict(d: dict):
         pass
 
-    @abstractmethod
     def to_dict(self) -> dict:
         pass
 
 
-class DbUser(Base, MongoABC):
+class DbUser(Base, Mongo):
     @staticmethod
     def from_dict(d: dict):
         return DbUser(d["id"], d["warn_count"], d["osu_mode"], d["osu_username"])
@@ -47,7 +44,7 @@ class DbUser(Base, MongoABC):
     osu_mode: str = Column(Text, name="OsuMode", default="")
 
 
-class DbGuild(Base, MongoABC):
+class DbGuild(Base, Mongo):
     def __init__(
         self,
         _id: int,

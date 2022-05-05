@@ -1,6 +1,9 @@
-import nextcord
-from nextcord import SlashOption
-from nextcord.ext import commands, activities
+import discord
+import discord_together
+from discord_together.discordTogetherMain import defaultApplications
+from discord.ext import commands
+from discord import app_commands
+from discord.app_commands import Choice
 
 from config import Config
 
@@ -9,31 +12,26 @@ class ActivityCog(commands.Cog):
     def __init__(self, bot: commands.AutoShardedBot) -> None:
         self.bot = bot
 
-    @nextcord.slash_command(
-        description="Embedded activity commands", guild_ids=Config.GUILD_IDs
+    @commands.hybrid_command()
+    @app_commands.guilds(*Config.GUILD_IDs)
+    @app_commands.describe(
+        target="Your desired activity", voice_channel="Target voice channel"
     )
-    async def activity(self, _: nextcord.Interaction):
-        pass
-
-    @activity.subcommand(description="Create a embedded activity")
-    async def create(
+    @app_commands.choices(
+        target=[Choice(name=k, value=k) for k, _ in defaultApplications.items()]
+    )
+    async def activity(
         self,
-        interaction: nextcord.Interaction,
-        target: str = SlashOption(
-            description="Your desired activity",
-            choices={str(i.name): str(i.value) for i in activities.enums.Activity},
-        ),
-        voice_channel: nextcord.abc.GuildChannel = SlashOption(
-            description="Target voice channel",
-            channel_types=[nextcord.ChannelType.voice],
-        ),
+        ctx: commands.Context,
+        voice_channel: discord.VoiceChannel,
+        target: str = "youtube",
     ):
-        await interaction.response.send_message("Generating link")
+        """Generate an embedded activity link"""
 
-        # voice_channel: nextcord.VoiceChannel
-        # voice_channel.create_activity_invite = activities.create_activity_invite
-        inv = await voice_channel.create_activity_invite(
-            activities.Activity.custom, activity_id=int(target)
-        )
+        msg = await ctx.send("Generating link")
 
-        await interaction.edit_original_message(content=f"Here is your link: {inv.url}")
+        inv = await (
+            await discord_together.DiscordTogether(Config.TOKEN, debug=Config.LAB)
+        ).create_link(voice_channel.id, target)
+
+        await msg.edit(content=f"Here is your link: {inv}")

@@ -6,26 +6,31 @@ from globals import *
 
 start_time = datetime.now()
 
+
 class Nameless(commands.AutoShardedBot):
     async def __register_all_cogs(self):
         if Config.LAB:
             await client.add_cog(cogs.ExperimentalCog(client))
-    
+
         await client.add_cog(cogs.OwnerCog(client))
-    
+        await client.add_cog(cogs.ActivityCog(client))
+
+    async def on_shard_ready(self, shard_id: int):
+        logging.info("Shard #{0} is ready".format(shard_id))
+
     async def on_ready(self):
         logging.info("Registering commands")
         await self.__register_all_cogs()
-        
+
         if Config.GUILD_IDs:
-            for id in Config.GUILD_IDs:
-                logging.info(f"Syncing commands with guild id {id}")
-                sf = discord.Object(id)
+            for _id in Config.GUILD_IDs:
+                logging.info(f"Syncing commands with guild id {_id}")
+                sf = discord.Object(_id)
                 await client.tree.sync(guild=sf)
         else:
             logging.info(f"Syncing commands globally")
             await client.tree.sync()
-        
+
         logging.info(msg="Setting presence")
         await client.change_presence(
             status=Config.STATUS["user_status"],
@@ -35,9 +40,9 @@ class Nameless(commands.AutoShardedBot):
                 url=Config.STATUS["url"] if Config.STATUS["url"] else None,
             ),
         )
-        
+
         logging.info(msg=f"Logged in as {client.user} (ID: {client.user.id})")
-        
+
     async def on_error(self, event_method: str, /, *args, **kwargs) -> None:
         logging.error(
             msg=f"[{event_method}] We have gone under a crisis!!!",
@@ -45,7 +50,7 @@ class Nameless(commands.AutoShardedBot):
             exc_info=True,
             extra={**kwargs},
         )
-        
+
     async def on_member_join(self, member: discord.Member):
         db_guild, _ = crud_database.get_or_create_guild_record(member.guild)
 
@@ -63,7 +68,7 @@ class Nameless(commands.AutoShardedBot):
                         .replace("{tag}", member.discriminator)
                         .replace("{@user}", member.mention)
                     )
-                    
+
     async def on_member_remove(self, member: discord.Member):
         db_guild, _ = crud_database.get_or_create_guild_record(member.guild)
 
@@ -80,15 +85,13 @@ class Nameless(commands.AutoShardedBot):
                         .replace("{name}", member.display_name)
                         .replace("{tag}", member.discriminator)
                     )
-        
-        
+
     async def close(self) -> None:
         logging.warning(msg="Shutting down database")
         crud_database.close_all_sessions()
         await super().close()
 
-client = Nameless(
-    intents=discord.Intents.all(), command_prefix=Config.PREFIXES
-)
+
+client = Nameless(intents=discord.Intents.all(), command_prefix=Config.PREFIXES)
 
 client.run(Config.TOKEN)

@@ -2,6 +2,7 @@ yt-dlp
 sqlalchemy
 psycopg2-binary
 ossapi
+discord-together
 wavelink
 pymongo
 pymongo[srv]

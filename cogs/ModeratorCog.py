@@ -1,6 +1,8 @@
-import nextcord
-from nextcord import SlashOption, Forbidden, HTTPException
-from nextcord.ext import commands, application_checks
+from typing import Callable, Awaitable, Any
+
+import discord
+from discord import Forbidden, HTTPException, app_commands
+from discord.ext import commands
 
 from config import Config
 from customs import Utility
@@ -13,41 +15,37 @@ class ModeratorCog(commands.Cog):
     def __init__(self, bot: commands.AutoShardedBot) -> None:
         self.bot = bot
 
-    @nextcord.slash_command(
-        description="Moderation commands", guild_ids=Config.GUILD_IDs
-    )
-    async def mod(self, _: nextcord.Interaction):
-        pass
+    @commands.hybrid_group(fallback="do-not-use")
+    @app_commands.guilds(*Config.GUILD_IDs)
+    async def mod(self, ctx: commands.Context):
+        await ctx.send(content="You found the matrix!")
 
     @staticmethod
     async def __generic_ban_kick(
-        interaction: nextcord.Interaction, reason: str, action: str, caller, d=-1
+        ctx: commands.Context, reason: str, action: str, caller: Callable[[discord.Member], Awaitable[Any]], d=-1
     ):
-        client: nextcord.Client = interaction.client
+        client = ctx.bot
 
-        await interaction.response.defer()
-        await interaction.edit_original_message(
-            content=f"Mention members you want to {action} with reason {reason}"
-        )
-        msg: nextcord.Message = await client.wait_for(
-            "message", check=Utility.message_waiter(interaction), timeout=30
-        )
+        await ctx.send(content=f"Mention members you want to {action} with reason {reason}")
+
+        msg: discord.Message = await client.wait_for("message", check=Utility.message_waiter(ctx), timeout=30)
         mentioned_members = msg.mentions
         responses = []
 
         for member in mentioned_members:
             response = f"Trying to {action} member {member.display_name}#{member.discriminator}. "
 
-            if member.id == interaction.user.id:
+            if member.id == ctx.author.id:
                 response += "And that is you."
             elif member.id == client.user.id:
                 response += "And that is me."
             else:
                 try:
+                    # ignore kwargs typings
                     if d != -1:
-                        await caller(member, reason=reason, delete_message_days=d)
+                        await caller(member, reason=reason, delete_message_days=d)  # type: ignore
                     else:
-                        await caller(member, reason=reason)
+                        await caller(member, reason=reason)  # type: ignore
                 except Forbidden:
                     response += "And I lack the permissions to do it."
                 except HTTPException:
@@ -55,58 +53,54 @@ class ModeratorCog(commands.Cog):
 
             responses.append(response)
 
-        await interaction.followup.send(content="\n".join(responses))
+        await ctx.send(content="\n".join(responses))
 
     @staticmethod
     async def __generic_warn(
-        interaction: nextcord.Interaction,
-        member: nextcord.Member,
+        ctx: commands.Context,
+        member: discord.Member,
         reason: str,
         val: int,
-        zero_fn,
-        three_fn,
-        diff_fn,
+        zero_fn: Callable[[commands.Context, discord.Member, str], Awaitable[None]],
+        three_fn: Callable[[commands.Context, discord.Member, str], Awaitable[None]],
+        diff_fn: Callable[[commands.Context, discord.Member, str, int, int], Awaitable[None]],
     ):
-        await interaction.response.defer()
+        await ctx.defer()
 
         u, _ = crud_database.get_or_create_user_record(member)
 
         if (u.warn_count == 0 and val < 0) or (u.warn_count == 3 and val > 0):
-            await interaction.edit_original_message(
-                content=f"The user already have {u.warn_count} warn(s)."
-            )
+            await ctx.send(content=f"The user already have {u.warn_count} warn(s).")
             return
 
         u.warn_count += val
         crud_database.save_changes(user_record=u)
 
         if u.warn_count == 0:
-            await zero_fn(interaction, member, reason)
+            await zero_fn(ctx, member, reason)
         elif u.warn_count == 3:
-            await three_fn(interaction, member, reason)
+            await three_fn(ctx, member, reason)
         else:
-            await diff_fn(interaction, member, reason, u.warn_count, u.warn_count - val)
+            await diff_fn(ctx, member, reason, u.warn_count, u.warn_count - val)
 
         # await member.send()
-        await interaction.edit_original_message(
+        await ctx.send(
             content=f"{'Removed' if val < 0 else 'Added'} {abs(val)} warn to {member.mention} with reason: {reason}\n"
             f"Now they have {u.warn_count} warn(s)"
         )
 
     @staticmethod
     async def __generic_mute(
-        interaction: nextcord.Interaction,
-        member: nextcord.Member,
+        ctx: commands.Context,
+        member: discord.Member,
         reason: str,
         mute: bool = 1,
     ):
-        await interaction.response.defer()
-        mute_role, is_new = await Utility.get_or_create_role(
-            interaction, MUTE_ROLE_NAME, "Mute role creation"
-        )
+        await ctx.defer()
+        mute_role, is_new = await Utility.get_or_create_role(MUTE_ROLE_NAME, "Mute role creation", ctx)
 
         if is_new:
-            for channel in interaction.guild.channels:
+            for channel in ctx.guild.channels:
                 await channel.set_permissions(
                     mute_role,
                     send_messages=False,
@@ -118,73 +112,72 @@ class ModeratorCog(commands.Cog):
         if is_muted:
             if not mute:
                 await member.remove_roles(mute_role, reason=reason)
-                await interaction.edit_original_message(content="Unmuted")
+                await ctx.send(content="Unmuted")
             else:
-                await interaction.edit_original_message(content="Already muted")
+                await ctx.send(content="Already muted")
         else:
             if mute:
                 await member.add_roles(mute_role, reason=reason)
-                await interaction.edit_original_message(content="Muted")
+                await ctx.send(content="Muted")
             else:
-                await interaction.edit_original_message(content="Already unmuted")
+                await ctx.send(content="Already unmuted")
 
-    @mod.subcommand(description="Ban members, in batch")
-    @application_checks.bot_has_guild_permissions(ban_members=True)
-    @application_checks.has_guild_permissions(ban_members=True)
+    @mod.command()
+    @commands.has_guild_permissions(ban_members=True)
+    @commands.bot_has_guild_permissions(ban_members=True)
+    @app_commands.checks.has_permissions(ban_members=True)
+    @app_commands.checks.bot_has_permissions(ban_members=True)
+    @app_commands.describe(delete_message_days="Past message days to delete", reason="Ban reason")
     async def ban(
         self,
-        interaction: nextcord.Interaction,
-        delete_message_days: int = SlashOption(
-            description="Past message days to delete", default=0
-        ),
-        reason: str = SlashOption(description="Ban reason", default="Rule violation"),
+        ctx: commands.Context,
+        delete_message_days: int = 0,
+        reason: str = "Rule violation",
     ):
+        """Ban members, in batch"""
         if not 0 <= delete_message_days <= 7:
-            await interaction.send(
-                content="delete_message_days must satisfy 0 <= delete_message_days <= 7"
-            )
+            await ctx.send(content="delete_message_days must satisfy 0 <= delete_message_days <= 7")
         else:
-            await self.__generic_ban_kick(
-                interaction, reason, "ban", interaction.guild.ban, delete_message_days
-            )
+            await self.__generic_ban_kick(ctx, reason, "ban", ctx.guild.ban, delete_message_days)
 
-    @mod.subcommand(description="Kick members, in batch")
-    @application_checks.bot_has_guild_permissions(kick_members=True)
-    @application_checks.has_guild_permissions(kick_members=True)
+    @mod.command()
+    @commands.has_guild_permissions(kick_members=True)
+    @commands.bot_has_guild_permissions(kick_members=True)
+    @app_commands.checks.has_permissions(kick_members=True)
+    @app_commands.checks.bot_has_permissions(kick_members=True)
+    @app_commands.describe(reason="Kick reason")
     async def kick(
         self,
-        interaction: nextcord.Interaction,
-        reason: str = SlashOption(description="Kick reason", default="Rule violation"),
+        ctx: commands.Context,
+        reason: str = "Rule violation",
     ):
-        await self.__generic_ban_kick(
-            interaction, reason, "kick", interaction.guild.kick
-        )
+        """Kick members, in batch"""
+        await self.__generic_ban_kick(ctx, reason, "kick", ctx.guild.kick)
 
-    @mod.subcommand(description="Add a warning to a member")
-    @application_checks.has_guild_permissions(moderate_members=True)
+    @mod.command()
+    @commands.has_guild_permissions(moderate_members=True)
+    @app_commands.checks.has_permissions(moderate_members=True)
+    @app_commands.describe(member="Target member", reason="Warn addition reason")
     async def warn_add(
         self,
-        interaction: nextcord.Interaction,
-        member: nextcord.Member = SlashOption(description="Target member"),
-        reason: str = SlashOption(
-            description="Reason to add", default="Rule violation"
-        ),
+        ctx: commands.Context,
+        member: discord.Member,
+        reason: str = "Rule violation"
     ):
-        async def zero_fn(i: nextcord.Interaction, m: nextcord.Member, r: str):
+        """Add a warning to a member"""
+        async def zero_fn(_ctx: commands.Context, m: discord.Member, r: str):
             pass
 
         async def diff_fn(
-            i: nextcord.Interaction, m: nextcord.Member, r: str, current: int, prev: int
+            _ctx: commands.Context, m: discord.Member, r: str, curr: int, prev: int
         ):
             pass
 
-        async def three_fn(i: nextcord.Interaction, m: nextcord.Member, r: str):
-            role, no = await Utility.get_or_create_role(
-                interaction=i, name=MUTE_ROLE_NAME, reason="Mute role creation"
-            )
+        async def three_fn(_ctx: commands.Context, m: discord.Member, r: str):
+            role, no = await Utility.get_or_create_role(MUTE_ROLE_NAME, "Mute role creation", _ctx)
 
             if no:
-                for channel in i.guild.channels:
+                for channel in _ctx.guild.channels:
                     await channel.set_permissions(
                         role,
                         send_messages=False,
@@ -196,59 +189,60 @@ class ModeratorCog(commands.Cog):
                 await m.add_roles(role, reason=r)
 
         await ModeratorCog.__generic_warn(
-            interaction, member, reason, 1, zero_fn, three_fn, diff_fn
+            ctx, member, reason, 1, zero_fn, three_fn, diff_fn
         )
 
-    @mod.subcommand(description="Remove a warning from a member")
-    @application_checks.has_guild_permissions(moderate_members=True)
+    @mod.command()
+    @commands.has_guild_permissions(moderate_members=True)
+    @app_commands.checks.has_permissions(moderate_members=True)
+    @app_commands.describe(member="Target member", reason="Warn removal reason")
     async def warn_remove(
         self,
-        interaction: nextcord.Interaction,
-        member: nextcord.Member = SlashOption(description="Target member"),
-        reason: str = SlashOption(
-            description="Reason to remove", default="Good behavior"
-        ),
+        ctx: commands.Context,
+        member: discord.Member,
+        reason: str = "Good behavior"
     ):
-        async def zero_fn(i: nextcord.Interaction, m: nextcord.Member, r: str):
+        """Remove a warning from a member"""
+
+        async def zero_fn(_ctx: commands.Context, m: discord.Member, r: str):
             pass
 
         async def diff_fn(
-            i: nextcord.Interaction, m: nextcord.Member, r: str, current: int, prev: int
+            _ctx: commands.Context, m: discord.Member, r: str, current: int, prev: int
         ):
             if prev == 3:
-                role, _ = await Utility.get_or_create_role(
-                    interaction=i, name=MUTE_ROLE_NAME, reason="Mute role creation"
-                )
+                role, _ = await Utility.get_or_create_role(MUTE_ROLE_NAME, "Mute role creation", _ctx)
                 if any(grole.name == MUTE_ROLE_NAME for grole in m.roles):
                     await m.remove_roles(role, reason=r)
 
-        async def three_fn(i: nextcord.Interaction, m: nextcord.Member, r: str):
+        async def three_fn(_ctx: commands.Context, m: discord.Member, r: str):
             pass
 
         await ModeratorCog.__generic_warn(
-            interaction, member, reason, -1, zero_fn, three_fn, diff_fn
+            ctx, member, reason, -1, zero_fn, three_fn, diff_fn
         )
 
-    @mod.subcommand(description="Mute a member")
-    @application_checks.has_guild_permissions(moderate_members=True)
+    @mod.command()
+    @commands.has_guild_permissions(moderate_members=True)
+    @app_commands.checks.has_permissions(moderate_members=True)
+    @app_commands.describe(member="Target member", reason="Mute reason")
     async def mute(
         self,
-        interaction: nextcord.Interaction,
-        member: nextcord.Member = SlashOption(description="Target member"),
-        reason: str = SlashOption(
-            description="Reason to mute", default="Rule violation"
-        ),
+        ctx: commands.Context,
+        member: discord.Member,
+        reason: str = "Rule violation"
     ):
-        await self.__generic_mute(interaction, member, reason)
+        """Mute a member"""
+        await self.__generic_mute(ctx, member, reason)
 
-    @mod.subcommand(description="Unmute a member")
-    @application_checks.has_guild_permissions(moderate_members=True)
+    @mod.command(description="Unmute a member")
+    @commands.has_guild_permissions(moderate_members=True)
+    @app_commands.checks.has_permissions(moderate_members=True)
+    @app_commands.describe(member="Target member", reason="Unmute reason")
     async def unmute(
         self,
-        interaction: nextcord.Interaction,
-        member: nextcord.Member = SlashOption(description="Target member"),
-        reason: str = SlashOption(
-            description="Reason to unmute", default="Good behavior"
-        ),
+        ctx: commands.Context,
+        member: discord.Member,
+        reason: str = "Good behavior"
     ):
-        await self.__generic_mute(interaction, member, reason, False)
+        await self.__generic_mute(ctx, member, reason, False)

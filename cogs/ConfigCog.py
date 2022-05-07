@@ -1,4 +1,5 @@
 import datetime
+from typing import Union
 
 import discord
 from discord import app_commands
@@ -65,7 +66,7 @@ class ConfigCog(commands.Cog):
         dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.welcome_message = message
         crud_database.save_changes(guild_record=dbg)
-        await ctx.send(content="Done updating welcome message")
+        await ctx.send("Done updating welcome message")
 
     @config.command()
     @app_commands.checks.has_permissions(manage_guild=True)
@@ -80,37 +81,33 @@ class ConfigCog(commands.Cog):
         dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.goodbye_message = message
         crud_database.save_changes(guild_record=dbg)
-        await ctx.send(content="Done updating goodbye message")
+        await ctx.send("Done updating goodbye message")
 
     @config.command()
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.describe(dest_channel="Goodbye message delivery channel")
     async def set_goodbye_channel(
-        self, ctx: commands.Context, dest_channel: discord.TextChannel
+        self, ctx: commands.Context, dest_channel: Union[discord.TextChannel, app_commands.models.AppCommandThread]
     ):
         """Change goodbye message delivery channel"""
         await ctx.defer()
         dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.goodbye_channel_id = dest_channel.id
         crud_database.save_changes(guild_record=dbg)
-        await ctx.send(
-            content=f"Done updating goodbye channel to {dest_channel.mention}"
-        )
+        await ctx.send(f"Done updating goodbye channel to {dest_channel.mention}")
 
     @config.command()
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.describe(dest_channel="Welcome message delivery channel")
     async def set_welcome_channel(
-        self, ctx: commands.Context, dest_channel: discord.TextChannel
+        self, ctx: commands.Context, dest_channel: Union[discord.TextChannel, app_commands.models.AppCommandThread]
     ):
         """Change welcome message delivery channel"""
         await ctx.defer()
         dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.welcome_channel_id = dest_channel.id
         crud_database.save_changes(guild_record=dbg)
-        await ctx.send(
-            content=f"Done updating welcome channel to {dest_channel.mention}"
-        )
+        await ctx.send(f"Done updating welcome channel to {dest_channel.mention}")
 
     @config.command()
     @app_commands.checks.has_permissions(manage_guild=True)
@@ -120,9 +117,7 @@ class ConfigCog(commands.Cog):
         dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.is_welcome_enabled = not dbg.is_welcome_enabled
         crud_database.save_changes(guild_record=dbg)
-        await ctx.send(
-            content=f"Welcome message delivery is now {'enabled' if dbg.is_welcome_enabled else 'disabled'}"
-        )
+        await ctx.send(f"Welcome message delivery is now {'enabled' if dbg.is_welcome_enabled else 'disabled'}")
 
     @config.command()
     @app_commands.checks.has_permissions(manage_guild=True)
@@ -132,9 +127,7 @@ class ConfigCog(commands.Cog):
         dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.is_goodbye_enabled = not dbg.is_goodbye_enabled
         crud_database.save_changes(guild_record=dbg)
-        await ctx.send(
-            content=f"Goodbye message delivery is now {'enabled' if dbg.is_welcome_enabled else 'disabled'}"
-        )
+        await ctx.send(f"Goodbye message delivery is now {'enabled' if dbg.is_welcome_enabled else 'disabled'}")
 
     @config.command()
     @app_commands.checks.has_permissions(manage_guild=True)
@@ -148,8 +141,4 @@ class ConfigCog(commands.Cog):
             "{tag}": "The 4-digit after #.\nAvailability: Welcome+Goodbye.",
         }
 
-        await ctx.send(
-            content="\n".join(
-                f"**{key}**\n{value}\n" for key, value in placeholders.items()
-            )
-        )
+        await ctx.send("\n".join(f"**{key}**\n{value}\n" for key, value in placeholders.items()))

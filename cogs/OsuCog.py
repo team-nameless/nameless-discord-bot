@@ -1,10 +1,11 @@
 import datetime
 from typing import Optional, List
 
-import nextcord
-from nextcord import Color, SlashOption
-from nextcord.ext import commands
-from nextcord_paginator import Paginator
+import discord
+from discord import Color, app_commands
+from discord.app_commands import Choice
+from discord.ext import commands
+from DiscordUtils import Pagination
 from ossapi import *
 
 import globals
@@ -12,6 +13,12 @@ from config import Config
 from customs import Utility
 
 osu_modes = {"osu": "Osu", "taiko": "Taiko", "fruits": "Fruits", "mania": "Mania"}
+request_types = {
+    "profile": "profile",
+    "firsts": "firsts",
+    "recents": "recents",
+    "bests": "bests",
+}
 
 
 def convert_to_game_mode(mode: str) -> GameMode:
@@ -34,22 +41,20 @@ def convert_to_game_mode(mode: str) -> GameMode:
             return GameMode.MANIA
 
 
-class FailInclusionConfirmationView(nextcord.ui.View):
+class FailInclusionConfirmationView(discord.ui.View):
     def __init__(self):
         super().__init__()
         self.is_confirmed = False
 
-    @nextcord.ui.button(label="Yep!", style=nextcord.ButtonStyle.green)
+    @discord.ui.button(label="Yep!", style=discord.ButtonStyle.green)
     async def confirm(
-        self, button: nextcord.ui.Button, interaction: nextcord.Interaction
+        self, button: discord.ui.Button, interaction: discord.Interaction
     ):
         self.is_confirmed = True
         self.stop()
 
-    @nextcord.ui.button(label="Cancel", style=nextcord.ButtonStyle.grey)
-    async def cancel(
-        self, button: nextcord.ui.Button, interaction: nextcord.Interaction
-    ):
+    @discord.ui.button(label="Nope!", style=discord.ButtonStyle.red)
+    async def cancel(self, button: discord.ui.Button, interaction: discord.Interaction):
         self.stop()
 
 
@@ -64,79 +69,73 @@ class OsuCog(commands.Cog):
         self.api.log.handlers[:] = [globals.handler]
         self.api.log.parent.handlers[:] = [globals.handler]
 
-    @nextcord.slash_command(description="osu! commands", guild_ids=Config.GUILD_IDs)
-    async def osu(self, _: nextcord.Interaction):
-        pass
-
-    @osu.subcommand(description="View your linked auto search data")
-    async def me(self, interaction: nextcord.Interaction):
-        await interaction.response.defer()
-        dbu, _ = globals.crud_database.get_or_create_user_record(interaction.user)
+    @commands.hybrid_group(fallback="me")
+    @app_commands.guilds(*Config.GUILD_IDs)
+    async def osu(self, ctx: commands.Context):
+        """View your osu! *linked* profile"""
+        await ctx.defer()
+        dbu, _ = globals.crud_database.get_or_create_user_record(ctx.author)
         embed = (
-            nextcord.Embed(
+            discord.Embed(
                 description="Your linked osu! auto search with me",
                 timestamp=datetime.datetime.now(),
                 colour=Color.brand_red(),
             )
-            .set_image(url=interaction.user.display_avatar.url)
+            .set_image(url=ctx.author.display_avatar.url)
             .add_field(name="Username", value=dbu.osu_username, inline=True)
             .add_field(name="Mode", value=dbu.osu_mode, inline=True)
         )
-        await interaction.edit_original_message(embeds=[embed])
+        await ctx.send(embeds=[embed])
 
-    @osu.subcommand(description="Update your linked auto search data")
-    async def update(
-        self,
-        interaction: nextcord.Interaction,
-        username: str = SlashOption(description="Your osu! username"),
-        mode: str = SlashOption(
-            description="Your osu! mode", choices=osu_modes, default="osu"
-        ),
-    ):
-        await interaction.response.defer()
-        dbu, _ = globals.crud_database.get_or_create_user_record(interaction.user)
+    @osu.command()
+    @app_commands.describe(username="Your osu! username", mode="Your osu! mode")
+    @app_commands.choices(mode=[Choice(name=k, value=v) for k, v in osu_modes.items()])
+    async def update(self, ctx: commands.Context, username: str, mode: str = "Osu"):
+        """Update your auto search"""
+        await ctx.defer()
+        dbu, _ = globals.crud_database.get_or_create_user_record(ctx.author)
         dbu.osu_username, dbu.osu_mode = username, mode
         globals.crud_database.save_changes(user_record=dbu)
-        await interaction.edit_original_message(content="Updated")
+        await ctx.send(content="Updated")
 
-    @osu.subcommand(description="Force update a member's linked auto search data")
+    @osu.command()
+    @app_commands.describe(
+        member="Target member", username="osu! username", mode="osu! mode"
+    )
+    @app_commands.choices(mode=[Choice(name=k, value=v) for k, v in osu_modes.items()])
     async def force_update(
         self,
-        interaction: nextcord.Interaction,
-        member: nextcord.Member = SlashOption(description="Target member"),
-        username: str = SlashOption(description="osu! username"),
-        mode: str = SlashOption(
-            description="osu! mode", choices=osu_modes, default="osu"
-        ),
+        ctx: commands.Context,
+        member: discord.Member,
+        username: str,
+        mode: str = "Osu",
     ):
-        await interaction.response.defer()
+        """Force database to update a member's auto search"""
+        await ctx.defer()
         dbu, _ = globals.crud_database.get_or_create_user_record(member)
         dbu.osu_username, dbu.osu_mode = username, mode
         globals.crud_database.save_changes(user_record=dbu)
-        await interaction.edit_original_message(content="Updated")
+        await ctx.send(content="Updated")
 
     async def __generic_check(
         self,
-        interaction: nextcord.Interaction,
+        ctx: commands.Context,
         request: str,
         username: str,
         mode: str,
         is_from_context: bool = False,
     ):
-        await interaction.edit_original_message(content="Processing")
+        await ctx.send(content="Processing")
 
         osu_user: Optional[User]
-        the_mode = None
-
-        if mode != "default":
-            the_mode = convert_to_game_mode(mode)
+        the_mode = None if mode == "default" else convert_to_game_mode(mode)
 
         osu_user: User = self.api.user(username, the_mode, key=UserLookupKey.USERNAME)
         user_stats = osu_user.statistics
 
         if request == "profile":
             eb = (
-                nextcord.Embed(
+                discord.Embed(
                     color=Color.brand_red(),
                     timestamp=datetime.datetime.now(),
                     description=f"This user is now {'online' if osu_user.is_online else 'offline/invisible'}",
@@ -149,7 +148,7 @@ class OsuCog(commands.Cog):
                 )
                 .set_thumbnail(url=osu_user.avatar_url)
                 .set_footer(
-                    text=f"Requested by {interaction.user.display_name}#{interaction.user.discriminator}"
+                    text=f"Requested by {ctx.author.display_name}#{ctx.author.discriminator}"
                 )
                 .add_field(
                     name="Formerly known as",
@@ -182,7 +181,7 @@ class OsuCog(commands.Cog):
                 )
             )
 
-            await interaction.edit_original_message(content="", embed=eb)
+            await ctx.send(embeds=[eb])
         else:
             request_type: ScoreType = ScoreType.BEST
 
@@ -196,21 +195,20 @@ class OsuCog(commands.Cog):
             limit: int
             prompt: str
             include_fails: bool
-            msg: nextcord.Message
+            msg: discord.Message
 
             # limit count
             if not is_from_context:
+                pr = await ctx.send(content="How many records do you want to get?")
+
                 try:
-                    await interaction.send(
-                        content="How many records do you want to get?"
-                    )
-                    msg = await self.bot.wait_for(
-                        "message", check=Utility.message_waiter(interaction), timeout=30
+                    msg: discord.Message = await self.bot.wait_for(
+                        "message", check=Utility.message_waiter(ctx), timeout=30
                     )
                     prompt = msg.content
                     await msg.delete(delay=1.0)
                 except TimeoutError:
-                    await interaction.edit_original_message(content="Timed out")
+                    await pr.edit(content="Timed out")
                     return
             else:
                 prompt = "1"
@@ -218,7 +216,7 @@ class OsuCog(commands.Cog):
             try:
                 limit = int(prompt)
             except ValueError:
-                await interaction.followup.send(
+                await ctx.send(
                     content="Invalid number provided. Please correct then run again."
                 )
                 return
@@ -226,13 +224,13 @@ class OsuCog(commands.Cog):
             # fail inclusion prompt
             if not is_from_context and request == "recents":
                 view = FailInclusionConfirmationView()
-                await interaction.followup.send(
+                fail_pr = await ctx.send(
                     content="Do you want to include fail scores?", view=view
                 )
                 await view.wait()
 
                 if not view.is_confirmed:
-                    await interaction.followup.send(content="Timed out")
+                    await fail_pr.edit(content="Timed out")
                     return
                 else:
                     include_fails = view.is_confirmed
@@ -244,7 +242,7 @@ class OsuCog(commands.Cog):
             )
 
             if len(scores) == 0:
-                await interaction.followup.send(content="No suitable scores found")
+                await ctx.send(content="No suitable scores found")
                 return
 
             embeds = []
@@ -256,7 +254,7 @@ class OsuCog(commands.Cog):
                 score_stats = score.statistics
 
                 embed = (
-                    nextcord.Embed(
+                    discord.Embed(
                         description=f"Score position #{idx + 1}",
                         color=Color.brand_red(),
                         timestamp=datetime.datetime.now(),
@@ -274,7 +272,9 @@ class OsuCog(commands.Cog):
                         inline=False,
                     )
                     .add_field(name="Ranking", value=score.rank.name)
-                    .add_field(name="Accuracy", value=score.accuracy)
+                    .add_field(
+                        name="Accuracy", value=f"{round(score.accuracy * 100, 2)}%"
+                    )
                     .add_field(
                         name="Max combo",
                         value=f"{score.max_combo}x/{beatmap.max_combo}",
@@ -298,129 +298,64 @@ class OsuCog(commands.Cog):
                 embeds.append(embed)
 
             if not is_from_context or len(embeds) != 1:
-                msg = await interaction.followup.send(embed=embeds[0])
-                pages = Paginator(
-                    msg,
-                    embeds,
-                    interaction.user,
-                    interaction.client,
-                    timeout=60,
-                    footerpage=False,
-                    footerdatetime=False,
-                    footerboticon=False,
-                )
-                await pages.start()
+                paginator = Pagination.AutoEmbedPaginator(ctx)
+                await paginator.run(embeds)
             else:
-                await interaction.followup.send(embed=embeds[0])
+                # Since we are in context menu command
+                # Or either the embed list is so small
+                await ctx.send(embed=embeds[0])
 
-    @osu.subcommand(description="Check osu! profile of a member")
+    @osu.command()
+    @app_commands.describe(
+        member="Target member", request="Request type", mode="osu! mode"
+    )
+    @app_commands.choices(
+        mode=[
+            Choice(name=k, value=v)
+            for k, v in {**osu_modes, "default": "default"}.items()
+        ],
+        request=[Choice(name=k, value=v) for k, v in request_types.items()],
+    )
     async def check_member(
         self,
-        interaction: nextcord.Interaction,
-        member: nextcord.Member = SlashOption(description="Target member"),
-        request: str = SlashOption(
-            description="Request data",
-            choices={
-                "profile": "profile",
-                "firsts": "firsts",
-                "recents": "recents",
-                "bests": "bests",
-            },
-            default="profile",
-        ),
-        mode: str = SlashOption(
-            description="Request mode",
-            choices={**osu_modes, "default": "default"},
-            default="default",
-        ),
+        ctx: commands.Context,
+        member: discord.Member,
+        request: str = "profile",
+        mode: str = "default",
     ):
-        await interaction.response.defer()
+        """Check osu! profile of a member"""
+        await ctx.defer()
         dbu, _ = globals.crud_database.get_or_create_user_record(member)
 
         if dbu.osu_username == "":
-            await interaction.edit_original_message(
-                content="This user did not linked to me"
-            )
+            await ctx.send(content="This user did not linked to me")
             return
 
         await self.__generic_check(
-            interaction,
+            ctx,
             request,
             dbu.osu_username,
             dbu.osu_mode if mode == "default" else mode,
         )
 
-    @osu.subcommand(description="Check osu! profile of a custom osu profile")
+    @osu.command()
+    @app_commands.describe(
+        username="osu! username", request="Request type", mode="osu! mode"
+    )
+    @app_commands.choices(
+        mode=[
+            Choice(name=k, value=v)
+            for k, v in {**osu_modes, "default": "default"}.items()
+        ],
+        request=[Choice(name=k, value=v) for k, v in request_types.items()],
+    )
     async def check_custom(
         self,
-        interaction: nextcord.Interaction,
-        username: str = SlashOption(description="osu! username"),
-        request: str = SlashOption(
-            description="Request data",
-            choices={
-                "profile": "profile",
-                "firsts": "firsts",
-                "recents": "recents",
-                "bests": "bests",
-            },
-            default="profile",
-        ),
-        mode: str = SlashOption(
-            description="Request mode",
-            choices={**osu_modes, "default": "default"},
-            default="default",
-        ),
+        ctx: commands.Context,
+        username: str,
+        request: str = "profile",
+        mode: str = "defaiult",
     ):
-        await interaction.response.defer()
-        await self.__generic_check(interaction, request, username, mode)
-
-    @nextcord.user_command(name="osu! - View profile", guild_ids=Config.GUILD_IDs)
-    async def user_context_menu_view_profile(
-        self, interaction: nextcord.Interaction, member: nextcord.Member
-    ):
-        await interaction.response.defer()
-        dbu, _ = globals.crud_database.get_or_create_user_record(member)
-
-        if dbu.osu_username == "":
-            await interaction.edit_original_message(
-                content="This user did not linked to me"
-            )
-            return
-
-        await self.__generic_check(
-            interaction, "profile", dbu.osu_username, "default", True
-        )
-
-    @nextcord.user_command(name="osu! - View latest score", guild_ids=Config.GUILD_IDs)
-    async def user_context_menu_view_latest_score(
-        self, interaction: nextcord.Interaction, member: nextcord.Member
-    ):
-        await interaction.response.defer()
-        dbu, _ = globals.crud_database.get_or_create_user_record(member)
-
-        if dbu.osu_username == "":
-            await interaction.edit_original_message(
-                content="This user did not linked to me"
-            )
-            return
-
-        await self.__generic_check(
-            interaction, "recents", dbu.osu_username, "default", True
-        )
-
-    @nextcord.user_command(name="osu! - View best score", guild_ids=Config.GUILD_IDs)
-    async def user_context_menu_view_best_score(
-        self, interaction: nextcord.Interaction, member: nextcord.Member
-    ):
-        await interaction.response.defer()
-        dbu, _ = globals.crud_database.get_or_create_user_record(member)
-
-        if dbu.osu_username == "":
-            await interaction.edit_original_message(
-                content="This user did not linked to me"
-            )
-            return
-
-        await self.__generic_check(
-            interaction, "bests", dbu.osu_username, "default", True
-        )
+        """Check a custom osu! profile"""
+        await ctx.defer()
+        await self.__generic_check(ctx, request, username, mode)

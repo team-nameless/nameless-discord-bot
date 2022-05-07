@@ -22,13 +22,21 @@ class ModeratorCog(commands.Cog):
 
     @staticmethod
     async def __generic_ban_kick(
-        ctx: commands.Context, reason: str, action: str, caller: Callable[[discord.Member], Awaitable[Any]], d=-1
+        ctx: commands.Context,
+        reason: str,
+        action: str,
+        caller: Callable[[discord.Member], Awaitable[Any]],
+        d=-1,
     ):
         client = ctx.bot
 
-        await ctx.send(content=f"Mention members you want to {action} with reason {reason}")
+        await ctx.send(
+            content=f"Mention members you want to {action} with reason {reason}"
+        )
 
-        msg: discord.Message = await client.wait_for("message", check=Utility.message_waiter(ctx), timeout=30)
+        msg: discord.Message = await client.wait_for(
+            "message", check=Utility.message_waiter(ctx), timeout=30
+        )
         mentioned_members = msg.mentions
         responses = []
 
@@ -63,7 +71,9 @@ class ModeratorCog(commands.Cog):
         val: int,
         zero_fn: Callable[[commands.Context, discord.Member, str], Awaitable[None]],
         three_fn: Callable[[commands.Context, discord.Member, str], Awaitable[None]],
-        diff_fn: Callable[[commands.Context, discord.Member, str, int, int], Awaitable[None]],
+        diff_fn: Callable[
+            [commands.Context, discord.Member, str, int, int], Awaitable[None]
+        ],
     ):
         await ctx.defer()
 
@@ -97,7 +107,9 @@ class ModeratorCog(commands.Cog):
         mute: bool = 1,
     ):
         await ctx.defer()
-        mute_role, is_new = await Utility.get_or_create_role(MUTE_ROLE_NAME, "Mute role creation", ctx)
+        mute_role, is_new = await Utility.get_or_create_role(
+            MUTE_ROLE_NAME, "Mute role creation", ctx
+        )
 
         if is_new:
             for channel in ctx.guild.channels:
@@ -127,7 +139,9 @@ class ModeratorCog(commands.Cog):
     @commands.bot_has_guild_permissions(ban_members=True)
     @app_commands.checks.has_permissions(ban_members=True)
     @app_commands.checks.bot_has_permissions(ban_members=True)
-    @app_commands.describe(delete_message_days="Past message days to delete", reason="Ban reason")
+    @app_commands.describe(
+        delete_message_days="Past message days to delete", reason="Ban reason"
+    )
     async def ban(
         self,
         ctx: commands.Context,
@@ -136,9 +150,13 @@ class ModeratorCog(commands.Cog):
     ):
         """Ban members, in batch"""
         if not 0 <= delete_message_days <= 7:
-            await ctx.send(content="delete_message_days must satisfy 0 <= delete_message_days <= 7")
+            await ctx.send(
+                content="delete_message_days must satisfy 0 <= delete_message_days <= 7"
+            )
         else:
-            await self.__generic_ban_kick(ctx, reason, "ban", ctx.guild.ban, delete_message_days)
+            await self.__generic_ban_kick(
+                ctx, reason, "ban", ctx.guild.ban, delete_message_days
+            )
 
     @mod.command()
     @commands.has_guild_permissions(kick_members=True)
@@ -162,9 +180,10 @@ class ModeratorCog(commands.Cog):
         self,
         ctx: commands.Context,
         member: discord.Member,
-        reason: str = "Rule violation"
+        reason: str = "Rule violation",
     ):
         """Add a warning to a member"""
+
         async def zero_fn(_ctx: commands.Context, m: discord.Member, r: str):
             pass
 
@@ -174,7 +193,9 @@ class ModeratorCog(commands.Cog):
             pass
 
         async def three_fn(_ctx: commands.Context, m: discord.Member, r: str):
-            role, no = await Utility.get_or_create_role(MUTE_ROLE_NAME, "Mute role creation", _ctx)
+            role, no = await Utility.get_or_create_role(
+                MUTE_ROLE_NAME, "Mute role creation", _ctx
+            )
 
             if no:
                 for channel in _ctx.guild.channels:
@@ -200,7 +221,7 @@ class ModeratorCog(commands.Cog):
         self,
         ctx: commands.Context,
         member: discord.Member,
-        reason: str = "Good behavior"
+        reason: str = "Good behavior",
     ):
         """Remove a warning from a member"""
 
@@ -211,7 +232,9 @@ class ModeratorCog(commands.Cog):
             _ctx: commands.Context, m: discord.Member, r: str, current: int, prev: int
         ):
             if prev == 3:
-                role, _ = await Utility.get_or_create_role(MUTE_ROLE_NAME, "Mute role creation", _ctx)
+                role, _ = await Utility.get_or_create_role(
+                    MUTE_ROLE_NAME, "Mute role creation", _ctx
+                )
                 if any(grole.name == MUTE_ROLE_NAME for grole in m.roles):
                     await m.remove_roles(role, reason=r)
 
@@ -230,7 +253,7 @@ class ModeratorCog(commands.Cog):
         self,
         ctx: commands.Context,
         member: discord.Member,
-        reason: str = "Rule violation"
+        reason: str = "Rule violation",
     ):
         """Mute a member"""
         await self.__generic_mute(ctx, member, reason)
@@ -243,6 +266,6 @@ class ModeratorCog(commands.Cog):
         self,
         ctx: commands.Context,
         member: discord.Member,
-        reason: str = "Good behavior"
+        reason: str = "Good behavior",
     ):
         await self.__generic_mute(ctx, member, reason, False)

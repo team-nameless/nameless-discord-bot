@@ -61,6 +61,7 @@ class Utility:
         :param ctx: Current context.
         :return: The waiter function.
         """
+
         def message_checker(message: discord.Message) -> bool:
             return (
                 message.author.id == ctx.author.id
@@ -70,7 +71,9 @@ class Utility:
         return message_checker
 
     @staticmethod
-    async def get_or_create_role(name: str, reason: str, ctx: commands.Context) -> tuple[discord.Role, bool]:
+    async def get_or_create_role(
+        name: str, reason: str, ctx: commands.Context
+    ) -> tuple[discord.Role, bool]:
         """
         Get or create new role.
         :param ctx: Current context.

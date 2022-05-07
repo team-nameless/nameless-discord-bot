@@ -3,7 +3,6 @@ sqlalchemy
 psycopg2-binary
 ossapi
 discord-together
-wavelink
 pymongo
 pymongo[srv]
 git+https://github.com/Rapptz/discord.py

@@ -21,7 +21,6 @@ class CRUD:
 
     def __init__(self):
         self.is_mongo = Config.DATABASE["dialect"] == "mongodb"
-        print(Utility.get_db_url())
 
         if self.is_mongo:
             # I know, the db_name is used twice, can't fix that
@@ -44,7 +43,7 @@ class CRUD:
             Base.metadata.create_all(self.engine)
 
     @property
-    def current_session(self) -> sessionmaker():
+    def current_session(self) -> sessionmaker:
         """
         Current session, None in MongoDB.
         """
@@ -88,7 +87,7 @@ class CRUD:
 
         return g, False
 
-    def __get_user_record(self, user: discord.User) -> Optional[DbUser]:
+    def get_user_record(self, user: discord.User) -> Optional[DbUser]:
         if self.is_mongo:
             record = self.mongo_users.find_one({"id": user.id})
             if record:
@@ -98,7 +97,7 @@ class CRUD:
 
         return self.session.query(DbUser).filter_by(id=user.id).one_or_none()
 
-    def __get_guild_record(self, guild: discord.Guild) -> Optional[DbGuild]:
+    def get_guild_record(self, guild: discord.Guild) -> Optional[DbGuild]:
         if self.is_mongo:
             record = self.mongo_guilds.find_one({"id": guild.id})
             if record:
@@ -108,7 +107,7 @@ class CRUD:
 
         return self.session.query(DbGuild).filter_by(id=guild.id).one_or_none()
 
-    def __create_user_record(self, user: discord.User) -> DbUser:
+    def create_user_record(self, user: discord.User) -> DbUser:
         decoy_user = DbUser(_id=user.id)
 
         if self.is_mongo:
@@ -122,7 +121,7 @@ class CRUD:
 
         return self.session.query(DbUser).filter_by(id=user.id).one()
 
-    def __create_guild_record(self, guild: discord.Guild) -> DbGuild:
+    def create_guild_record(self, guild: discord.Guild) -> DbGuild:
         decoy_guild = DbGuild(_id=guild.id)
 
         if self.is_mongo:

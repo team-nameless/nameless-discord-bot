@@ -18,25 +18,15 @@ class CRUD:
     """
     Basic database CRUD operations.
     """
-
-    def __should_mongo(self) -> bool:
-        if Config.DATABASE and Config.MONGODB:
-            self.is_mongo = True
-        elif not Config.DATABASE and Config.MONGODB:
-            self.is_mongo = True
-        elif Config.DATABASE and not Config.MONGODB:
-            self.is_mongo = False
-        else:
-            self.is_mongo = False
-
-        return self.is_mongo
-
     def __init__(self):
-        if self.__should_mongo():
+        self.is_mongo = Config.DATABASE["dialect"] == "mongodb"
+        print(Utility.get_db_url())
+
+        if self.is_mongo:
             # I know, the db_name is used twice, can't fix that
             self.mongo_engine: Database = pymongo.MongoClient(
-                Utility.get_mongo_db_url()
-            )[Config.MONGODB["db_name"]]
+                Utility.get_db_url()
+            )[Config.DATABASE["db_name"]]
 
             self.mongo_guilds: Collection = self.mongo_engine.get_collection(
                 DbGuild.__tablename__
@@ -45,7 +35,6 @@ class CRUD:
                 DbUser.__tablename__
             )
         else:
-            # print(Utility.get_db_url())
             self.engine = create_engine(
                 Utility.get_db_url(), logging_name=Config.DATABASE["db_name"]
             )

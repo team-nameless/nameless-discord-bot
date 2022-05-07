@@ -18,15 +18,16 @@ class CRUD:
     """
     Basic database CRUD operations.
     """
+
     def __init__(self):
         self.is_mongo = Config.DATABASE["dialect"] == "mongodb"
         print(Utility.get_db_url())
 
         if self.is_mongo:
             # I know, the db_name is used twice, can't fix that
-            self.mongo_engine: Database = pymongo.MongoClient(
-                Utility.get_db_url()
-            )[Config.DATABASE["db_name"]]
+            self.mongo_engine: Database = pymongo.MongoClient(Utility.get_db_url())[
+                Config.DATABASE["db_name"]
+            ]
 
             self.mongo_guilds: Collection = self.mongo_engine.get_collection(
                 DbGuild.__tablename__

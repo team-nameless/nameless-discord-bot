@@ -1,9 +1,9 @@
 import discord
 import discord_together
-from discord_together.discordTogetherMain import defaultApplications
-from discord.ext import commands
 from discord import app_commands
 from discord.app_commands import Choice
+from discord.ext import commands
+from discord_together.discordTogetherMain import defaultApplications
 
 from config import Config
 

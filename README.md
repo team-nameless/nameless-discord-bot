@@ -11,7 +11,8 @@ A rewrite of [original nameless*](https://github.com/FoxeiZ/nameless)
 ## How to run this bot?
 
 - First, install `python3`, latest version preferred.
-- Second, create a virtual environment so your global `python3` won't be badly affected and activate it (most IDEs automatically activate it for you)
+- Second, create a virtual environment so your global `python3` won't be badly affected and activate it (most IDEs
+  automatically activate it for you)
 
 ```shell
 python3 -m venv venv
@@ -24,7 +25,10 @@ source venv/bin/activate
 pip install -r requirements_core.txt
 ```
 
-- After that, create a config file naming `config.py` and [fill it](https://github.com/Lilia-Workshop/nameless/wiki/config.py). Also [setup your database](https://github.com/Lilia-Workshop/nameless/wiki/Setup-database-(PostgreSQL)) (PostgreSQL for example, YMMV. We also support MongoDB/MongoDB Atlas).
+- After that, create a config file naming `config.py`
+  and [fill it](https://github.com/Lilia-Workshop/nameless/wiki/config.py).
+  Also [setup your database](https://github.com/Lilia-Workshop/nameless/wiki/Setup-database-(PostgreSQL)) (PostgreSQL
+  for example, YMMV. We also support MongoDB/MongoDB Atlas).
 
 - Lastly, run the `main.py` file:
 
@@ -39,13 +43,15 @@ See [CONTRIBUTING.md](https://github.com/Lilia-Workshop/nameless/blob/main/CONTR
 ## Oh look, there are branches!
 
 - `main`: Stable codes that is ready for production.
-- `dev`: Changes that might not backward-compatible with `main`, and will be pushed to production at a later time after careful testing and reviewing.
+- `dev`: Changes that might not backward-compatible with `main`, and will be pushed to production at a later time after
+  careful testing and reviewing.
 - `feat/{name}`: New features that will be pushed to `dev`
 - `fix/{#}` or `fix/{name}`: Bug fixes that will be pushed to EITHER `main` OR `dev`, depending on its severity.
 
 ## Hey! I wanna throw money at you!
 
-- Oh, thank you for your generosity! You can look for the sponsor button or some link at the sidebar, any value is appreciated.
+- Oh, thank you for your generosity! You can look for the sponsor button or some link at the sidebar, any value is
+  appreciated.
 
 ----------------------------------------
 

@@ -93,9 +93,11 @@ class ModeratorCog(commands.Cog):
             await diff_fn(ctx, member, reason, u.warn_count, u.warn_count - val)
 
         # await member.send()
-        await ctx.send(f"{'Removed' if val < 0 else 'Added'} {abs(val)} warn to {member.mention}"
-                       "with reason: {reason}\n"
-                       f"Now they have {u.warn_count} warn(s)")
+        await ctx.send(
+            f"{'Removed' if val < 0 else 'Added'} {abs(val)} warn to {member.mention}"
+            "with reason: {reason}\n"
+            f"Now they have {u.warn_count} warn(s)"
+        )
 
     @staticmethod
     async def __generic_mute(
@@ -148,7 +150,9 @@ class ModeratorCog(commands.Cog):
     ):
         """Ban members, in batch"""
         if not 0 <= delete_message_days <= 7:
-            await ctx.send("delete_message_days must satisfy 0 <= delete_message_days <= 7")
+            await ctx.send(
+                "delete_message_days must satisfy 0 <= delete_message_days <= 7"
+            )
         else:
             await self.__generic_ban_kick(
                 ctx, reason, "ban", ctx.guild.ban, delete_message_days

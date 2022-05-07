@@ -216,13 +216,17 @@ class OsuCog(commands.Cog):
             try:
                 limit = int(prompt)
             except ValueError:
-                await ctx.send("Invalid number provided. Please correct then run again.")
+                await ctx.send(
+                    "Invalid number provided. Please correct then run again."
+                )
                 return
 
             # fail inclusion prompt
             if not is_from_context and request == "recents":
                 view = FailInclusionConfirmationView()
-                fail_pr = await ctx.send("Do you want to include fail scores?", view=view)
+                fail_pr = await ctx.send(
+                    "Do you want to include fail scores?", view=view
+                )
                 await view.wait()
 
                 if not view.is_confirmed:

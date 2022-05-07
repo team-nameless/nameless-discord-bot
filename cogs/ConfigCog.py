@@ -87,7 +87,9 @@ class ConfigCog(commands.Cog):
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.describe(dest_channel="Goodbye message delivery channel")
     async def set_goodbye_channel(
-        self, ctx: commands.Context, dest_channel: Union[discord.TextChannel, app_commands.models.AppCommandThread]
+        self,
+        ctx: commands.Context,
+        dest_channel: Union[discord.TextChannel, app_commands.models.AppCommandThread],
     ):
         """Change goodbye message delivery channel"""
         await ctx.defer()
@@ -100,7 +102,9 @@ class ConfigCog(commands.Cog):
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.describe(dest_channel="Welcome message delivery channel")
     async def set_welcome_channel(
-        self, ctx: commands.Context, dest_channel: Union[discord.TextChannel, app_commands.models.AppCommandThread]
+        self,
+        ctx: commands.Context,
+        dest_channel: Union[discord.TextChannel, app_commands.models.AppCommandThread],
     ):
         """Change welcome message delivery channel"""
         await ctx.defer()
@@ -117,7 +121,9 @@ class ConfigCog(commands.Cog):
         dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.is_welcome_enabled = not dbg.is_welcome_enabled
         crud_database.save_changes(guild_record=dbg)
-        await ctx.send(f"Welcome message delivery is now {'enabled' if dbg.is_welcome_enabled else 'disabled'}")
+        await ctx.send(
+            f"Welcome message delivery is now {'enabled' if dbg.is_welcome_enabled else 'disabled'}"
+        )
 
     @config.command()
     @app_commands.checks.has_permissions(manage_guild=True)
@@ -127,7 +133,9 @@ class ConfigCog(commands.Cog):
         dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.is_goodbye_enabled = not dbg.is_goodbye_enabled
         crud_database.save_changes(guild_record=dbg)
-        await ctx.send(f"Goodbye message delivery is now {'enabled' if dbg.is_welcome_enabled else 'disabled'}")
+        await ctx.send(
+            f"Goodbye message delivery is now {'enabled' if dbg.is_welcome_enabled else 'disabled'}"
+        )
 
     @config.command()
     @app_commands.checks.has_permissions(manage_guild=True)
@@ -141,4 +149,6 @@ class ConfigCog(commands.Cog):
             "{tag}": "The 4-digit after #.\nAvailability: Welcome+Goodbye.",
         }
 
-        await ctx.send("\n".join(f"**{key}**\n{value}\n" for key, value in placeholders.items()))
+        await ctx.send(
+            "\n".join(f"**{key}**\n{value}\n" for key, value in placeholders.items())
+        )

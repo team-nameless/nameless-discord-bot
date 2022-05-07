@@ -36,7 +36,7 @@ pip install -r requirements_core.txt
 python3 main.py
 ```
 
-## Noice, your code is so cool, and I wanna contribute my parts on them!
+## Noice, your code is so cool, and I wanna contribute my parts on them
 
 See [CONTRIBUTING.md](https://github.com/Lilia-Workshop/nameless/blob/main/CONTRIBUTING.md)
 
@@ -46,7 +46,7 @@ See [CONTRIBUTING.md](https://github.com/Lilia-Workshop/nameless/blob/main/CONTR
 - `feat/{name}`: New features that will be pushed to `main`
 - `fix/{#}` or `fix/{name}`: Bug fixes that will be pushed after passing checks.
 
-## Hey! I wanna throw money at you!
+## Hey! I wanna throw money at you
 
 - Oh, thank you for your generosity! You can look for the sponsor button or some link at the sidebar, any value is
   appreciated.

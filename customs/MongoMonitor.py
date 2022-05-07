@@ -103,6 +103,9 @@ class TopologyLogger(monitoring.TopologyListener):
 class ConnectionPoolLogger(monitoring.ConnectionPoolListener):
     def pool_created(self, event):
         logging.info("[pool {0.address}] pool created".format(event))
+        
+    def pool_ready(self, event) -> None:
+        logging.info("[pool {0.address}] pool created".format(event))
 
     def pool_cleared(self, event):
         logging.info("[pool {0.address}] pool cleared".format(event))
@@ -151,8 +154,8 @@ class ConnectionPoolLogger(monitoring.ConnectionPoolListener):
         )
 
 
-monitoring.register(CommandLogger())
 monitoring.register(ServerLogger())
 monitoring.register(HeartbeatLogger())
 monitoring.register(TopologyLogger())
 monitoring.register(ConnectionPoolLogger())
+monitoring.register(CommandLogger())

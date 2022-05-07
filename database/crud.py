@@ -23,8 +23,8 @@ class CRUD:
         self.is_mongo = Config.DATABASE["dialect"] == "mongodb"
 
         if self.is_mongo:
-            # I know, the db_name is used twice, can't fix that
-            self.mongo_engine: Database = pymongo.MongoClient(Utility.get_db_url())[
+            self.mongo_client = pymongo.MongoClient(Utility.get_db_url())
+            self.mongo_engine: Database = self.mongo_client[
                 Config.DATABASE["db_name"]
             ]
 
@@ -189,6 +189,6 @@ class CRUD:
 
     def close_all_sessions(self) -> None:
         if self.is_mongo:
-            pass
+            self.mongo_client.close()
         else:
             close_all_sessions()

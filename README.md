@@ -40,13 +40,11 @@ python3 main.py
 
 See [CONTRIBUTING.md](https://github.com/Lilia-Workshop/nameless/blob/main/CONTRIBUTING.md)
 
-## Oh look, there are branches!
+## Oh look, there are branches
 
 - `main`: Stable codes that is ready for production.
-- `dev`: Changes that might not backward-compatible with `main`, and will be pushed to production at a later time after
-  careful testing and reviewing.
-- `feat/{name}`: New features that will be pushed to `dev`
-- `fix/{#}` or `fix/{name}`: Bug fixes that will be pushed to EITHER `main` OR `dev`, depending on its severity.
+- `feat/{name}`: New features that will be pushed to `main`
+- `fix/{#}` or `fix/{name}`: Bug fixes that will be pushed after passing checks.
 
 ## Hey! I wanna throw money at you!
 

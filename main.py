@@ -16,6 +16,7 @@ class Nameless(commands.AutoShardedBot):
         await client.add_cog(cogs.ActivityCog(client))
         await client.add_cog(cogs.ConfigCog(client))
         await client.add_cog(cogs.ModeratorCog(client))
+        await client.add_cog(cogs.OsuCog(client))
 
     async def on_shard_ready(self, shard_id: int):
         logging.info("Shard #{0} is ready".format(shard_id))

@@ -18,7 +18,8 @@ class ModeratorCog(commands.Cog):
     @commands.hybrid_group(fallback="do-not-use")
     @app_commands.guilds(*Config.GUILD_IDs)
     async def mod(self, ctx: commands.Context):
-        await ctx.send(content="You found the matrix!")
+        """Nothing here!"""
+        await ctx.send("You found the matrix!")
 
     @staticmethod
     async def __generic_ban_kick(
@@ -30,9 +31,7 @@ class ModeratorCog(commands.Cog):
     ):
         client = ctx.bot
 
-        await ctx.send(
-            content=f"Mention members you want to {action} with reason {reason}"
-        )
+        await ctx.send(f"Mention members you want to {action} with reason {reason}")
 
         msg: discord.Message = await client.wait_for(
             "message", check=Utility.message_waiter(ctx), timeout=30
@@ -61,7 +60,7 @@ class ModeratorCog(commands.Cog):
 
             responses.append(response)
 
-        await ctx.send(content="\n".join(responses))
+        await ctx.send("\n".join(responses))
 
     @staticmethod
     async def __generic_warn(
@@ -80,7 +79,7 @@ class ModeratorCog(commands.Cog):
         u, _ = crud_database.get_or_create_user_record(member)
 
         if (u.warn_count == 0 and val < 0) or (u.warn_count == 3 and val > 0):
-            await ctx.send(content=f"The user already have {u.warn_count} warn(s).")
+            await ctx.send(f"The user already have {u.warn_count} warn(s).")
             return
 
         u.warn_count += val
@@ -94,10 +93,9 @@ class ModeratorCog(commands.Cog):
             await diff_fn(ctx, member, reason, u.warn_count, u.warn_count - val)
 
         # await member.send()
-        await ctx.send(
-            content=f"{'Removed' if val < 0 else 'Added'} {abs(val)} warn to {member.mention} with reason: {reason}\n"
-            f"Now they have {u.warn_count} warn(s)"
-        )
+        await ctx.send(f"{'Removed' if val < 0 else 'Added'} {abs(val)} warn to {member.mention}"
+                       "with reason: {reason}\n"
+                       f"Now they have {u.warn_count} warn(s)")
 
     @staticmethod
     async def __generic_mute(
@@ -124,15 +122,15 @@ class ModeratorCog(commands.Cog):
         if is_muted:
             if not mute:
                 await member.remove_roles(mute_role, reason=reason)
-                await ctx.send(content="Unmuted")
+                await ctx.send("Unmuted")
             else:
-                await ctx.send(content="Already muted")
+                await ctx.send("Already muted")
         else:
             if mute:
                 await member.add_roles(mute_role, reason=reason)
-                await ctx.send(content="Muted")
+                await ctx.send("Muted")
             else:
-                await ctx.send(content="Already unmuted")
+                await ctx.send("Already unmuted")
 
     @mod.command()
     @commands.has_guild_permissions(ban_members=True)
@@ -150,9 +148,7 @@ class ModeratorCog(commands.Cog):
     ):
         """Ban members, in batch"""
         if not 0 <= delete_message_days <= 7:
-            await ctx.send(
-                content="delete_message_days must satisfy 0 <= delete_message_days <= 7"
-            )
+            await ctx.send("delete_message_days must satisfy 0 <= delete_message_days <= 7")
         else:
             await self.__generic_ban_kick(
                 ctx, reason, "ban", ctx.guild.ban, delete_message_days

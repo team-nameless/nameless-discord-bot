@@ -96,7 +96,7 @@ class OsuCog(commands.Cog):
         dbu, _ = globals.crud_database.get_or_create_user_record(ctx.author)
         dbu.osu_username, dbu.osu_mode = username, mode
         globals.crud_database.save_changes(user_record=dbu)
-        await ctx.send(content="Updated")
+        await ctx.send("Updated")
 
     @osu.command()
     @app_commands.describe(
@@ -115,7 +115,7 @@ class OsuCog(commands.Cog):
         dbu, _ = globals.crud_database.get_or_create_user_record(member)
         dbu.osu_username, dbu.osu_mode = username, mode
         globals.crud_database.save_changes(user_record=dbu)
-        await ctx.send(content="Updated")
+        await ctx.send("Updated")
 
     async def __generic_check(
         self,
@@ -125,7 +125,7 @@ class OsuCog(commands.Cog):
         mode: str,
         is_from_context: bool = False,
     ):
-        await ctx.send(content="Processing")
+        m = await ctx.send("Processing")
 
         osu_user: Optional[User]
         the_mode = None if mode == "default" else convert_to_game_mode(mode)
@@ -181,7 +181,7 @@ class OsuCog(commands.Cog):
                 )
             )
 
-            await ctx.send(embeds=[eb])
+            await m.edit(embeds=[eb])
         else:
             request_type: ScoreType = ScoreType.BEST
 
@@ -199,7 +199,7 @@ class OsuCog(commands.Cog):
 
             # limit count
             if not is_from_context:
-                pr = await ctx.send(content="How many records do you want to get?")
+                pr = await m.edit(content="How many records do you want to get?")
 
                 try:
                     msg: discord.Message = await self.bot.wait_for(
@@ -216,21 +216,17 @@ class OsuCog(commands.Cog):
             try:
                 limit = int(prompt)
             except ValueError:
-                await ctx.send(
-                    content="Invalid number provided. Please correct then run again."
-                )
+                await ctx.send("Invalid number provided. Please correct then run again.")
                 return
 
             # fail inclusion prompt
             if not is_from_context and request == "recents":
                 view = FailInclusionConfirmationView()
-                fail_pr = await ctx.send(
-                    content="Do you want to include fail scores?", view=view
-                )
+                fail_pr = await ctx.send("Do you want to include fail scores?", view=view)
                 await view.wait()
 
                 if not view.is_confirmed:
-                    await fail_pr.edit(content="Timed out")
+                    await fail_pr.edit(content="Timed out", view=None)
                     return
                 else:
                     include_fails = view.is_confirmed
@@ -242,7 +238,7 @@ class OsuCog(commands.Cog):
             )
 
             if len(scores) == 0:
-                await ctx.send(content="No suitable scores found")
+                await ctx.send("No suitable scores found")
                 return
 
             embeds = []

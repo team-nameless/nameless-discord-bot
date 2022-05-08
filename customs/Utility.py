@@ -26,7 +26,7 @@ class Utility:
         password = qp(f":{db['password']}", safe=":") if db["password"] else ""
         at = qp("@", safe="@") if username and password else ""
         host = db["host"]
-        port = qp(f":{db['port']}", safe=':') if db["port"] else ""
+        port = qp(f":{db['port']}", safe=":") if db["port"] else ""
         db_name = db["db_name"]
         return f"{dialect}{driver}://{username}{password}{at}{host}{port}/{db_name}"
 

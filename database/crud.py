@@ -24,9 +24,7 @@ class CRUD:
 
         if self.is_mongo:
             self.mongo_client = pymongo.MongoClient(Utility.get_db_url())
-            self.mongo_engine: Database = self.mongo_client[
-                Config.DATABASE["db_name"]
-            ]
+            self.mongo_engine: Database = self.mongo_client[Config.DATABASE["db_name"]]
 
             self.mongo_guilds: Collection = self.mongo_engine.get_collection(
                 DbGuild.__tablename__

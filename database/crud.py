@@ -5,7 +5,7 @@ import pymongo
 from pymongo.collection import Collection
 from pymongo.database import Database
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.orm.session import close_all_sessions
 from sqlalchemy.util import IdentitySet
 
@@ -43,7 +43,7 @@ class CRUD:
             Base.metadata.create_all(self.engine)
 
     @property
-    def current_session(self) -> sessionmaker:
+    def current_session(self) -> Session:
         """
         Current session, None in MongoDB.
         """
@@ -69,9 +69,9 @@ class CRUD:
         :param user: User entity of discord.
         :return: User record in database. True if the returned record is the new one, False otherwise.
         """
-        u = self.__get_user_record(user)
+        u = self.get_user_record(user)
         if not u:
-            return self.__create_user_record(user), True
+            return self.create_user_record(user), True
 
         return u, False
 
@@ -81,9 +81,9 @@ class CRUD:
         :param guild: Guild entity of discord.
         :return: Guild record in database. True if the returned record is the new one, False otherwise.
         """
-        g = self.__get_guild_record(guild)
+        g = self.get_guild_record(guild)
         if not g:
-            return self.__create_guild_record(guild), True
+            return self.create_guild_record(guild), True
 
         return g, False
 

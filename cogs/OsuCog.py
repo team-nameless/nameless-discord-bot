@@ -290,7 +290,7 @@ class OsuCog(commands.Cog):
                     )
                     .add_field(
                         name="PP",
-                        value=f"{score.pp} * {score.weight.percentage}% = {score.weight.pp}"
+                        value=f"{score.pp} * {round(score.weight.percentage, 3)}% = {round(score.weight.pp, 3)}"
                         if score.weight is not None
                         else "0",
                     )

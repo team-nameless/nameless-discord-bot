@@ -178,7 +178,8 @@ class OsuCog(commands.Cog):
             )
 
             if osu_user.previous_usernames:
-                eb.add_field(
+                eb.insert_field_at(
+                    index=0
                     name="Formerly known as",
                     value=", ".join(osu_user.previous_usernames),
                 )

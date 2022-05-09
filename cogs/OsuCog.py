@@ -150,10 +150,6 @@ class OsuCog(commands.Cog):
                 .set_footer(
                     text=f"Requested by {ctx.author.display_name}#{ctx.author.discriminator}"
                 )
-                .add_field(
-                    name="Formerly known as",
-                    value=", ".join(osu_user.previous_usernames),
-                )
                 .add_field(name="Join date", value=osu_user.join_date)
                 .add_field(
                     name="Level",
@@ -180,6 +176,13 @@ class OsuCog(commands.Cog):
                     f"{user_stats.grade_counts.a}",
                 )
             )
+
+            if osu_user.previous_usernames:
+                eb.insert_field_at(
+                    index=0,
+                    name="Formerly known as",
+                    value=", ".join(osu_user.previous_usernames),
+                )
 
             await m.edit(embeds=[eb])
         else:
@@ -288,7 +291,7 @@ class OsuCog(commands.Cog):
                     )
                     .add_field(
                         name="PP",
-                        value=f"{score.pp} * {score.weight.percentage}% = {score.weight.pp}"
+                        value=f"{score.pp} * {round(score.weight.percentage, 3)}% = {round(score.weight.pp, 3)}"
                         if score.weight is not None
                         else "0",
                     )

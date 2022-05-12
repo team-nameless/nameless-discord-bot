@@ -1,5 +1,6 @@
 import datetime
 import logging
+import math
 import random
 from typing import List, Any, Type
 
@@ -65,7 +66,7 @@ class VoteSkip:
     ):
         self.track = track
         self.ctx = ctx
-        self.max_vote_user = round(len(voice_client.channel.members) / 2)
+        self.max_vote_user = math.ceil(len(voice_client.channel.members) / 2)
         self.total_vote = 1
 
         self.approve_member = [ctx.author.mention]

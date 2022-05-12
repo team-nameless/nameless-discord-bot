@@ -3,7 +3,9 @@ import logging
 import random
 from typing import List, Any, Type
 
+import DiscordUtils
 import discord
+import discord.utils as d_utils
 import wavelink
 from discord import app_commands
 from discord.app_commands import Choice
@@ -70,7 +72,6 @@ class VoteSkip:
         self.disapprove_member = []
 
     async def start(self):
-
         if self.max_vote_user <= 1:
             return True
 
@@ -329,7 +330,7 @@ class MusicCog(commands.Cog):
             await ctx.send("Currently playing a stream, consider stopping it")
             return
 
-        if not vc.queue:
+        if vc.queue.is_empty:
             await ctx.send("Queue is empty")
             return
 
@@ -380,15 +381,11 @@ class MusicCog(commands.Cog):
                 .set_author(name="Now playing track", icon_url=ctx.author.avatar.url)
                 .add_field(
                     name="Title",
-                    value=discord.utils.escape_markdown(track.title),
+                    value=d_utils.escape_markdown(track.title),
                     inline=False,
                 )
-                .add_field(
-                    name="Author", value=discord.utils.escape_markdown(track.author)
-                )
-                .add_field(
-                    name="Source", value=discord.utils.escape_markdown(track.uri)
-                )
+                .add_field(name="Author", value=d_utils.escape_markdown(track.author))
+                .add_field(name="Source", value=d_utils.escape_markdown(track.uri))
                 .add_field(
                     name="Playtime" if is_stream else "Position",
                     value=str(
@@ -405,7 +402,54 @@ class MusicCog(commands.Cog):
     @music.group(fallback="view")
     async def queue(self, ctx: commands.Context):
         """View current queue"""
-        pass
+        await ctx.defer()
+
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
+
+        if vc.queue.is_empty:
+            await ctx.send("The queue is empty")
+            return
+
+        txt = ""
+        copycat = vc.queue.copy()
+        idx = 1
+        embeds = []
+
+        try:
+            while track := copycat.get():
+                upcoming = (
+                    f"{idx} - "
+                    f"[{d_utils.escape_markdown(track.title)} by {d_utils.escape_markdown(track.author)}]"
+                    f"({track.uri})\n"
+                )
+
+                if len(txt) + len(upcoming) > 2048:
+                    eb = discord.Embed(
+                        title="Tracks currently in queue",
+                        color=discord.Color.orange(),
+                        description=txt,
+                    )
+                    embeds.append(eb)
+                    txt = upcoming
+                else:
+                    txt += upcoming
+
+                idx += 1
+        except wavelink.QueueEmpty:
+            # Nothing else in queue
+            pass
+        finally:
+            # Add the last bits
+            embeds.append(
+                discord.Embed(
+                    title="Tracks currently in queue",
+                    color=discord.Color.orange(),
+                    description=txt,
+                )
+            )
+
+        p = DiscordUtils.Pagination.AutoEmbedPaginator(ctx)
+        await p.run(embeds)
 
     @queue.command()
     @app_commands.describe(search="Search query", source="Source to search")
@@ -516,7 +560,7 @@ class MusicCog(commands.Cog):
 
         vc: wavelink.Player = ctx.voice_client  # type: ignore
 
-        if not vc.queue:
+        if vc.queue.is_empty:
             await ctx.send("There is nothing in queue")
             return
 
@@ -531,11 +575,11 @@ class MusicCog(commands.Cog):
 
         vc: wavelink.Player = ctx.voice_client  # type: ignore
 
-        if not vc.queue:
+        if vc.queue.is_empty:
             await ctx.send("The queue is already empty")
             return
 
-        vc.queue = wavelink.WaitQueue()
+        vc.queue.clear()
         await ctx.send("Shuffled the queue")
 
     @music.before_invoke

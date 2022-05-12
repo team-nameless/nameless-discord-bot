@@ -323,7 +323,7 @@ class MusicCog(commands.Cog):
         tracks = await search_cls.search(query=search)
 
         if not tracks:
-            await ctx.send(f"No tracks found for {search} on {source}")
+            await ctx.send(f"No tracks found for {search} on {source}, have you tried passing search query instead?")
             return
 
         view = discord.ui.View()
@@ -357,26 +357,40 @@ class MusicCog(commands.Cog):
 
     @queue.command()
     @app_commands.describe(url="Playlist URL", source="Source to get playlist")
-    @app_commands.choices(source=[
+    @app_commands.choices(
+        source=[
             Choice(name=k, value=k)
             for k in ["youtube", "soundcloud", "spotify", "ytmusic"]
-        ])
-    async def enqueue_playlist(self, ctx: commands.Context, search: str, source: str = "youtube"):
+        ]
+    )
+    async def enqueue_playlist(
+        self, ctx: commands.Context, url: str, source: str = "youtube"
+    ):
         """Add tracks from playlist to queue"""
         await ctx.defer()
 
         tracks: List[wavelink.SearchableTrack] = []
 
         match source:
+            case "youtube":
+                tracks = (await wavelink.YouTubePlaylist.search(query=url)).tracks
             case "ytmusic":
-                tracks = await wavelink.YouTubePlaylist.search(query=search)
+                tracks = await wavelink.YouTubeMusicTrack.search(query=url)
             case "spotify":
-                tracks = await spotify.SpotifyTrack.search(query=search, type=spotify.SpotifySearchType.playlist)
+                tracks = await spotify.SpotifyTrack.search(
+                    query=url, type=spotify.SpotifySearchType.playlist
+                )
             case "soundcloud":
-                tracks = await wavelink.SoundCloudTrack.search(query=search)
+                tracks = await wavelink.SoundCloudTrack.search(query=url)
 
+        if not tracks:
+            await ctx.send(f"No tracks found for {url} on {source}, have you checked your URL?")
+            return
 
+        player: wavelink.Player = ctx.voice_client  # type: ignore
+        player.queue.extend(tracks)
 
+        await ctx.send(f"Add {len(tracks)} track(s) from {url} to the queue")
 
     @queue.command()
     @commands.has_guild_permissions(manage_guild=True)
@@ -435,6 +449,7 @@ class MusicCog(commands.Cog):
     @now_playing.before_invoke
     @play_queue.before_invoke
     @enqueue.before_invoke
+    @enqueue_playlist.before_invoke
     @clear.before_invoke
     @shuffle.before_invoke
     async def bot_in_voice_before_invoke(self, ctx: commands.Context):

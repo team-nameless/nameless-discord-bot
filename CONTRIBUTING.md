@@ -63,7 +63,7 @@ pip install -U -r requirements_dev.txt
           alembic revision --autogenerate -m "Message here"
           alembic upgrade head
           ```
-          
-          - If you are experiencing `Target database is not up to date`, run `alembic stamp head` first. 
+
+            - If you are experiencing `Target database is not up to date`, run `alembic stamp head` first. 
   
     

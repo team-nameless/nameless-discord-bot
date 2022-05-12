@@ -40,7 +40,7 @@ class TrackPickDropdown(discord.ui.Select):
             options=options,
         )
 
-    def callback(self, _: discord.Interaction) -> Any:
+    async def callback(self, _: discord.Interaction) -> Any:
         v: discord.ui.View = self.view
         v.stop()
 

@@ -565,7 +565,7 @@ class MusicCog(commands.Cog):
             await ctx.send("There is nothing in queue")
             return
 
-        random.shuffle(vc.queue)
+        random.shuffle(vc.queue._queue)
         await ctx.send("Shuffled the queue")
 
     @queue.command()

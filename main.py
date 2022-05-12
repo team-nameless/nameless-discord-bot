@@ -41,7 +41,13 @@ class Nameless(commands.AutoShardedBot):
         await client.change_presence(
             status=Config.STATUS["user_status"],
             activity=discord.Activity(
-                type=Config.STATUS["type"],
+                type=Config.STATUS["type"]
+                if Config.STATUS["type"]
+                or (
+                    Config.STATUS["type"] == discord.ActivityType.streaming
+                    and Config.STATUS["url"]
+                )
+                else discord.ActivityType.playing,
                 name=Config.STATUS["name"],
                 url=Config.STATUS["url"] if Config.STATUS["url"] else None,
             ),
@@ -103,5 +109,4 @@ intents.guild_messages = True
 intents.members = True
 
 client = Nameless(intents=discord.Intents.all(), command_prefix=Config.PREFIXES)
-
 client.run(Config.TOKEN)

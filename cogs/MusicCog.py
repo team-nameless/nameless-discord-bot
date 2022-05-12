@@ -64,6 +64,8 @@ class MusicCog(commands.Cog):
                     client_secret=Config.LAVALINK["spotify"]["client_secret"],
                 )
                 if Config.LAVALINK["spotify"]
+                and Config.LAVALINK["spotify"]["client_id"]
+                and Config.LAVALINK["spotify"]["client_secret"]
                 else None,
             )
 

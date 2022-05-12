@@ -14,6 +14,118 @@ import globals
 from config import Config
 
 
+class VoteSkipView(discord.ui.View):
+    __slots__ = ("user", "value")
+
+    def __init__(self):
+        super().__init__(timeout=15)
+        self.user = None
+        self.value = None
+
+    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green)
+    async def approve(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        self.value = True
+        self.user = interaction.user.mention
+
+        self.stop()
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.grey)
+    async def disapprove(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        self.value = False
+        self.user = interaction.user.mention
+
+        self.stop()
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        await interaction.response.defer()
+        return True
+
+
+class VoteSkip:
+    __slots__ = (
+        "track",
+        "ctx",
+        "max_vote_user",
+        "total_vote",
+        "approve_member",
+        "disapprove_member",
+    )
+
+    def __init__(
+        self,
+        track: wavelink.Track,
+        ctx: commands.Context,
+        voice_client: discord.VoiceClient,
+    ):
+        self.track = track
+        self.ctx = ctx
+        self.max_vote_user = round(len(voice_client.channel.members) / 2)
+        self.total_vote = 1
+
+        self.approve_member = [ctx.author.mention]
+        self.disapprove_member = []
+
+    async def start(self):
+
+        if self.max_vote_user <= 1:
+            return True
+
+        menu = VoteSkipView()
+        message = await self.ctx.send(embed=self.__eb(), view=menu)
+
+        while (
+            len(self.disapprove_member) < self.max_vote_user
+            and len(self.approve_member) < self.max_vote_user
+        ):
+            await menu.wait()
+
+            if menu.user in self.disapprove_member or menu.user in self.approve_member:
+                continue
+
+            self.total_vote += 1
+
+            if menu.value:
+                self.approve_member.append(menu.user)
+            else:
+                self.disapprove_member.append(menu.user)
+
+            await message.edit(embed=self.__eb())
+
+        if len(self.disapprove_member) > len(self.approve_member):
+            await message.edit(
+                content="Not enough votes to skip!", embed=None, view=None
+            )
+            return False
+        else:
+            await message.edit(content="Skip!", embed=None, view=None)
+            return True
+
+    def __eb(self):
+        return (
+            discord.Embed(
+                title=f"Vote skip for {self.track.title[:75]}...",
+                description=f"Total vote: {self.total_vote}",
+            )
+            .add_field(
+                name="Approve",
+                value="\n".join(self.approve_member),
+                inline=True,
+            )
+            .add_field(
+                name="Disapprove",
+                value="\n".join(self.disapprove_member)
+                if self.disapprove_member
+                else "None",
+                inline=True,
+            )
+            .set_footer(text=f"Requested by {self.ctx.author.name}")
+        )
+
+
 class TrackPickDropdown(discord.ui.Select):
     def __init__(self, tracks: List[wavelink.SearchableTrack]):
         options = [
@@ -241,9 +353,9 @@ class MusicCog(commands.Cog):
             await ctx.send("Can not skip a stream")
             return
 
-        vc.skip_sent = True
-        await vc.stop()
-        await ctx.send("Skipping.")
+        if await VoteSkip(track, ctx, vc).start():  # type: ignore
+            vc.skip_sent = True
+            await vc.stop()
 
     @music.command()
     async def now_playing(self, ctx: commands.Context):
@@ -323,7 +435,9 @@ class MusicCog(commands.Cog):
         tracks = await search_cls.search(query=search)
 
         if not tracks:
-            await ctx.send(f"No tracks found for {search} on {source}, have you tried passing search query instead?")
+            await ctx.send(
+                f"No tracks found for {search} on {source}, have you tried passing search query instead?"
+            )
             return
 
         view = discord.ui.View()
@@ -384,7 +498,9 @@ class MusicCog(commands.Cog):
                 tracks = await wavelink.SoundCloudTrack.search(query=url)
 
         if not tracks:
-            await ctx.send(f"No tracks found for {url} on {source}, have you checked your URL?")
+            await ctx.send(
+                f"No tracks found for {url} on {source}, have you checked your URL?"
+            )
             return
 
         player: wavelink.Player = ctx.voice_client  # type: ignore

@@ -18,6 +18,9 @@ class Nameless(commands.AutoShardedBot):
         await client.add_cog(cogs.ModeratorCog(client))
         await client.add_cog(cogs.OsuCog(client))
 
+        if Config.LAVALINK:
+            await client.add_cog(cogs.MusicCog(client))
+
     async def on_shard_ready(self, shard_id: int):
         logging.info("Shard #{0} is ready".format(shard_id))
 
@@ -94,6 +97,10 @@ class Nameless(commands.AutoShardedBot):
         crud_database.close_all_sessions()
         await super().close()
 
+
+intents = discord.Intents.none()
+intents.guild_messages = True
+intents.members = True
 
 client = Nameless(intents=discord.Intents.all(), command_prefix=Config.PREFIXES)
 

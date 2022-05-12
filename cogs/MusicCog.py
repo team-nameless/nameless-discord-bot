@@ -1,594 +1,440 @@
-from __future__ import unicode_literals
+import datetime
+import logging
+import random
+from typing import List, Any, Type
 
-import asyncio
-import gc
-import itertools
-from functools import partial
-from math import ceil
-from random import choice, shuffle
-from time import gmtime, strftime
+import discord
+import wavelink
+from discord import app_commands
+from discord.app_commands import Choice
+from discord.ext import commands
+from wavelink.ext import spotify
 
-import nextcord
-from nextcord import Interaction, Embed, SlashOption
-from nextcord.ext import commands
-from yt_dlp import YoutubeDL
-
+import globals
 from config import Config
 
-ytdlopts = {
-    "format": "bestaudio/93/best",
-    "outtmpl": "downloads/%(extractor)s-%(id)s-%(title)s.%(ext)s",
-    "restrictfilenames": True,
-    "nocheckcertificate": True,
-    "ignoreerrors": False,
-    "logtostderr": False,
-    "quiet": True,
-    "extract_flat": "in_playlist",
-    "no_warnings": True,
-    "default_search": "ytsearch5",
-    "source_address": "0.0.0.0",
-}
 
-ffmpegopts = {
-    "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
-    "options": "-vn",
-}
-
-ytdl = YoutubeDL(ytdlopts)
-color = (0xDB314B, 0xDB3A4C, 0xDB424D, 0xDB354B)
-
-
-def timeconv(time):
-    return strftime("%H:%M:%S", gmtime(time))
-
-
-def embed_(footer, thumbnail, **kwargs):
-    embed = nextcord.Embed(color=choice(color), **kwargs)
-
-    if isinstance(footer, (int, float)):
-        time = timeconv(footer)
-        embed.set_footer(text=time)
-    else:
-        embed.set_footer(text=footer)
-
-    if thumbnail:
-        embed.set_thumbnail(url=thumbnail)
-
-    return embed
-
-
-class VoiceConnectionError(commands.CommandError):
-    """Custom Exception class for connection errors."""
-
-
-class InvalidVoiceChannel(VoiceConnectionError):
-    """Exception for cases of invalid Voice Channels."""
-
-
-class Dropdown(nextcord.ui.Select):
-    def __init__(self, data=None):
+class TrackPickDropdown(discord.ui.Select):
+    def __init__(self, tracks: List[wavelink.SearchableTrack]):
         options = [
-            nextcord.SelectOption(
-                label="Select all",
-                value="All",
-                description="Selected items from above will be excluded from playlist",
+            discord.SelectOption(
+                label="I don't see my results here",
+                description="Nothing here!",
+                value="Nope",
+                emoji="❌",
             )
+        ] + [
+            discord.SelectOption(
+                label=f"{track.author} - {track.title}"[:100],
+                description=track.uri[:100],
+                value=str(index),
+            )
+            for index, track in enumerate(tracks[:25])
         ]
-        for index, item in enumerate(data):
-            options.append(
-                nextcord.SelectOption(
-                    label=item["title"], description=item["url"], value=str(int)
-                )
-            )
 
         super().__init__(
-            placeholder="owo", min_values=1, max_values=len(options), options=options
+            custom_id="music-pick-select",
+            placeholder="Choose your tracks",
+            min_values=1,
+            max_values=10,
+            options=options,
         )
 
-    async def callback(self, interaction: Interaction):
-        self._view.stop()
-
-
-class YTDLSource(nextcord.PCMVolumeTransformer):
-    __slots__ = ("source", "requester", "webpage_url", "title", "duration", "thumbnail")
-
-    def __init__(self, source=None, *, data, requester):
-        super().__init__(source)
-
-        self.requester = requester
-        self.duration = data.get("duration")
-        self.webpage_url = data.get("webpage_url")
-        self.title = data.get("title")
-        self.thumbnail = None  # what
-
-    @classmethod
-    async def create_source(
-        cls, interaction, search, loop, imported=False, picker=False
-    ):
-
-        loop = loop or asyncio.get_event_loop()
-
-        to_run = partial(ytdl.extract_info, url=search, download=False)
-        data = await loop.run_in_executor(None, to_run)
-
-        data = ytdl.sanitize_info(data)
-
-        if not picker and data["extractor"] == "youtube:search":
-            data = data["entries"][0]
-
-        if "entries" in data:
-            if data["extractor"] == "youtube:search":
-
-                view = nextcord.ui.View(timeout=30)
-                view.add_item(Dropdown(data["entries"]))
-
-                msg = await interaction.send(
-                    "Pick a song, or multiple ones if you want.", view=view
-                )
-
-                if await view.wait():
-                    await msg.edit(content="Timeout!", view=None, delete_after=10)
-                    return
-
-                if view.children[0].values is None:
-                    await msg.delete()
-                    return
-
-                if "All" in view.children[0].values:
-                    values = [0, 1, 2, 3, 4]
-                    if len(view.children[0].values) > 1:
-                        for item in set(view.children[0].values):
-                            while item in values:
-                                values.remove(item)
-                else:
-                    values = view.children[0].values
-
-                await msg.edit(
-                    view=None,
-                    embed=Embed(
-                        title=f"Added {len(values)} songs",
-                        description=f"Requested by {interaction.user}",
-                    ),
-                )
-
-                for i in values:
-                    yield cls.to_value(data["entries"][int(i)], interaction.user)
-
-        else:
-            yield cls.to_value(data, interaction.user)
-
-            if not imported:
-                await interaction.send(
-                    embed=embed_(
-                        title="Song added",
-                        description=f"[{data['title']}]({data.get('webpage_url') or data.get('url')})",
-                        footer=data.get("duration") or 0,
-                        thumbnail=data["thumbnail"],
-                    )
-                )
-
-    @staticmethod
-    def to_value(data, user):
-        return {
-            "webpage_url": data.get("webpage_url") or data.get("url"),
-            "requester": user,
-            "title": data["title"],
-            "duration": data.get("duration") or 0,
-            "thumbnail": data["thumbnail"],
-        }
-
-    @classmethod
-    async def regather_stream(cls, data, loop):
-        loop = loop or asyncio.get_event_loop()
-        requester = data["requester"]
-
-        to_run = partial(ytdl.extract_info, url=data["webpage_url"], download=False)
-        data = await loop.run_in_executor(None, to_run)
-        data = ytdl.sanitize_info(data)
-
-        return cls(
-            nextcord.FFmpegPCMAudio(data["url"], **ffmpegopts),
-            data=data,
-            requester=requester,
-        )
-
-
-class MusicPlayer:
-    __slots__ = (
-        "interaction",
-        "_loop",
-        "client",
-        "_guild",
-        "_channel",
-        "_cog",
-        "queue",
-        "next",
-        "current",
-        "np",
-        "volume",
-        "totaldura",
-        "task",
-        "source",
-    )
-
-    def __init__(self, interaction: Interaction, cog=None):
-        self.client = interaction.client
-        self._guild = interaction.guild
-        self._channel = interaction.channel
-        self._cog = cog
-
-        self.queue = asyncio.Queue()
-        self.next = asyncio.Event()
-
-        self.np = None
-        self.volume = 0.5
-        self.current = None
-        self.source = None
-        self.totaldura = 0
-        self._loop = False
-
-        self.task = interaction.client.loop.create_task(self.player_loop())
-
-    @property
-    def loop(self):
-        return self._loop
-
-    @loop.setter
-    def loop(self, value: bool):
-        self._loop = value
-
-    async def player_loop(self):
-        await self.client.wait_until_ready()
-
-        while not self.client.is_closed():
-            try:
-                self.next.clear()
-
-                if not self._loop or self.source is None:
-                    self.source = await self.queue.get()
-
-                    self.np = embed_(
-                        title=f"Nowplaying",
-                        footer=f"Requested by {self.source['requester']}",
-                        description=f"[{self.source['title']}]({self.source['webpage_url']})",
-                        thumbnail=self.source["thumbnail"],
-                    )
-                    await self._channel.send(embed=self.np)
-
-                self.current = await YTDLSource.regather_stream(
-                    self.source, loop=self.client.loop
-                )
-                self.current.volume = self.volume
-
-                self._guild.voice_client.play(
-                    self.current,
-                    after=lambda _: self.client.loop.call_soon_threadsafe(
-                        self.next.set
-                    ),
-                )
-
-                self.totaldura -= self.source["duration"]
-
-            except AttributeError as e:
-                print(self._guild.id, str(e))
-                return self.destroy(self._guild)
-
-            except Exception as e:
-                return await self._channel.send(
-                    f"There was an error processing your song.\n" f"```css\n[{e}]\n```"
-                )
-
-            finally:
-                await self.next.wait()
-
-                # Make sure the FFmpeg process is cleaned up.
-                self.current.cleanup()
-                self.current = None
-                print(f"after music, release: {gc.collect()} objects")
-
-    def destroy(self, guild):
-        """Disconnect and cleanup the player."""
-        return self.client.loop.create_task(self._cog.cleanup(guild))
+    def callback(self, _: discord.Interaction) -> Any:
+        v: discord.ui.View = self.view
+        v.stop()
 
 
 class MusicCog(commands.Cog):
-    __slots__ = ("client", "players", "db")
-
     def __init__(self, bot: commands.AutoShardedBot):
         self.bot = bot
-        self.players = {}
+        bot.loop.create_task(self.connect_nodes())
 
-    async def cleanup(self, guild):
-        try:
-            await guild.voice_client.disconnect()
-        except AttributeError:
-            pass
-
-        try:
-            player = self.players[guild.id]
-            player.task.cancel()
-        except asyncio.CancelledError:
-            pass
-
-        try:
-            del self.players[guild.id]
-            print(f"cleanup guild, release: {gc.collect()} objects")
-        except KeyError:
-            pass
-
-    def get_player(self, interaction: Interaction):
-        try:
-            player = self.players[interaction.guild.id]
-        except KeyError:
-            player = MusicPlayer(interaction, self)
-            self.players[interaction.guild.id] = player
-
-        return player
+    async def connect_nodes(self):
+        await self.bot.wait_until_ready()
+        for node in Config.LAVALINK["nodes"]:
+            await wavelink.NodePool.create_node(
+                bot=self.bot,
+                host=node["host"],
+                port=node["port"],
+                password=node["password"],
+                https=node["is_secure"],
+                spotify_client=spotify.SpotifyClient(
+                    client_id=Config.LAVALINK["spotify"]["client_id"],
+                    client_secret=Config.LAVALINK["spotify"]["client_secret"],
+                )
+                if Config.LAVALINK["spotify"]
+                else None,
+            )
 
     @commands.Cog.listener()
-    async def on_voice_state_update(self, member, before, after):
-        try:
-            player = self.players[member.guild.id]
-        except KeyError:
+    async def on_wavelink_node_ready(self, node: wavelink.Node):
+        logging.info(f"Node {node.identifier} ({node.host}) is ready!")
+
+    @commands.Cog.listener()
+    async def on_wavelink_track_start(
+        self, player: wavelink.Player, track: wavelink.Track
+    ):
+        chn = player.guild.get_channel(player.trigger_channel_id)  # type: ignore
+        await chn.send(
+            f"Playing: **{track.title}** from **{track.author}** ({track.uri})"
+        )
+
+    @commands.Cog.listener()
+    async def on_wavelink_track_end(
+        self, player: wavelink.Player, track: wavelink.Track, reason: str
+    ):
+        if player.stop_sent:  # type: ignore
             return
 
-        try:
-            if len(player._guild.voice_client.channel.members) == 1:  # If bot is alone
-                if player._guild.voice_client.channel.members[0].id == self.bot.user.id:
-                    await self.cleanup(player._guild)
-                    await player._channel.send('Hic. Don"t leave me alone :cry:')
-        except AttributeError:  # bot got kicked out
-            await self.cleanup(player._guild)
+        chn = player.guild.get_channel(player.trigger_channel_id)  # type: ignore
 
-    @nextcord.slash_command(description="Music command", guild_ids=Config.GUILD_IDs)
-    async def music(self, interaction: nextcord.Interaction):
+        try:
+            if player.loop_sent and not player.skip_sent:  # type: ignore
+                await player.play(track)
+            else:
+                player.skip_sent = False
+                track = player.queue.get()
+                await player.play(track)
+                await chn.send(
+                    f"Playing: **{track.title}** from **{track.author}** ({track.uri})"
+                )
+        except wavelink.QueueEmpty:
+            await chn.send("The queue is empty now")
+
+    async def __internal_play(
+        self, ctx: commands.Context, url: str, is_radio: bool = False
+    ):
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
+
+        # Props set
+        vc.skip_sent = False
+        vc.stop_sent = False
+        vc.loop_sent = False
+        vc.trigger_channel_id = ctx.channel.id
+
+        if is_radio:
+            dbg, _ = globals.crud_database.get_or_create_guild_record(ctx.guild)
+            dbg.radio_start_time = datetime.datetime.now()
+            globals.crud_database.save_changes(guild_record=dbg)
+
+        await ctx.send("Initiating playback")
+
+        track = await vc.node.get_tracks(cls=wavelink.Track, query=url)
+        self.bot.loop.create_task(vc.play(track[0]))
+
+    @commands.hybrid_group(fallback="radio")
+    @app_commands.describe(url="Radio url")
+    @app_commands.guilds(*Config.GUILD_IDs)
+    async def music(self, ctx: commands.Context, url: str):
+        """Play a radio"""
+        await ctx.defer()
+
+        await ctx.author.voice.channel.connect(cls=wavelink.Player)  # type: ignore
+        await self.__internal_play(ctx, url, True)
+
+    @music.command()
+    async def connect(self, ctx: commands.Context):
+        """Connect to your current voice channel"""
+        await ctx.defer()
+
+        await ctx.author.voice.channel.connect(cls=wavelink.Player)  # type: ignore
+        await ctx.send("Connected to your current voice channel")
+
+    @music.command()
+    async def disconnect(self, ctx: commands.Context):
+        """Disconnect from my current voice channel"""
+        await ctx.defer()
+
+        await ctx.voice_client.disconnect(force=True)
+        await ctx.send("Disconnected from my own voice channel")
+
+    @music.command()
+    async def loop(self, ctx: commands.Context):
+        """Toggle loop playback of current track"""
+        await ctx.defer()
+
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
+        track: wavelink.Track = vc.track  # type: ignore
+        if track.is_stream():
+            await ctx.send("Can not loop a stream, sorry")
+            return
+
+        vc.loop_sent = not vc.loop_sent
+
+        await ctx.send(f"Loop set to {'on' if vc.loop_sent else 'off'}")
+
+    @music.command()
+    async def pause(self, ctx: commands.Context):
+        """Pause current playback"""
+        await ctx.defer()
+
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
+
+        if vc.is_paused():
+            await ctx.send("Already paused")
+            return
+
+        await vc.pause()
+        await ctx.send("Paused")
+
+    @music.command()
+    async def resume(self, ctx: commands.Context):
+        """Resume current playback, if paused"""
+        await ctx.defer()
+
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
+
+        if not vc.is_paused():
+            await ctx.send("Already resuming")
+            return
+
+        await vc.resume()
+        await ctx.send("Resuming")
+
+    @music.command()
+    async def stop(self, ctx: commands.Context):
+        """Stop current playback."""
+        await ctx.defer()
+
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
+        vc.stop_sent = True
+
+        await vc.stop()
+        await ctx.send("Stopping")
+
+    @music.command()
+    async def play_queue(self, ctx: commands.Context):
+        """Play entire queue"""
+        await ctx.defer()
+
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
+        track: wavelink.Track = vc.track  # type: ignore
+
+        if track and track.is_stream():
+            await ctx.send("Currently playing a stream, consider stopping it")
+            return
+
+        if not vc.queue:
+            await ctx.send("Queue is empty")
+            return
+
+        track = vc.queue.get()
+
+        await self.__internal_play(ctx, track.uri)
+
+    @music.command()
+    async def skip(self, ctx: commands.Context):
+        """Skip a song. Remind you that the loop effect DOES NOT apply."""
+        await ctx.defer()
+
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
+        track: wavelink.Track = vc.track  # type: ignore
+
+        if not track:
+            await ctx.send("No track is played")
+            return
+
+        if track.is_stream():
+            await ctx.send("Can not skip a stream")
+            return
+
+        vc.skip_sent = True
+        await vc.stop()
+        await ctx.send("Skipping.")
+
+    @music.command()
+    async def now_playing(self, ctx: commands.Context):
+        """Check now playing song"""
+        await ctx.defer()
+
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
+        track: wavelink.Track = vc.track  # type: ignore
+
+        if not track:
+            await ctx.send("No track is played")
+            return
+
+        is_stream = track.is_stream()
+        dbg, _ = globals.crud_database.get_or_create_guild_record(ctx.guild)
+
+        await ctx.send(
+            embeds=[
+                discord.Embed(
+                    timestamp=datetime.datetime.now(), color=discord.Color.orange()
+                )
+                .set_author(name="Now playing track", icon_url=ctx.author.avatar.url)
+                .add_field(
+                    name="Title",
+                    value=discord.utils.escape_markdown(track.title),
+                    inline=False,
+                )
+                .add_field(
+                    name="Author", value=discord.utils.escape_markdown(track.author)
+                )
+                .add_field(
+                    name="Source", value=discord.utils.escape_markdown(track.uri)
+                )
+                .add_field(
+                    name="Playtime" if is_stream else "Position",
+                    value=str(
+                        datetime.datetime.now().astimezone() - dbg.radio_start_time
+                    ),
+                )
+                .add_field(
+                    name="Looping", value="This is a stream" if is_stream else vc.loop_sent  # type: ignore
+                )
+                .add_field(name="Paused", value=vc.is_paused())
+            ]
+        )
+
+    @music.group(fallback="view")
+    async def queue(self, ctx: commands.Context):
+        """View current queue"""
         pass
 
-    @music.subcommand(description="Connect to voice channel")
-    async def connect(
-        self,
-        interaction: Interaction,
-        channel: nextcord.abc.GuildChannel = SlashOption(
-            name="channel",
-            description="Join where?",
-            channel_types=[nextcord.ChannelType.voice],
-        ),
+    @queue.command()
+    @app_commands.describe(search="Search query", source="Source to search")
+    @app_commands.choices(
+        source=[
+            Choice(name=k, value=k)
+            for k in ["youtube", "soundcloud", "spotify", "ytmusic"]
+        ]
+    )
+    async def enqueue(
+        self, ctx: commands.Context, search: str, source: str = "youtube"
     ):
-        if not channel:
-            try:
-                channel = interaction.user.voice.channel
-            except AttributeError:
-                await interaction.send(
-                    "No channel to join. Please either specify a valid channel or join one."
-                )
-                raise InvalidVoiceChannel
+        """Enqueue a track"""
+        await ctx.defer()
 
-        vc = interaction.guild.voice_client
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
+        search_cls: Type[wavelink.SearchableTrack] = wavelink.YouTubeTrack
 
-        if vc:
-            if vc.channel.id == channel.id:
-                return
-            try:
-                await vc.move_to(channel)
-            except asyncio.TimeoutError:
-                raise VoiceConnectionError(f"Moving to channel: <{channel}> timed out.")
-        else:
-            try:
-                await channel.connect()
-            except asyncio.TimeoutError:
-                raise VoiceConnectionError(
-                    f"Connecting to channel: <{channel}> timed out."
-                )
+        match source:
+            case "ytmusic":
+                search_cls = wavelink.YouTubeMusicTrack
+            case "spotify":
+                search_cls = spotify.SpotifyTrack
+            case "soundcloud":
+                search_cls = wavelink.SoundCloudTrack
 
-        self.get_player(interaction)
-        await interaction.send(f"Connected to: **{channel}**", delete_after=20)
+        tracks = await search_cls.search(query=search)
 
-    @music.subcommand(description="Play music from remote URL")
-    async def play(
-        self,
-        interaction: Interaction,
-        url=SlashOption(description="URL go brrrrr", required=True),
-        picker: bool = SlashOption(
-            description="Show a dropdown menu", required=False, default=False
-        ),
-    ):
-        await interaction.response.defer()
-
-        vc = interaction.guild.voice_client
-        try:
-            if not vc:
-                await self.connect.invoke_slash(interaction, channel=None)
-        except InvalidVoiceChannel:
+        if not tracks:
+            await ctx.send(f"No tracks found for {search} on {source}")
             return
 
-        player = self.get_player(interaction)
+        view = discord.ui.View()
+        view.add_item(TrackPickDropdown(tracks))
 
-        async for source in YTDLSource.create_source(
-            interaction, url, loop=self.bot.loop, picker=picker
-        ):
-            player.totaldura += source["duration"]
-            await player.queue.put(source)
+        m = await ctx.send("Tracks found", view=view)
 
-    @music.subcommand(description="Toggle playback of current song")
-    async def toggle_playback(self, interaction: Interaction):
-        vc: nextcord.VoiceClient = interaction.guild.voice_client
-
-        if not vc or not vc.is_connected():
-            return await interaction.send(
-                "I am currently not in any voice chat!", delete_after=20
-            )
-
-        if vc.source is None:
-            return await interaction.send(
-                "I am not currently playing anything!", delete_after=20
-            )
-
-        if vc.is_paused():
-            vc.resume()
-            action = "Resumed"
-        else:
-            vc.pause()
-            action = "Paused"
-
-        await interaction.send(f"**`{interaction.user}`**: {action} the song!")
-
-    @music.subcommand(description="Skip playing song")
-    async def skip(self, interaction: Interaction):
-        vc: nextcord.VoiceClient = interaction.guild.voice_client
-
-        if vc.is_paused():
-            pass
-        elif not vc.is_playing():
+        if await view.wait():
+            await m.edit(content="Timed out!", view=None, delete_after=30)
             return
 
-        player = self.get_player(interaction)
-        if player.loop:
-            player.source = None
+        drop: TrackPickDropdown = view.children[0]  # type: ignore
+        vals = drop.values
 
-        vc.stop()
-        await interaction.send(f"**`{interaction.user}`**: Skipped the song!")
-
-    @music.subcommand(description="Loop current song")
-    async def loop(self, interaction: Interaction):
-        player = self.get_player(interaction)
-
-        if not player.loop:
-            player.loop = True
-            await interaction.send("Looping current song!")
-        else:
-            player.loop = False
-            await interaction.send("Current song is now no longer in loop!")
-
-    @music.subcommand(description="View information of current queue")
-    async def queue_info(
-        self,
-        interaction: Interaction,
-        page: int = SlashOption(description="Page to view", required=False, default=1),
-    ):
-        player = self.get_player(interaction)
-        if player.queue.empty():
-            return await interaction.send("There are currently no more queued songs.")
-
-        index = (page - 1) * 5
-        max_index = len(player.queue._queue)
-        upcoming = list(itertools.islice(player.queue._queue, index, index + 5))
-        if not upcoming:
-            await interaction.send("Out of index!")
+        if not vals:
+            await m.delete()
             return
 
-        desc = "\n"
-        for i, q in enumerate(upcoming, start=index):
-            if len(q["title"]) > 50:
-                title = q["title"][:50] + "..." + q["title"][-5:]
-            else:
-                title = q["title"]
+        if "Nope" in vals:
+            await m.edit(content="All choices cleared", view=None)
+            return
 
-            desc += f"\n[{str(i + 1) + '. ' + title}]({q['webpage_url']})\n"
+        soon_to_add_queue: List[wavelink.SearchableTrack] = []
 
-        embed = nextcord.Embed(title=f"{max_index} songs in queue")
-        embed.add_field(name=f"Total time: {timeconv(player.totaldura)}", value=desc)
-        embed.set_footer(text=f"Page {page}/{ceil(max_index / 5)}")
-        await interaction.send(embed=embed)
+        for val in vals:
+            idx = int(val)
+            soon_to_add_queue.append(tracks[idx])
 
-    @music.subcommand(description="Swap two song in queue")
-    async def swap(
-        self,
-        interaction,
-        pos1: int = SlashOption(description="Position of first track"),
-        pos2: int = SlashOption(description="Position of second track"),
-    ):
-        # i = i - 1
-        # j = j - 1
-        # As long as I remember, the following use C code right?
-        pos1 -= 1
-        pos2 -= 1
+        vc.queue.extend(soon_to_add_queue)
+        await m.edit(content=f"Added {len(vals)} tracks into the queue", view=None)
 
-        player = self.get_player(interaction)
-        if pos1 < len(player.queue._queue) and pos2 < len(player.queue._queue):
-            player.queue._queue[pos1], player.queue._queue[pos2] = (
-                player.queue._queue[pos2],
-                player.queue._queue[pos1],
-            )
-            await interaction.send("✅")
-        else:
-            await interaction.send("Out of index!")
+    @queue.command()
+    @app_commands.describe(url="Playlist URL", source="Source to get playlist")
+    @app_commands.choices(source=[
+            Choice(name=k, value=k)
+            for k in ["youtube", "soundcloud", "spotify", "ytmusic"]
+        ])
+    async def enqueue_playlist(self, ctx: commands.Context, search: str, source: str = "youtube"):
+        """Add tracks from playlist to queue"""
+        await ctx.defer()
 
-    @music.subcommand(name="shuffle", description="Shuffle the queue")
-    async def shuffle_(self, interaction: Interaction):
-        await interaction.response.defer()
-        vc: nextcord.VoiceClient = interaction.guild.voice_client
+        tracks: List[wavelink.SearchableTrack] = []
 
-        player = self.get_player(interaction)
+        match source:
+            case "ytmusic":
+                tracks = await wavelink.YouTubePlaylist.search(query=search)
+            case "spotify":
+                tracks = await spotify.SpotifyTrack.search(query=search, type=spotify.SpotifySearchType.playlist)
+            case "soundcloud":
+                tracks = await wavelink.SoundCloudTrack.search(query=search)
 
-        if player.queue.empty():
-            return await interaction.send("There are no more queued songs to shuffle.")
 
-        shuffle(player.queue._queue)
-        await interaction.send("✅")  # white_check_mark
 
-    @music.subcommand(description="Remove a song from queue")
-    async def remove(
-        self,
-        interaction: Interaction,
-        index: int = SlashOption(description="Index to remove"),
-    ):
-        player = self.get_player(interaction)
-        title = player.queue._queue[index - 1]["title"]
 
-        if player.queue.empty():
-            return await interaction.send("There is no other song in queue!")
+    @queue.command()
+    @commands.has_guild_permissions(manage_guild=True)
+    async def shuffle(self, ctx: commands.Context):
+        """Shuffle the queue"""
+        await ctx.defer()
 
-        del player.queue._queue[index - 1]
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
 
-        await interaction.send(
-            f"**`{interaction.user}`**: Removed `{title}` from queue"
-        )
+        if not vc.queue:
+            await ctx.send("There is nothing in queue")
+            return
 
-    @music.subcommand(description="View now playing song")
-    async def now_playing(self, interaction: Interaction):
-        player = self.get_player(interaction)
-        if not player.current:
-            return await interaction.send("I am not currently playing anything!")
+        random.shuffle(vc.queue)
+        await ctx.send("Shuffled the queue")
 
-        await interaction.send(embed=player.np)
+    @queue.command()
+    @commands.has_guild_permissions(manage_guild=True)
+    async def clear(self, ctx: commands.Context):
+        """Clear the queue"""
+        await ctx.defer()
 
-    @music.subcommand(description="Adjust the volume")
-    async def volume(
-        self,
-        interaction: Interaction,
-        _: float = SlashOption(name="vol", description="A value"),
-    ):
-        await interaction.send(
-            content="Due to the expensive hardware cost of adjusting the volume,"
-            "you have to do it manually."
-        )
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
 
-    @music.subcommand(description="Stop playing session")
-    async def stop(self, interaction: Interaction):
-        await self.cleanup(interaction.guild)
-        await interaction.send("byeee")
+        if not vc.queue:
+            await ctx.send("The queue is already empty")
+            return
 
-    @music.subcommand(description="Clear the queue")
-    async def clear(self, interaction: Interaction):
-        player = self.get_player(interaction)
-        if not player.current:
-            return await interaction.send("I am not playing anything!")
+        vc.queue = wavelink.WaitQueue()
+        await ctx.send("Shuffled the queue")
 
-        player.queue._queue.clear()
-        await interaction.send("✅")
+    @music.before_invoke
+    @queue.before_invoke
+    @connect.before_invoke
+    @stop.before_invoke
+    @resume.before_invoke
+    @pause.before_invoke
+    @loop.before_invoke
+    @now_playing.before_invoke
+    @play_queue.before_invoke
+    @enqueue.before_invoke
+    @enqueue_playlist.before_invoke
+    @clear.before_invoke
+    @shuffle.before_invoke
+    async def user_in_voice_before_invoke(self, ctx: commands.Context):
+        if not ctx.author.voice:
+            await ctx.send("You need to be in a voice channel")
 
-    @clear.application_command_before_invoke
-    @stop.application_command_before_invoke
-    @now_playing.application_command_before_invoke
-    @shuffle_.application_command_before_invoke
-    @swap.application_command_before_invoke
-    @queue_info.application_command_before_invoke
-    @loop.application_command_before_invoke
-    @skip.application_command_before_invoke
-    @toggle_playback.application_command_before_invoke
-    async def require_bot_connected(self, interaction: Interaction):
-        vc = interaction.guild.voice_client
-        if not vc or not vc.is_connected():
-            return await interaction.send(
-                "I am not connected to voice!", delete_after=10
-            )
+    @music.before_invoke
+    @queue.before_invoke
+    @disconnect.before_invoke
+    @stop.before_invoke
+    @resume.before_invoke
+    @pause.before_invoke
+    @loop.before_invoke
+    @now_playing.before_invoke
+    @play_queue.before_invoke
+    @enqueue.before_invoke
+    @clear.before_invoke
+    @shuffle.before_invoke
+    async def bot_in_voice_before_invoke(self, ctx: commands.Context):
+        if not ctx.voice_client:
+            await ctx.send("I need to be in a voice channel")

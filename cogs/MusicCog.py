@@ -191,9 +191,10 @@ class MusicCog(commands.Cog):
         self, player: wavelink.Player, track: wavelink.Track
     ):
         chn = player.guild.get_channel(player.trigger_channel_id)  # type: ignore
-        await chn.send(
-            f"Playing: **{track.title}** from **{track.author}** ({track.uri})"
-        )
+        if not player.loop_sent:  # type: ignore
+            await chn.send(
+                f"Playing: **{track.title}** from **{track.author}** ({track.uri})"
+            )
 
     @commands.Cog.listener()
     async def on_wavelink_track_end(
@@ -206,14 +207,12 @@ class MusicCog(commands.Cog):
 
         try:
             if player.loop_sent and not player.skip_sent:  # type: ignore
-                await player.play(track)
+                pass
             else:
                 player.skip_sent = False
-                track = player.queue.get()
-                await player.play(track)
-                await chn.send(
-                    f"Playing: **{track.title}** from **{track.author}** ({track.uri})"
-                )
+                track = await player.queue.get_wait()
+
+            await self.__internal_play2(player, track.uri)
         except wavelink.QueueEmpty:
             await chn.send("The queue is empty now")
 
@@ -234,9 +233,11 @@ class MusicCog(commands.Cog):
             globals.crud_database.save_changes(guild_record=dbg)
 
         await ctx.send("Initiating playback")
+        await self.__internal_play2(vc, url)
 
+    async def __internal_play2(self, vc: wavelink.Player, url: str):
         track = await vc.node.get_tracks(cls=wavelink.Track, query=url)
-        self.bot.loop.create_task(vc.play(track[0]))
+        await vc.play(track[0])
 
     @commands.hybrid_group(fallback="radio")
     @app_commands.describe(url="Radio url")
@@ -335,7 +336,6 @@ class MusicCog(commands.Cog):
             return
 
         track = vc.queue.get()
-
         await self.__internal_play(ctx, track.uri)
 
     @music.command()
@@ -389,7 +389,8 @@ class MusicCog(commands.Cog):
                 .add_field(
                     name="Playtime" if is_stream else "Position",
                     value=str(
-                        datetime.datetime.now().astimezone() - dbg.radio_start_time
+                        datetime.datetime.now().astimezone() - dbg.radio_start_time if is_stream
+                        else f"{datetime.timedelta(seconds=vc.position)}/{datetime.timedelta(seconds=track.length)}"
                     ),
                 )
                 .add_field(
@@ -550,7 +551,7 @@ class MusicCog(commands.Cog):
         player: wavelink.Player = ctx.voice_client  # type: ignore
         player.queue.extend(tracks)
 
-        await ctx.send(f"Add {len(tracks)} track(s) from {url} to the queue")
+        await ctx.send(f"Added {len(tracks)} track(s) from {url} to the queue")
 
     @queue.command()
     @commands.has_guild_permissions(manage_guild=True)

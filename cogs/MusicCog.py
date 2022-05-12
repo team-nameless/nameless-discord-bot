@@ -390,7 +390,8 @@ class MusicCog(commands.Cog):
                 .add_field(
                     name="Playtime" if is_stream else "Position",
                     value=str(
-                        datetime.datetime.now().astimezone() - dbg.radio_start_time if is_stream
+                        datetime.datetime.now().astimezone() - dbg.radio_start_time
+                        if is_stream
                         else f"{datetime.timedelta(seconds=vc.position)}/{datetime.timedelta(seconds=track.length)}"
                     ),
                 )

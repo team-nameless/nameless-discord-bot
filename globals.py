@@ -11,13 +11,10 @@ from database import CRUD
 crud_database = CRUD()
 
 # Logging setup
-base_logging_level: logging = logging.INFO
+log_level: logging = logging.DEBUG if Config.LAB else logging.INFO
 logging.getLogger().handlers.clear()
 
-if Config.LAB:
-    base_logging_level = logging.DEBUG
-
-logging.basicConfig(level=base_logging_level)
+logging.basicConfig(level=log_level)
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(
     customs.ColoredFormatter("[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s")

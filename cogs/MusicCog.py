@@ -581,7 +581,7 @@ class MusicCog(commands.Cog):
             return
 
         vc.queue.clear()
-        await ctx.send("Shuffled the queue")
+        await ctx.send("Cleared the queue")
 
     @music.before_invoke
     @queue.before_invoke

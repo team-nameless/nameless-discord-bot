@@ -1,4 +1,3 @@
-yt-dlp
 sqlalchemy
 psycopg2-binary
 ossapi
@@ -6,6 +5,5 @@ discord-together
 pymongo
 pymongo[srv]
 git+https://github.com/Rapptz/discord.py
-git+https://github.com/Rapptz/discord.py#egg=discord.py[voice]
 DiscordUtils
 wavelink

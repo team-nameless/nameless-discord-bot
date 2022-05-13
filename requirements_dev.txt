@@ -2,3 +2,5 @@ pip-autoremove
 black
 alembic
 pycodestyle
+pip
+setuptools

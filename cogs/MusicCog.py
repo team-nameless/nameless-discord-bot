@@ -528,13 +528,12 @@ class MusicCog(commands.Cog):
         vc: wavelink.Player = ctx.voice_client  # type: ignore
         search_cls: Type[wavelink.SearchableTrack] = wavelink.YouTubeTrack
 
-        match source:
-            case "ytmusic":
-                search_cls = wavelink.YouTubeMusicTrack
-            case "spotify":
-                search_cls = spotify.SpotifyTrack
-            case "soundcloud":
-                search_cls = wavelink.SoundCloudTrack
+        if source == "ytmusic":
+            search_cls = wavelink.YouTubeMusicTrack
+        elif source == "spotify":
+            search_cls = spotify.SpotifyTrack
+        elif source == "soundcloud":
+            search_cls = wavelink.SoundCloudTrack
 
         tracks = await search_cls.search(query=search)
 
@@ -589,17 +588,14 @@ class MusicCog(commands.Cog):
 
         tracks: List[wavelink.SearchableTrack] = []
 
-        match source:
-            case "youtube":
-                tracks = (await wavelink.YouTubePlaylist.search(query=url)).tracks
-            case "ytmusic":
-                tracks = await wavelink.YouTubeMusicTrack.search(query=url)
-            case "spotify":
-                tracks = await spotify.SpotifyTrack.search(
-                    query=url, type=spotify.SpotifySearchType.playlist
-                )
-            case "soundcloud":
-                tracks = await wavelink.SoundCloudTrack.search(query=url)
+        if source == "youtube":
+            tracks = (await wavelink.YouTubePlaylist.search(query=url)).tracks
+        elif source == "ytmusic":
+            tracks = await wavelink.YouTubeMusicTrack.search(query=url)
+        elif source == "spotify":
+            tracks = await spotify.SpotifyTrack.search(query=url, type=spotify.SpotifySearchType.playlist)
+        elif source == "soundcloud":
+            tracks = await wavelink.SoundCloudTrack.search(query=url)
 
         if not tracks:
             await ctx.send(

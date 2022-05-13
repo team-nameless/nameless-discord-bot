@@ -1,5 +1,5 @@
 import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 import discord
 from DiscordUtils import Pagination
@@ -12,13 +12,8 @@ import globals
 from config import Config
 from customs import Utility
 
-osu_modes = {"osu": "Osu", "taiko": "Taiko", "fruits": "Fruits", "mania": "Mania"}
-request_types = {
-    "profile": "profile",
-    "firsts": "firsts",
-    "recents": "recents",
-    "bests": "bests",
-}
+osu_modes = ["osu", "taiko", "fruits", "mania"]
+request_types = ["profile", "firsts", "recents", "bests"]
 
 
 def convert_to_game_mode(mode: str) -> GameMode:
@@ -30,15 +25,14 @@ def convert_to_game_mode(mode: str) -> GameMode:
     Returns:
         GameMode: GameMode for ossapi
     """
-    match mode.lower():
-        case "osu":
-            return GameMode.STD
-        case "taiko":
-            return GameMode.TAIKO
-        case "fruits":
-            return GameMode.CTB
-        case "mania":
-            return GameMode.MANIA
+    m: Dict[str, GameMode] = {
+        "osu": GameMode.STD,
+        "taiko": GameMode.TAIKO,
+        "fruits":  GameMode.CTB,
+        "mania": GameMode.MANIA
+    }
+
+    return m[mode.lower()]
 
 
 class FailInclusionConfirmationView(discord.ui.View):
@@ -89,12 +83,12 @@ class OsuCog(commands.Cog):
 
     @osu.command()
     @app_commands.describe(username="Your osu! username", mode="Your osu! mode")
-    @app_commands.choices(mode=[Choice(name=k, value=v) for k, v in osu_modes.items()])
+    @app_commands.choices(mode=[Choice(name=k, value=k) for k in osu_modes])
     async def update(self, ctx: commands.Context, username: str, mode: str = "Osu"):
         """Update your auto search"""
         await ctx.defer()
         dbu, _ = globals.crud_database.get_or_create_user_record(ctx.author)
-        dbu.osu_username, dbu.osu_mode = username, mode
+        dbu.osu_username, dbu.osu_mode = username, mode.title()
         globals.crud_database.save_changes(user_record=dbu)
         await ctx.send("Updated")
 
@@ -102,7 +96,7 @@ class OsuCog(commands.Cog):
     @app_commands.describe(
         member="Target member", username="osu! username", mode="osu! mode"
     )
-    @app_commands.choices(mode=[Choice(name=k, value=v) for k, v in osu_modes.items()])
+    @app_commands.choices(mode=[Choice(name=k, value=k) for k in osu_modes])
     async def force_update(
         self,
         ctx: commands.Context,
@@ -113,7 +107,7 @@ class OsuCog(commands.Cog):
         """Force database to update a member's auto search"""
         await ctx.defer()
         dbu, _ = globals.crud_database.get_or_create_user_record(member)
-        dbu.osu_username, dbu.osu_mode = username, mode
+        dbu.osu_username, dbu.osu_mode = username, mode.title()
         globals.crud_database.save_changes(user_record=dbu)
         await ctx.send("Updated")
 
@@ -314,10 +308,10 @@ class OsuCog(commands.Cog):
     )
     @app_commands.choices(
         mode=[
-            Choice(name=k, value=v)
-            for k, v in {**osu_modes, "default": "default"}.items()
+            Choice(name=k, value=k)
+            for k in [*osu_modes, "default"]
         ],
-        request=[Choice(name=k, value=v) for k, v in request_types.items()],
+        request=[Choice(name=k, value=k) for k in request_types],
     )
     async def check_member(
         self,
@@ -347,10 +341,10 @@ class OsuCog(commands.Cog):
     )
     @app_commands.choices(
         mode=[
-            Choice(name=k, value=v)
-            for k, v in {**osu_modes, "default": "default"}.items()
+            Choice(name=k, value=k)
+            for k in [*osu_modes, "default"]
         ],
-        request=[Choice(name=k, value=v) for k, v in request_types.items()],
+        request=[Choice(name=k, value=k) for k in request_types],
     )
     async def check_custom(
         self,

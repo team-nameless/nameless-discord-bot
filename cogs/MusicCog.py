@@ -110,7 +110,7 @@ class VoteMenu:
             )
             return False
         else:
-            await message.edit(content=f"{self.action.upper()}!", embed=None, view=None)
+            await message.edit(content=f"{self.action.title()} {self.content}!", embed=None, view=None)
             return True
 
     def __eb(self):

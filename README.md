@@ -4,7 +4,8 @@ A rewrite of [original nameless*](https://github.com/FoxeiZ/nameless)
 
 [![CodeFactor](https://www.codefactor.io/repository/github/lilia-workshop/nameless/badge/main)](https://www.codefactor.io/repository/github/lilia-workshop/nameless/overview/main)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Python](https://badgen.net/badge/Python/3.10/)](https://python.org/)
+[![Python](https://badgen.net/badge/Python/3.8/)](https://python.org/)
+[![pypy](https://badgen.net/badge/pypy/3.8%20(with%20compatibility%20layer)/)](https://pypy.org/)
 
 ----------------------------------------
 

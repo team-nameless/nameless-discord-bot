@@ -95,12 +95,9 @@ class VoteMenu:
             await menu.wait()
 
             if menu.user in self.approve_member or menu.user in self.disapprove_member:
-                print('already existed. skip')
                 continue
 
             self.total_vote += 1
-
-            print(len(self.disapprove_member), len(self.approve_member), self.max_vote_user)
 
             if menu.value:
                 self.approve_member.append(menu.user)

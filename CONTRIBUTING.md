@@ -64,5 +64,3 @@ pip install -U -r requirements_dev.txt
           ```
 
             - If you are experiencing `Target database is not up to date`, run `alembic stamp head` first. 
-  
-    

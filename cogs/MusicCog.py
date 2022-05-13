@@ -68,7 +68,11 @@ class VoteMenu:
         voice_client: discord.VoiceClient,
     ):
         self.action = action
-        self.content = f"{content.title[:75]}..." if isinstance(content, wavelink.Track) else content
+        self.content = (
+            f"{content.title[:75]}..."
+            if isinstance(content, wavelink.Track)
+            else content
+        )
         self.ctx = ctx
         self.max_vote_user = math.ceil(len(voice_client.channel.members) / 2)
         self.total_vote = 1

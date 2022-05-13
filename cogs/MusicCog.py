@@ -254,7 +254,6 @@ class MusicCog(commands.Cog):
             await ctx.send("I am playing something else")
             return
         else:
-            await ctx.author.voice.channel.connect(cls=wavelink.Player)  # type: ignore
             await self.__internal_play(ctx, url, True)
 
     @music.command()
@@ -263,7 +262,7 @@ class MusicCog(commands.Cog):
         await ctx.defer()
 
         try:
-            await ctx.author.voice.channel.connect(cls=wavelink.Player)  # type: ignore
+            await ctx.author.voice.channel.connect(cls=wavelink.Player, self_deaf=True)  # type: ignore
             await ctx.send("Connected to your current voice channel")
         except ClientException:
             await ctx.send("Already connected")
@@ -659,6 +658,7 @@ class MusicCog(commands.Cog):
     async def user_in_voice_before_invoke(self, ctx: commands.Context):
         if not ctx.author.voice:
             await ctx.send("You need to be in a voice channel")
+            raise commands.CommandError("User did not join voice")
 
     @music.before_invoke
     @queue.before_invoke
@@ -676,3 +676,4 @@ class MusicCog(commands.Cog):
     async def bot_in_voice_before_invoke(self, ctx: commands.Context):
         if not ctx.voice_client:
             await ctx.send("I need to be in a voice channel")
+            raise commands.CommandError("User did not join voice")

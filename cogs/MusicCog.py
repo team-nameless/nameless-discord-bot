@@ -1,3 +1,4 @@
+import collections
 import datetime
 import logging
 import math
@@ -455,6 +456,45 @@ class MusicCog(commands.Cog):
         await p.run(embeds)
 
     @queue.command()
+    @app_commands.describe(indexes="The indexes to remove (1-based), separated by comma")
+    @commands.has_guild_permissions(manage_guild=True)
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def delete(self, ctx: commands.Context, indexes: str):
+        """Remove tracks from queue atomically (remove as much as possible)"""
+        await ctx.defer()
+
+        vc: wavelink.Player = ctx.voice_client
+
+        if vc.queue.is_empty:
+            await ctx.send("The queue is empty")
+            return
+
+        positions = indexes.split(",")
+        result = ""
+        succ_cnt = 0
+        q = vc.queue._queue
+
+        for position in positions:
+            try:
+                pos = int(position)
+                if pos < 0:
+                    result += f"Invalid position: {pos}\n"
+                    continue
+
+                if not q[pos]:
+                    result += f"Already marked track #{pos} as deleted\n"
+                    continue
+
+                result += f"Marked track #{pos} as deleted\n"
+                succ_cnt += 1
+                q[pos - 1] = None
+            except ValueError:
+                result += f"Invalid value: {position}\n"
+
+        vc.queue._queue = collections.deque([t for t in q if t])
+        await ctx.send(f"{result}\n{succ_cnt} tracks deleted")
+
+    @queue.command()
     @app_commands.describe(search="Search query", source="Source to search")
     @app_commands.choices(
         source=[
@@ -598,6 +638,7 @@ class MusicCog(commands.Cog):
     @enqueue_playlist.before_invoke
     @clear.before_invoke
     @shuffle.before_invoke
+    @delete.before_invoke
     async def user_in_voice_before_invoke(self, ctx: commands.Context):
         if not ctx.author.voice:
             await ctx.send("You need to be in a voice channel")
@@ -615,6 +656,7 @@ class MusicCog(commands.Cog):
     @enqueue_playlist.before_invoke
     @clear.before_invoke
     @shuffle.before_invoke
+    @delete.before_invoke
     async def bot_in_voice_before_invoke(self, ctx: commands.Context):
         if not ctx.voice_client:
             await ctx.send("I need to be in a voice channel")

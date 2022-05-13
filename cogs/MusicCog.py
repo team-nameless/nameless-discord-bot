@@ -18,7 +18,7 @@ import globals
 from config import Config
 
 
-class VoteSkipView(discord.ui.View):
+class VoteMenuView(discord.ui.View):
     __slots__ = ("user", "value")
 
     def __init__(self):
@@ -49,9 +49,10 @@ class VoteSkipView(discord.ui.View):
         return True
 
 
-class VoteSkip:
+class VoteMenu:
     __slots__ = (
-        "track",
+        "action",
+        "content",
         "ctx",
         "max_vote_user",
         "total_vote",
@@ -61,11 +62,13 @@ class VoteSkip:
 
     def __init__(
         self,
-        track: wavelink.Track,
+        action: str,
+        content: (wavelink.Track, str),
         ctx: commands.Context,
         voice_client: discord.VoiceClient,
     ):
-        self.track = track
+        self.action = action
+        self.content = f"{content.title[:75]}..." if isinstance(content, wavelink.Track) else content
         self.ctx = ctx
         self.max_vote_user = math.ceil(len(voice_client.channel.members) / 2)
         self.total_vote = 1
@@ -77,7 +80,7 @@ class VoteSkip:
         if self.max_vote_user <= 1:
             return True
 
-        menu = VoteSkipView()
+        menu = VoteMenuView()
         message = await self.ctx.send(embed=self.__eb(), view=menu)
 
         while (
@@ -100,17 +103,17 @@ class VoteSkip:
 
         if len(self.disapprove_member) > len(self.approve_member):
             await message.edit(
-                content="Not enough votes to skip!", embed=None, view=None
+                content=f"Not enough votes to {self.action}!", embed=None, view=None
             )
             return False
         else:
-            await message.edit(content="Skip!", embed=None, view=None)
+            await message.edit(content=f"{self.action.upper()}!", embed=None, view=None)
             return True
 
     def __eb(self):
         return (
             discord.Embed(
-                title=f"Vote skip for {self.track.title[:75]}...",
+                title=f"Vote {self.action} {self.content}",
                 description=f"Total vote: {self.total_vote}",
             )
             .add_field(
@@ -372,7 +375,7 @@ class MusicCog(commands.Cog):
             await ctx.send("Can not skip a stream")
             return
 
-        if await VoteSkip(track, ctx, vc).start():  # type: ignore
+        if await VoteMenu("skip", track, ctx, vc).start():  # type: ignore
             vc.skip_sent = True
             await vc.stop()
 

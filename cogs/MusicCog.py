@@ -110,7 +110,9 @@ class VoteMenu:
             )
             return False
         else:
-            await message.edit(content=f"{self.action.title()} {self.content}!", embed=None, view=None)
+            await message.edit(
+                content=f"{self.action.title()} {self.content}!", embed=None, view=None
+            )
             return True
 
     def __eb(self):
@@ -355,7 +357,9 @@ class MusicCog(commands.Cog):
             await vc.stop()
 
     @music.command()
-    @app_commands.describe(pos="Position to seek to in milliseconds, defaults to run from start")
+    @app_commands.describe(
+        pos="Position to seek to in milliseconds, defaults to run from start"
+    )
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
     async def seek(self, ctx: commands.Context, pos: int = 0):
@@ -377,7 +381,9 @@ class MusicCog(commands.Cog):
             await ctx.send(f"Seek to position {delta_pos}")
 
     @music.command()
-    @app_commands.describe(segment="Segment to seek (from 0 to 10, respecting to 0%, 10%, ..., 100%), defaults to 0")
+    @app_commands.describe(
+        segment="Segment to seek (from 0 to 10, respecting to 0%, 10%, ..., 100%), defaults to 0"
+    )
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
     async def seek_segment(self, ctx: commands.Context, segment: int = 0):
@@ -407,7 +413,9 @@ class MusicCog(commands.Cog):
         vc: wavelink.Player = ctx.voice_client  # type: ignore
         vc.play_now_allowed = not vc.play_now_allowed  # type: ignore
 
-        await ctx.send(f"'Now playing' delivery is now {'on' if vc.play_now_allowed else 'off'}")
+        await ctx.send(
+            f"'Now playing' delivery is now {'on' if vc.play_now_allowed else 'off'}"
+        )
 
     @music.command()
     async def now_playing(self, ctx: commands.Context):
@@ -551,9 +559,7 @@ class MusicCog(commands.Cog):
             for k in ["youtube", "soundcloud", "spotify", "ytmusic"]
         ]
     )
-    async def add(
-        self, ctx: commands.Context, search: str, source: str = "youtube"
-    ):
+    async def add(self, ctx: commands.Context, search: str, source: str = "youtube"):
         """Add selected track(s) to queue"""
         await ctx.defer()
 

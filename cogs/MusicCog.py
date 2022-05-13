@@ -629,9 +629,24 @@ class MusicCog(commands.Cog):
         await ctx.send("Shuffled the queue")
 
     @queue.command()
+    async def clear(self, ctx: commands.Context):
+        """Clear the queue"""
+        await ctx.defer()
+
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
+
+        if vc.queue.is_empty:
+            await ctx.send("The queue is already empty")
+            return
+
+        if await VoteMenu("clear", "queue", ctx, vc).start():  # type: ignore
+            vc.queue.clear()
+            await ctx.send("Cleared the queue")
+
+    @queue.command()
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
-    async def clear(self, ctx: commands.Context):
+    async def force_clear(self, ctx: commands.Context):
         """Clear the queue"""
         await ctx.defer()
 

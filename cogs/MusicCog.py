@@ -413,9 +413,7 @@ class MusicCog(commands.Cog):
                         else f"{datetime.timedelta(seconds=vc.position)}/{datetime.timedelta(seconds=track.length)}"
                     ),
                 )
-                .add_field(
-                    name="Looping", value="This is a stream" if is_stream else vc.loop_sent  # type: ignore
-                )
+                .add_field(name="Looping", value="This is a stream" if is_stream else vc.loop_sent)  # type: ignore
                 .add_field(name="Paused", value=vc.is_paused())
             ]
         )

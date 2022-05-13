@@ -9,8 +9,7 @@ pip install -U -r requirements_dev.txt
 ```
 
 - Coding conventions:
-    - We follow PEP8 rule from `pycodestyle`, with a small modification:
-        - Use 120 characters limit instead of 88.
+    - We follow PEP8 rule from `pycodestyle`
     - We follow `black` code style.
         - Be sure to format the document with `black` before committing:
 

@@ -614,6 +614,7 @@ class MusicCog(commands.Cog):
 
     @queue.command()
     @commands.has_guild_permissions(manage_guild=True)
+    @app_commands.checks.has_permissions(manage_guild=True)
     async def shuffle(self, ctx: commands.Context):
         """Shuffle the queue"""
         await ctx.defer()
@@ -629,6 +630,7 @@ class MusicCog(commands.Cog):
 
     @queue.command()
     @commands.has_guild_permissions(manage_guild=True)
+    @app_commands.checks.has_permissions(manage_guild=True)
     async def clear(self, ctx: commands.Context):
         """Clear the queue"""
         await ctx.defer()

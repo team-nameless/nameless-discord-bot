@@ -9,7 +9,7 @@ import DiscordUtils
 import discord
 import discord.utils as d_utils
 import wavelink
-from discord import app_commands
+from discord import ClientException, app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
 from wavelink.ext import spotify
@@ -256,16 +256,22 @@ class MusicCog(commands.Cog):
         """Connect to your current voice channel"""
         await ctx.defer()
 
-        await ctx.author.voice.channel.connect(cls=wavelink.Player)  # type: ignore
-        await ctx.send("Connected to your current voice channel")
+        try:
+            await ctx.author.voice.channel.connect(cls=wavelink.Player)  # type: ignore
+            await ctx.send("Connected to your current voice channel")
+        except ClientException:
+            await ctx.send("Already connected")
 
     @music.command()
     async def disconnect(self, ctx: commands.Context):
         """Disconnect from my current voice channel"""
         await ctx.defer()
 
-        await ctx.voice_client.disconnect(force=True)
-        await ctx.send("Disconnected from my own voice channel")
+        try:
+            await ctx.voice_client.disconnect(force=True)
+            await ctx.send("Disconnected from my own voice channel")
+        except AttributeError:
+            await ctx.send("Already disconnected")
 
     @music.command()
     async def loop(self, ctx: commands.Context):
@@ -645,7 +651,6 @@ class MusicCog(commands.Cog):
 
     @music.before_invoke
     @queue.before_invoke
-    @disconnect.before_invoke
     @stop.before_invoke
     @resume.before_invoke
     @pause.before_invoke

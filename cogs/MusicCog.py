@@ -248,8 +248,14 @@ class MusicCog(commands.Cog):
         """Play a radio"""
         await ctx.defer()
 
-        await ctx.author.voice.channel.connect(cls=wavelink.Player)  # type: ignore
-        await self.__internal_play(ctx, url, True)
+        vc: wavelink.Player = ctx.voice_client
+
+        if vc and vc.is_playing():
+            await ctx.send("I am playing something else")
+            return
+        else:
+            await ctx.author.voice.channel.connect(cls=wavelink.Player)  # type: ignore
+            await self.__internal_play(ctx, url, True)
 
     @music.command()
     async def connect(self, ctx: commands.Context):
@@ -333,6 +339,11 @@ class MusicCog(commands.Cog):
         await ctx.defer()
 
         vc: wavelink.Player = ctx.voice_client  # type: ignore
+
+        if vc.is_playing():
+            await ctx.send("I am playing something else.")
+            return
+
         track: wavelink.Track = vc.track  # type: ignore
 
         if track and track.is_stream():

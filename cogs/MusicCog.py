@@ -248,7 +248,7 @@ class MusicCog(commands.Cog):
         """Play a radio"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
 
         if vc and vc.is_playing():
             await ctx.send("I am playing something else")
@@ -473,14 +473,16 @@ class MusicCog(commands.Cog):
         await p.run(embeds)
 
     @queue.command()
-    @app_commands.describe(indexes="The indexes to remove (1-based), separated by comma")
+    @app_commands.describe(
+        indexes="The indexes to remove (1-based), separated by comma"
+    )
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
     async def delete(self, ctx: commands.Context, indexes: str):
         """Remove tracks from queue atomically (remove as much as possible)"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
 
         if vc.queue.is_empty:
             await ctx.send("The queue is empty")
@@ -488,7 +490,7 @@ class MusicCog(commands.Cog):
 
         positions = indexes.split(",")
         result = ""
-        succ_cnt = 0
+        success_cnt = 0
         q = vc.queue._queue
 
         for position in positions:
@@ -503,13 +505,13 @@ class MusicCog(commands.Cog):
                     continue
 
                 result += f"Marked track #{pos} as deleted\n"
-                succ_cnt += 1
+                success_cnt += 1
                 q[pos - 1] = None
             except ValueError:
                 result += f"Invalid value: {position}\n"
 
         vc.queue._queue = collections.deque([t for t in q if t])
-        await ctx.send(f"{result}\n{succ_cnt} tracks deleted")
+        await ctx.send(f"{result}\n{success_cnt} tracks deleted")
 
     @queue.command()
     @app_commands.describe(search="Search query", source="Source to search")

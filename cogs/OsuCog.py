@@ -28,8 +28,8 @@ def convert_to_game_mode(mode: str) -> GameMode:
     m: Dict[str, GameMode] = {
         "osu": GameMode.STD,
         "taiko": GameMode.TAIKO,
-        "fruits":  GameMode.CTB,
-        "mania": GameMode.MANIA
+        "fruits": GameMode.CTB,
+        "mania": GameMode.MANIA,
     }
 
     return m[mode.lower()]
@@ -307,10 +307,7 @@ class OsuCog(commands.Cog):
         member="Target member", request="Request type", mode="osu! mode"
     )
     @app_commands.choices(
-        mode=[
-            Choice(name=k, value=k)
-            for k in [*osu_modes, "default"]
-        ],
+        mode=[Choice(name=k, value=k) for k in [*osu_modes, "default"]],
         request=[Choice(name=k, value=k) for k in request_types],
     )
     async def check_member(
@@ -340,10 +337,7 @@ class OsuCog(commands.Cog):
         username="osu! username", request="Request type", mode="osu! mode"
     )
     @app_commands.choices(
-        mode=[
-            Choice(name=k, value=k)
-            for k in [*osu_modes, "default"]
-        ],
+        mode=[Choice(name=k, value=k) for k in [*osu_modes, "default"]],
         request=[Choice(name=k, value=k) for k in request_types],
     )
     async def check_custom(

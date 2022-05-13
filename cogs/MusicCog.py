@@ -593,7 +593,9 @@ class MusicCog(commands.Cog):
         elif source == "ytmusic":
             tracks = await wavelink.YouTubeMusicTrack.search(query=url)
         elif source == "spotify":
-            tracks = await spotify.SpotifyTrack.search(query=url, type=spotify.SpotifySearchType.playlist)
+            tracks = await spotify.SpotifyTrack.search(
+                query=url, type=spotify.SpotifySearchType.playlist
+            )
         elif source == "soundcloud":
             tracks = await wavelink.SoundCloudTrack.search(query=url)
 

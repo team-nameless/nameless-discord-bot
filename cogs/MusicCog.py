@@ -69,7 +69,7 @@ class VoteMenu:
     ):
         self.action = action
         self.content = (
-            f"{content.title[:75]}..."
+            f"{content.title[:50]}..."
             if isinstance(content, wavelink.Track)
             else content
         )
@@ -84,26 +84,28 @@ class VoteMenu:
         if self.max_vote_user <= 1:
             return True
 
-        menu = VoteMenuView()
-        message = await self.ctx.send(embed=self.__eb(), view=menu)
+        message = await self.ctx.send(embed=self.__eb())
 
         while (
             len(self.disapprove_member) < self.max_vote_user
             and len(self.approve_member) < self.max_vote_user
         ):
+            menu = VoteMenuView()
+            await message.edit(embed=self.__eb(), view=menu)
             await menu.wait()
 
-            if menu.user in self.disapprove_member or menu.user in self.approve_member:
+            if menu.user in self.approve_member or menu.user in self.disapprove_member:
+                print('already existed. skip')
                 continue
 
             self.total_vote += 1
+
+            print(len(self.disapprove_member), len(self.approve_member), self.max_vote_user)
 
             if menu.value:
                 self.approve_member.append(menu.user)
             else:
                 self.disapprove_member.append(menu.user)
-
-            await message.edit(embed=self.__eb())
 
         if len(self.disapprove_member) > len(self.approve_member):
             await message.edit(
@@ -118,7 +120,7 @@ class VoteMenu:
         return (
             discord.Embed(
                 title=f"Vote {self.action} {self.content}",
-                description=f"Total vote: {self.total_vote}",
+                description=f"Total vote: {self.total_vote}/{self.max_vote_user}",
             )
             .add_field(
                 name="Approve",

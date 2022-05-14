@@ -709,8 +709,8 @@ class MusicCog(commands.Cog):
     @now_playing.before_invoke
     @queue.before_invoke
     @delete.before_invoke
-    @enqueue.before_invoke
-    @enqueue_playlist.before_invoke
+    @add.before_invoke
+    @add_playlist.before_invoke
     @shuffle.before_invoke
     @clear.before_invoke
     @force_clear.before_invoke
@@ -732,8 +732,8 @@ class MusicCog(commands.Cog):
     @now_playing.before_invoke
     @queue.before_invoke
     @delete.before_invoke
-    @enqueue.before_invoke
-    @enqueue_playlist.before_invoke
+    @add.before_invoke
+    @add_playlist.before_invoke
     @shuffle.before_invoke
     @clear.before_invoke
     @force_clear.before_invoke

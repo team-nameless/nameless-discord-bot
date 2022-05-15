@@ -522,11 +522,7 @@ class MusicCog(commands.Cog):
 
         vc: wavelink.Player = ctx.voice_client  # type: ignore
 
-        if vc.queue.is_empty:
-            await ctx.send("The queue is empty")
-            return
-
-        positions = indexes.split(",")
+        positions = indexes.replace(" ", "").split(",")
         result = ""
         success_cnt = 0
         q = vc.queue._queue
@@ -649,6 +645,81 @@ class MusicCog(commands.Cog):
         await ctx.send(f"Added {len(tracks)} track(s) from {url} to the queue")
 
     @queue.command()
+    @app_commands.describe(before="Old position", after="New position")
+    @commands.has_guild_permissions(manage_guild=True)
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def move(self, ctx: commands.Context, before: int, after: int):
+        """Move track to new position"""
+        await ctx.defer()
+
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
+
+        int_queue = vc.queue._queue
+        queue_length = len(int_queue)
+
+        if not (
+            before != after
+            and 1 <= before <= queue_length
+            and 1 <= after <= queue_length
+        ):
+            await ctx.send("Invalid queue position(s)")
+            return
+
+        temp = int_queue[before - 1]
+        del int_queue[before - 1]
+        int_queue.insert(after - 1, temp)
+
+        await ctx.send(f"Moved track #{before} to #{after}")
+
+    @queue.command()
+    @app_commands.describe(pos="Current position", diff="Relative difference")
+    @commands.has_guild_permissions(manage_guild=True)
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def move_relative(self, ctx: commands.Context, pos: int, diff: int):
+        """Move track to new position using relative difference"""
+        await self.move(ctx, pos, pos + diff)
+
+    @queue.command()
+    @app_commands.describe(
+        pos1="First track positions, separated by comma, covered by pair of \"",
+        pos2="Second track positions, separated by comma, covered by pair of \"",
+    )
+    @commands.has_guild_permissions(manage_guild=True)
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def swap(self, ctx: commands.Context, pos1: str, pos2: str):
+        """Swap two or more tracks. "swap "1,2,3" "4,5,6" will swap 1 with 4, 2 with 5, 4 with 6"""
+        await ctx.defer()
+
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
+        int_q = vc.queue._queue
+        q_length = len(int_q)
+
+        a1 = pos1.replace(" ", "").split(",")
+        a2 = pos2.replace(" ", "").split(",")
+
+        if len(a1) != len(a2):
+            await ctx.send("Position counts are not equal")
+            return
+
+        resp = ""
+
+        for before, after in zip(a1, a2):
+            try:
+                before = int(before)
+                after = int(after)
+
+                if not (1 <= before <= q_length and 1 <= after <= q_length):
+                    resp += f"Invalid position(s): ({before}, {after})\n"
+                    continue
+
+                int_q[before - 1], int_q[after - 1] = int_q[after - 1], int_q[before - 1]
+                resp += f"Swapped #{before} and #{after}\n"
+            except ValueError:
+                resp += f"Invalid pair: ({before}, {after})\n"
+
+        await ctx.send(resp[:996])
+
+    @queue.command()
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
     async def shuffle(self, ctx: commands.Context):
@@ -656,10 +727,6 @@ class MusicCog(commands.Cog):
         await ctx.defer()
 
         vc: wavelink.Player = ctx.voice_client  # type: ignore
-
-        if vc.queue.is_empty:
-            await ctx.send("There is nothing in queue")
-            return
 
         random.shuffle(vc.queue._queue)
         await ctx.send("Shuffled the queue")
@@ -670,10 +737,6 @@ class MusicCog(commands.Cog):
         await ctx.defer()
 
         vc: wavelink.Player = ctx.voice_client  # type: ignore
-
-        if vc.queue.is_empty:
-            await ctx.send("The queue is already empty")
-            return
 
         if await VoteMenu("clear", "queue", ctx, vc).start():  # type: ignore
             vc.queue.clear()
@@ -687,10 +750,6 @@ class MusicCog(commands.Cog):
         await ctx.defer()
 
         vc: wavelink.Player = ctx.voice_client  # type: ignore
-
-        if vc.queue.is_empty:
-            await ctx.send("The queue is already empty")
-            return
 
         vc.queue.clear()
         await ctx.send("Cleared the queue")
@@ -714,6 +773,9 @@ class MusicCog(commands.Cog):
     @shuffle.before_invoke
     @clear.before_invoke
     @force_clear.before_invoke
+    @move.before_invoke
+    @move_relative.before_invoke
+    @swap.before_invoke
     async def user_in_voice_before_invoke(self, ctx: commands.Context):
         if not ctx.author.voice:
             await ctx.send("You need to be in a voice channel")
@@ -737,10 +799,22 @@ class MusicCog(commands.Cog):
     @shuffle.before_invoke
     @clear.before_invoke
     @force_clear.before_invoke
+    @move.before_invoke
+    @move_relative.before_invoke
+    @swap.before_invoke
     async def bot_in_voice_before_invoke(self, ctx: commands.Context):
         if not ctx.voice_client:
             await ctx.send("I need to be in a voice channel")
             raise commands.CommandError("Bot did not join voice")
+
+    @music.before_invoke
+    @play_queue.before_invoke
+    async def no_play_anything_before_invoke(self, ctx: commands.Context):
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
+
+        if vc and vc.is_playing():
+            await ctx.send("I am playing something else.")
+            raise commands.CommandError("Something else is being played")
 
     @loop.before_invoke
     @pause.before_invoke
@@ -758,6 +832,21 @@ class MusicCog(commands.Cog):
             await ctx.send("Nothing is being played right now")
             raise commands.CommandError("No track is being played")
 
+    @queue.before_invoke
+    @delete.before_invoke
+    @shuffle.before_invoke
+    @clear.before_invoke
+    @force_clear.before_invoke
+    @move.before_invoke
+    @move_relative.before_invoke
+    @swap.before_invoke
+    async def queue_exists_before_invoke(self, ctx: commands.Context):
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
+
+        if vc.queue.is_empty:
+            await ctx.send("Queue is empty")
+            raise commands.CommandError("Queue is empty")
+
     @skip.before_invoke
     @loop.before_invoke
     @seek.before_invoke
@@ -769,12 +858,3 @@ class MusicCog(commands.Cog):
         if track and track.is_stream():
             await ctx.send("Stream is not allowed on this command")
             raise commands.CommandError("Stream is not allowed")
-
-    @music.before_invoke
-    @play_queue.before_invoke
-    async def no_play_anything_before_invoke(self, ctx: commands.Context):
-        vc: wavelink.Player = ctx.voice_client  # type: ignore
-
-        if vc and vc.is_playing():
-            await ctx.send("I am playing something else.")
-            raise commands.CommandError("Something else is being played")

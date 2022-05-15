@@ -6,7 +6,9 @@ from discord import app_commands
 from discord.ext import commands
 
 from config import Config
-from globals import crud_database
+from global_deps import crud_database
+
+__all__ = ["ConfigCog"]
 
 
 class ConfigCog(commands.Cog):

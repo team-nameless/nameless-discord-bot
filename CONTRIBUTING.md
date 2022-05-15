@@ -9,8 +9,7 @@ pip install -U -r requirements_dev.txt
 ```
 
 - Coding conventions:
-    - We follow PEP8 rule from `pycodestyle`, with a small modification:
-        - Use 120 characters limit instead of 88.
+    - We follow PEP8 rule from `pycodestyle`
     - We follow `black` code style.
         - Be sure to format the document with `black` before committing:
 
@@ -63,7 +62,5 @@ pip install -U -r requirements_dev.txt
           alembic revision --autogenerate -m "Message here"
           alembic upgrade head
           ```
-          
-          - If you are experiencing `Target database is not up to date`, run `alembic stamp head` first. 
-  
-    
+
+            - If you are experiencing `Target database is not up to date`, run `alembic stamp head` first. 

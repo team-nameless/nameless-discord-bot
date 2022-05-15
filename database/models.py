@@ -3,6 +3,8 @@ import datetime
 from sqlalchemy import *
 from sqlalchemy.orm import declarative_base
 
+__all__ = ["Base", "DbUser", "DbGuild"]
+
 Base = declarative_base()
 
 

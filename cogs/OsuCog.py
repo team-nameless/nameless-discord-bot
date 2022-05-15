@@ -1,5 +1,5 @@
 import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 import discord
 from DiscordUtils import Pagination
@@ -8,17 +8,14 @@ from discord.app_commands import Choice
 from discord.ext import commands
 from ossapi import *
 
-import globals
+import global_deps
 from config import Config
 from customs import Utility
 
-osu_modes = {"osu": "Osu", "taiko": "Taiko", "fruits": "Fruits", "mania": "Mania"}
-request_types = {
-    "profile": "profile",
-    "firsts": "firsts",
-    "recents": "recents",
-    "bests": "bests",
-}
+__all__ = ["OsuCog"]
+
+osu_modes = ["osu", "taiko", "fruits", "mania"]
+request_types = ["profile", "firsts", "recents", "bests"]
 
 
 def convert_to_game_mode(mode: str) -> GameMode:
@@ -30,15 +27,14 @@ def convert_to_game_mode(mode: str) -> GameMode:
     Returns:
         GameMode: GameMode for ossapi
     """
-    match mode.lower():
-        case "osu":
-            return GameMode.STD
-        case "taiko":
-            return GameMode.TAIKO
-        case "fruits":
-            return GameMode.CTB
-        case "mania":
-            return GameMode.MANIA
+    m: Dict[str, GameMode] = {
+        "osu": GameMode.STD,
+        "taiko": GameMode.TAIKO,
+        "fruits": GameMode.CTB,
+        "mania": GameMode.MANIA,
+    }
+
+    return m[mode.lower()]
 
 
 class FailInclusionConfirmationView(discord.ui.View):
@@ -66,15 +62,15 @@ class OsuCog(commands.Cog):
         # Workaround for logging dupe
         self.api.log.propagate = False
         self.api.log.parent.propagate = False
-        self.api.log.handlers[:] = [globals.handler]
-        self.api.log.parent.handlers[:] = [globals.handler]
+        self.api.log.handlers[:] = [global_deps.handler]
+        self.api.log.parent.handlers[:] = [global_deps.handler]
 
     @commands.hybrid_group(fallback="me")
     @app_commands.guilds(*Config.GUILD_IDs)
     async def osu(self, ctx: commands.Context):
         """View your osu! *linked* profile"""
         await ctx.defer()
-        dbu, _ = globals.crud_database.get_or_create_user_record(ctx.author)
+        dbu, _ = global_deps.crud_database.get_or_create_user_record(ctx.author)
         embed = (
             discord.Embed(
                 description="Your linked osu! auto search with me",
@@ -89,20 +85,20 @@ class OsuCog(commands.Cog):
 
     @osu.command()
     @app_commands.describe(username="Your osu! username", mode="Your osu! mode")
-    @app_commands.choices(mode=[Choice(name=k, value=v) for k, v in osu_modes.items()])
+    @app_commands.choices(mode=[Choice(name=k, value=k) for k in osu_modes])
     async def update(self, ctx: commands.Context, username: str, mode: str = "Osu"):
         """Update your auto search"""
         await ctx.defer()
-        dbu, _ = globals.crud_database.get_or_create_user_record(ctx.author)
-        dbu.osu_username, dbu.osu_mode = username, mode
-        globals.crud_database.save_changes(user_record=dbu)
+        dbu, _ = global_deps.crud_database.get_or_create_user_record(ctx.author)
+        dbu.osu_username, dbu.osu_mode = username, mode.title()
+        global_deps.crud_database.save_changes(user_record=dbu)
         await ctx.send("Updated")
 
     @osu.command()
     @app_commands.describe(
         member="Target member", username="osu! username", mode="osu! mode"
     )
-    @app_commands.choices(mode=[Choice(name=k, value=v) for k, v in osu_modes.items()])
+    @app_commands.choices(mode=[Choice(name=k, value=k) for k in osu_modes])
     async def force_update(
         self,
         ctx: commands.Context,
@@ -112,9 +108,9 @@ class OsuCog(commands.Cog):
     ):
         """Force database to update a member's auto search"""
         await ctx.defer()
-        dbu, _ = globals.crud_database.get_or_create_user_record(member)
-        dbu.osu_username, dbu.osu_mode = username, mode
-        globals.crud_database.save_changes(user_record=dbu)
+        dbu, _ = global_deps.crud_database.get_or_create_user_record(member)
+        dbu.osu_username, dbu.osu_mode = username, mode.title()
+        global_deps.crud_database.save_changes(user_record=dbu)
         await ctx.send("Updated")
 
     async def __generic_check(
@@ -235,8 +231,8 @@ class OsuCog(commands.Cog):
                 if not view.is_confirmed:
                     await fail_pr.edit(content="Timed out", view=None)
                     return
-                else:
-                    include_fails = view.is_confirmed
+
+                include_fails = view.is_confirmed
             else:
                 include_fails = True
 
@@ -313,11 +309,8 @@ class OsuCog(commands.Cog):
         member="Target member", request="Request type", mode="osu! mode"
     )
     @app_commands.choices(
-        mode=[
-            Choice(name=k, value=v)
-            for k, v in {**osu_modes, "default": "default"}.items()
-        ],
-        request=[Choice(name=k, value=v) for k, v in request_types.items()],
+        mode=[Choice(name=k, value=k) for k in [*osu_modes, "default"]],
+        request=[Choice(name=k, value=k) for k in request_types],
     )
     async def check_member(
         self,
@@ -328,7 +321,7 @@ class OsuCog(commands.Cog):
     ):
         """Check osu! profile of a member"""
         await ctx.defer()
-        dbu, _ = globals.crud_database.get_or_create_user_record(member)
+        dbu, _ = global_deps.crud_database.get_or_create_user_record(member)
 
         if dbu.osu_username == "":
             await ctx.send(content="This user did not linked to me")
@@ -346,11 +339,8 @@ class OsuCog(commands.Cog):
         username="osu! username", request="Request type", mode="osu! mode"
     )
     @app_commands.choices(
-        mode=[
-            Choice(name=k, value=v)
-            for k, v in {**osu_modes, "default": "default"}.items()
-        ],
-        request=[Choice(name=k, value=v) for k, v in request_types.items()],
+        mode=[Choice(name=k, value=k) for k in [*osu_modes, "default"]],
+        request=[Choice(name=k, value=k) for k in request_types],
     )
     async def check_custom(
         self,

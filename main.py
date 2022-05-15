@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 import cogs
-from globals import *
+from global_deps import *
 
 start_time = datetime.now()
 
@@ -17,6 +17,9 @@ class Nameless(commands.AutoShardedBot):
         await client.add_cog(cogs.ConfigCog(client))
         await client.add_cog(cogs.ModeratorCog(client))
         await client.add_cog(cogs.OsuCog(client))
+
+        if Config.LAVALINK:
+            await client.add_cog(cogs.MusicCog(client))
 
     async def on_shard_ready(self, shard_id: int):
         logging.info("Shard #{0} is ready".format(shard_id))
@@ -38,7 +41,13 @@ class Nameless(commands.AutoShardedBot):
         await client.change_presence(
             status=Config.STATUS["user_status"],
             activity=discord.Activity(
-                type=Config.STATUS["type"],
+                type=Config.STATUS["type"]
+                if Config.STATUS["type"]
+                or (
+                    Config.STATUS["type"] == discord.ActivityType.streaming
+                    and Config.STATUS["url"]
+                )
+                else discord.ActivityType.playing,
                 name=Config.STATUS["name"],
                 url=Config.STATUS["url"] if Config.STATUS["url"] else None,
             ),
@@ -95,6 +104,9 @@ class Nameless(commands.AutoShardedBot):
         await super().close()
 
 
-client = Nameless(intents=discord.Intents.all(), command_prefix=Config.PREFIXES)
+intents = discord.Intents.none()
+intents.guild_messages = True
+intents.members = True
 
+client = Nameless(intents=discord.Intents.all(), command_prefix=Config.PREFIXES)
 client.run(Config.TOKEN)

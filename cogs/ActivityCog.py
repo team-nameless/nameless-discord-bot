@@ -7,6 +7,8 @@ from discord_together.discordTogetherMain import defaultApplications
 
 from config import Config
 
+__all__ = ["ActivityCog"]
+
 
 class ActivityCog(commands.Cog):
     def __init__(self, bot: commands.AutoShardedBot) -> None:

@@ -3,6 +3,8 @@ from discord.ext import commands
 
 from config import Config
 
+__all__ = ["OwnerCog"]
+
 
 class OwnerCog(commands.Cog):
     def __init__(self, bot: commands.AutoShardedBot):

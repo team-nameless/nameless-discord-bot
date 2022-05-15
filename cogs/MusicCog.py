@@ -241,9 +241,9 @@ class MusicCog(commands.Cog):
         vc.trigger_channel_id = ctx.channel.id
 
         if is_radio:
-            dbg, _ = globals.crud_database.get_or_create_guild_record(ctx.guild)
+            dbg, _ = global_deps.crud_database.get_or_create_guild_record(ctx.guild)
             dbg.radio_start_time = datetime.datetime.now()
-            globals.crud_database.save_changes(guild_record=dbg)
+            global_deps.crud_database.save_changes(guild_record=dbg)
 
         await ctx.send("Initiating playback")
         await self.__internal_play2(vc, url)
@@ -432,7 +432,7 @@ class MusicCog(commands.Cog):
             return
 
         is_stream = track.is_stream()
-        dbg, _ = globals.crud_database.get_or_create_guild_record(ctx.guild)
+        dbg, _ = global_deps.crud_database.get_or_create_guild_record(ctx.guild)
 
         await ctx.send(
             embeds=[

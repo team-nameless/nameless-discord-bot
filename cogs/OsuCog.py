@@ -62,15 +62,15 @@ class OsuCog(commands.Cog):
         # Workaround for logging dupe
         self.api.log.propagate = False
         self.api.log.parent.propagate = False
-        self.api.log.handlers[:] = [globals.handler]
-        self.api.log.parent.handlers[:] = [globals.handler]
+        self.api.log.handlers[:] = [global_deps.handler]
+        self.api.log.parent.handlers[:] = [global_deps.handler]
 
     @commands.hybrid_group(fallback="me")
     @app_commands.guilds(*Config.GUILD_IDs)
     async def osu(self, ctx: commands.Context):
         """View your osu! *linked* profile"""
         await ctx.defer()
-        dbu, _ = globals.crud_database.get_or_create_user_record(ctx.author)
+        dbu, _ = global_deps.crud_database.get_or_create_user_record(ctx.author)
         embed = (
             discord.Embed(
                 description="Your linked osu! auto search with me",
@@ -89,9 +89,9 @@ class OsuCog(commands.Cog):
     async def update(self, ctx: commands.Context, username: str, mode: str = "Osu"):
         """Update your auto search"""
         await ctx.defer()
-        dbu, _ = globals.crud_database.get_or_create_user_record(ctx.author)
+        dbu, _ = global_deps.crud_database.get_or_create_user_record(ctx.author)
         dbu.osu_username, dbu.osu_mode = username, mode.title()
-        globals.crud_database.save_changes(user_record=dbu)
+        global_deps.crud_database.save_changes(user_record=dbu)
         await ctx.send("Updated")
 
     @osu.command()
@@ -108,9 +108,9 @@ class OsuCog(commands.Cog):
     ):
         """Force database to update a member's auto search"""
         await ctx.defer()
-        dbu, _ = globals.crud_database.get_or_create_user_record(member)
+        dbu, _ = global_deps.crud_database.get_or_create_user_record(member)
         dbu.osu_username, dbu.osu_mode = username, mode.title()
-        globals.crud_database.save_changes(user_record=dbu)
+        global_deps.crud_database.save_changes(user_record=dbu)
         await ctx.send("Updated")
 
     async def __generic_check(
@@ -321,7 +321,7 @@ class OsuCog(commands.Cog):
     ):
         """Check osu! profile of a member"""
         await ctx.defer()
-        dbu, _ = globals.crud_database.get_or_create_user_record(member)
+        dbu, _ = global_deps.crud_database.get_or_create_user_record(member)
 
         if dbu.osu_username == "":
             await ctx.send(content="This user did not linked to me")

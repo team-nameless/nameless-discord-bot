@@ -8,9 +8,11 @@ from discord.app_commands import Choice
 from discord.ext import commands
 from ossapi import *
 
-import globals
+import global_deps
 from config import Config
 from customs import Utility
+
+__all__ = ["OsuCog"]
 
 osu_modes = ["osu", "taiko", "fruits", "mania"]
 request_types = ["profile", "firsts", "recents", "bests"]

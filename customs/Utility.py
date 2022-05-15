@@ -6,6 +6,8 @@ from discord.ext import commands
 
 from config import Config
 
+__all__ = ["Utility"]
+
 
 class Utility:
     """

@@ -6,9 +6,11 @@ from discord.ext import commands
 
 from config import Config
 from customs import Utility
-from globals import crud_database
+from global_deps import crud_database
 
 MUTE_ROLE_NAME = "you-are-muted"
+
+__all__ = ["ModeratorCog"]
 
 
 class ModeratorCog(commands.Cog):

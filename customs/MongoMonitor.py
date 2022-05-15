@@ -2,6 +2,14 @@ import logging
 
 from pymongo import monitoring
 
+__all__ = [
+    "CommandLogger",
+    "ServerLogger",
+    "HeartbeatLogger",
+    "TopologyLogger",
+    "ConnectionPoolLogger",
+]
+
 
 class CommandLogger(monitoring.CommandListener):
     def started(self, event):

@@ -1,5 +1,7 @@
 import logging
 
+__all__ = ["ColoredFormatter"]
+
 
 class ColoredFormatter(logging.Formatter):
     grey = "\x1b[38;21m"

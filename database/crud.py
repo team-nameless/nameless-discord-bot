@@ -13,6 +13,8 @@ from config import Config
 from customs import Utility
 from .models import Base, DbUser, DbGuild
 
+__all__ = ["CRUD"]
+
 
 class CRUD:
     """

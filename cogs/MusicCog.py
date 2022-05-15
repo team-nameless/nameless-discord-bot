@@ -14,8 +14,10 @@ from discord.app_commands import Choice
 from discord.ext import commands
 from wavelink.ext import spotify
 
-import globals
+import global_deps
 from config import Config
+
+__all__ = ["MusicCog"]
 
 
 class VoteMenuView(discord.ui.View):
@@ -681,8 +683,8 @@ class MusicCog(commands.Cog):
 
     @queue.command()
     @app_commands.describe(
-        pos1="First track positions, separated by comma, covered by pair of \"",
-        pos2="Second track positions, separated by comma, covered by pair of \"",
+        pos1='First track positions, separated by comma, covered by pair of "',
+        pos2='Second track positions, separated by comma, covered by pair of "',
     )
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
@@ -712,7 +714,10 @@ class MusicCog(commands.Cog):
                     resp += f"Invalid position(s): ({before}, {after})\n"
                     continue
 
-                int_q[before - 1], int_q[after - 1] = int_q[after - 1], int_q[before - 1]
+                int_q[before - 1], int_q[after - 1] = (
+                    int_q[after - 1],
+                    int_q[before - 1],
+                )
                 resp += f"Swapped #{before} and #{after}\n"
             except ValueError:
                 resp += f"Invalid pair: ({before}, {after})\n"

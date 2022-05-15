@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 import cogs
-from globals import *
+from global_deps import *
 
 start_time = datetime.now()
 

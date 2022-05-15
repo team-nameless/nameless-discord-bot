@@ -1,5 +1,4 @@
 sqlalchemy
-psycopg2-binary
 ossapi
 discord-together
 pymongo

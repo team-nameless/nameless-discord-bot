@@ -231,8 +231,8 @@ class OsuCog(commands.Cog):
                 if not view.is_confirmed:
                     await fail_pr.edit(content="Timed out", view=None)
                     return
-                else:
-                    include_fails = view.is_confirmed
+
+                include_fails = view.is_confirmed
             else:
                 include_fails = True
 

@@ -1,4 +1,5 @@
 import datetime
+from dis import dis
 from typing import Union
 
 import discord
@@ -91,7 +92,7 @@ class ConfigCog(commands.Cog):
     async def set_goodbye_channel(
         self,
         ctx: commands.Context,
-        dest_channel: Union[discord.TextChannel, app_commands.models.AppCommandThread],
+        dest_channel: Union[discord.TextChannel, discord.Thread],
     ):
         """Change goodbye message delivery channel"""
         await ctx.defer()
@@ -106,7 +107,7 @@ class ConfigCog(commands.Cog):
     async def set_welcome_channel(
         self,
         ctx: commands.Context,
-        dest_channel: Union[discord.TextChannel, app_commands.models.AppCommandThread],
+        dest_channel: Union[discord.TextChannel, discord.Thread],
     ):
         """Change welcome message delivery channel"""
         await ctx.defer()

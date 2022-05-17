@@ -28,25 +28,13 @@ jobs:
         id: install-deps
         run: |
           python -m pip install --upgrade pip
-          pip install --upgrade pip setuptools wheel requests "aiohttp>=3.7.4,<4"
+          pip install --upgrade pip setuptools wheel
           pip install -U -r requirements_core.txt
           pip install -U -r requirements_dev.txt
 
       - name: Create dummy config file
         run: |
           mv config.example.py config.py
-
-      - name: Setup node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '16'
-
-      - name: Run Pyright
-        uses: jakebailey/pyright-action@v1
-        with:
-          version: '1.1.242'
-          warnings: false
-          no-comments: false
 
       - name: Run black
         run: |

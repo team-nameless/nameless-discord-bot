@@ -51,15 +51,3 @@ class Utility:
             )
 
         return message_checker
-
-    @staticmethod
-    async def get_or_create_role(
-        name: str, reason: str, ctx: commands.Context
-    ) -> Tuple[discord.Role, bool]:
-        guild_roles = ctx.guild.roles
-        role_exists = any(role.name == name for role in guild_roles)
-        if role_exists:
-            roles = [role for role in guild_roles if role.name == name]
-            return roles[0], False
-
-        return await ctx.guild.create_role(name=name, reason=reason), True

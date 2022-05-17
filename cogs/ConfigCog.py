@@ -1,5 +1,4 @@
 import datetime
-from dis import dis
 from typing import Union
 
 import discord

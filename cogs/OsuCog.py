@@ -53,6 +53,10 @@ class FailInclusionConfirmationView(discord.ui.View):
     async def cancel(self, button: discord.ui.Button, interaction: discord.Interaction):
         self.stop()
 
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        await interaction.response.defer()
+        return await super().interaction_check(interaction)
+
 
 class OsuCog(commands.Cog):
     def __init__(self, bot: commands.AutoShardedBot):
@@ -106,6 +110,8 @@ class OsuCog(commands.Cog):
         member="Target member", username="osu! username", mode="osu! mode"
     )
     @app_commands.choices(mode=[Choice(name=k, value=k) for k in osu_modes])
+    @commands.has_guild_permissions(manage_guild=True)
+    @app_commands.checks.has_permissions(manage_guild=True)
     async def force_update(
         self,
         ctx: commands.Context,
@@ -150,10 +156,11 @@ class OsuCog(commands.Cog):
                     icon_url=f"https://flagcdn.com/h20/{osu_user.country_code.lower()}.jpg",
                 )
                 .set_thumbnail(url=osu_user.avatar_url)
-                .set_footer(
-                    text=f"Requested by {ctx.author.display_name}#{ctx.author.discriminator}"
+                .set_footer(text=f"Requested by {ctx.author}")
+                .add_field(
+                    name="Account creation time",
+                    value=f"<t:{int(osu_user.join_date.timestamp())}:F>",
                 )
-                .add_field(name="Join date", value=osu_user.join_date)
                 .add_field(
                     name="Level",
                     value=f"{user_stats.level.current} ({user_stats.level.progress}%)",
@@ -187,7 +194,7 @@ class OsuCog(commands.Cog):
                     value=", ".join(osu_user.previous_usernames),
                 )
 
-            await m.edit(embeds=[eb])
+            await m.edit(content="", embeds=[eb])
         else:
             request_type: ScoreType = ScoreType.BEST
 
@@ -230,15 +237,15 @@ class OsuCog(commands.Cog):
             # fail inclusion prompt
             if not is_from_context and request == "recents":
                 view = FailInclusionConfirmationView()
-                fail_pr = await ctx.send(
-                    "Do you want to include fail scores?", view=view
+                pr = await pr.edit(
+                    content="Do you want to include fail scores?", view=view
                 )
-                await view.wait()
 
-                if not view.is_confirmed:
-                    await fail_pr.edit(content="Timed out", view=None)
+                if await view.wait():
+                    await pr.edit(content="Timed out", view=None)
                     return
 
+                view.stop()
                 include_fails = view.is_confirmed
             else:
                 include_fails = True
@@ -248,7 +255,7 @@ class OsuCog(commands.Cog):
             )
 
             if len(scores) == 0:
-                await ctx.send("No suitable scores found")
+                await pr.edit(content="No suitable scores found", view=None)
                 return
 
             embeds = []
@@ -298,7 +305,9 @@ class OsuCog(commands.Cog):
                         if score.weight is not None
                         else "0",
                     )
-                    .add_field(name="Submission time", value=score.created_at)
+                    .add_field(
+                        name="Submission time", value=f"<t:{int(score.created_at.timestamp())}:R>"
+                    )
                 )
 
                 embeds.append(embed)
@@ -309,7 +318,7 @@ class OsuCog(commands.Cog):
             else:
                 # Since we are in context menu command
                 # Or either the embed list is so small
-                await ctx.send(embed=embeds[0])
+                await pr.edit(embed=embeds[0], view=None)
 
     @osu.command()
     @app_commands.describe(
@@ -354,7 +363,7 @@ class OsuCog(commands.Cog):
         ctx: commands.Context,
         username: str,
         request: str = "profile",
-        mode: str = "defaiult",
+        mode: str = "default",
     ):
         """Check a custom osu! profile"""
         await ctx.defer()

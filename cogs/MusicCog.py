@@ -7,7 +7,7 @@ from typing import List, Any, Type, Union
 
 import DiscordUtils
 import discord
-import discord.utils as d_utils
+from discord.utils import escape_markdown
 import wavelink
 from discord import ClientException, app_commands
 from discord.app_commands import Choice
@@ -435,6 +435,11 @@ class MusicCog(commands.Cog):
         is_stream = track.is_stream()
         dbg, _ = global_deps.crud_database.get_or_create_guild_record(ctx.guild)
 
+        try:
+            next_track = vc.queue.copy().get()
+        except wavelink.QueueEmpty:
+            next_track = None
+
         await ctx.send(
             embeds=[
                 discord.Embed(
@@ -443,11 +448,11 @@ class MusicCog(commands.Cog):
                 .set_author(name="Now playing track", icon_url=ctx.author.avatar.url)
                 .add_field(
                     name="Title",
-                    value=d_utils.escape_markdown(track.title),
+                    value=escape_markdown(track.title),
                     inline=False,
                 )
-                .add_field(name="Author", value=d_utils.escape_markdown(track.author))
-                .add_field(name="Source", value=d_utils.escape_markdown(track.uri))
+                .add_field(name="Author", value=escape_markdown(track.author))
+                .add_field(name="Source", value=escape_markdown(track.uri))
                 .add_field(
                     name="Playtime" if is_stream else "Position",
                     value=str(
@@ -458,6 +463,12 @@ class MusicCog(commands.Cog):
                 )
                 .add_field(name="Looping", value="This is a stream" if is_stream else vc.loop_sent)  # type: ignore
                 .add_field(name="Paused", value=vc.is_paused())
+                .add_field(
+                    name="Next track",
+                    value=f"[{escape_markdown(next_track.title)} from {escape_markdown(next_track.author)}]({next_track.uri})"
+                    if next_track
+                    else None,
+                )
             ]
         )
 
@@ -481,7 +492,7 @@ class MusicCog(commands.Cog):
             while track := copycat.get():
                 upcoming = (
                     f"{idx} - "
-                    f"[{d_utils.escape_markdown(track.title)} by {d_utils.escape_markdown(track.author)}]"
+                    f"[{escape_markdown(track.title)} by {escape_markdown(track.author)}]"
                     f"({track.uri})\n"
                 )
 
@@ -626,7 +637,11 @@ class MusicCog(commands.Cog):
         tracks: List[wavelink.SearchableTrack] = []
 
         if source == "youtube":
-            tracks = (await wavelink.YouTubePlaylist.search(query=url)).tracks
+            try:
+                pl = (await wavelink.YouTubePlaylist.search(query=url)).tracks
+            except wavelink.LoadTrackError:
+                pl = await wavelink.YouTubeTrack.search(query=url)
+            tracks = pl
         elif source == "ytmusic":
             tracks = await wavelink.YouTubeMusicTrack.search(query=url)
         elif source == "spotify":
@@ -849,9 +864,11 @@ class MusicCog(commands.Cog):
     async def queue_exists_before_invoke(self, ctx: commands.Context):
         vc: wavelink.Player = ctx.voice_client  # type: ignore
 
-        if vc.queue.is_empty:
+        if vc and vc.queue.is_empty:
             await ctx.send("Queue is empty")
             raise commands.CommandError("Queue is empty")
+        else:
+            raise commands.CommandError("Wait what?")
 
     @skip.before_invoke
     @loop.before_invoke
@@ -861,6 +878,8 @@ class MusicCog(commands.Cog):
         vc: wavelink.Player = ctx.voice_client  # type: ignore
         track: wavelink.Track = vc.track  # type: ignore
 
-        if track and track.is_stream():
+        if vc and track and track.is_stream():
             await ctx.send("Stream is not allowed on this command")
             raise commands.CommandError("Stream is not allowed")
+        else:
+            raise commands.CommandError("Wait what?")

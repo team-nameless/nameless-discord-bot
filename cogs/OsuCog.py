@@ -306,7 +306,8 @@ class OsuCog(commands.Cog):
                         else "0",
                     )
                     .add_field(
-                        name="Submission time", value=f"<t:{int(score.created_at.timestamp())}:R>"
+                        name="Submission time",
+                        value=f"<t:{int(score.created_at.timestamp())}:R>",
                     )
                 )
 

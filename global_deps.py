@@ -21,5 +21,4 @@ handler.setFormatter(
 )
 logging.getLogger().handlers[:] = [handler]
 
-# Global vars
 start_time: datetime = datetime.min

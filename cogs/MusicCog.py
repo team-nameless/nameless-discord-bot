@@ -385,7 +385,7 @@ class MusicCog(commands.Cog):
 
     @music.command()
     @app_commands.describe(
-        segment="Segment to seek (from 0 to 10, respecting to 0%, 10%, ..., 100%), defaults to 0"
+        segment="Segment to seek (from 0 to 10, respecting to 0%, 10%, ..., 100%)"
     )
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)

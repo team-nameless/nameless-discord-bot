@@ -65,12 +65,19 @@ class OsuCog(commands.Cog):
         self.api.log.handlers[:] = [global_deps.handler]
         self.api.log.parent.handlers[:] = [global_deps.handler]
 
-    @commands.hybrid_group(fallback="me")
+    @commands.hybrid_group(fallback="get")
     @app_commands.guilds(*Config.GUILD_IDs)
-    async def osu(self, ctx: commands.Context):
-        """View your osu! *linked* profile"""
+    async def osu(self, ctx: commands.Context, member: Optional[discord.Member]):
+        """View someone's osu! *linked* profile"""
         await ctx.defer()
-        dbu, _ = global_deps.crud_database.get_or_create_user_record(ctx.author)
+        dbu, _ = global_deps.crud_database.get_or_create_user_record(
+            member if member else ctx.author
+        )
+
+        if not dbu.osu_username:
+            await ctx.send("This user did not link with me")
+            return
+
         embed = (
             discord.Embed(
                 description="Your linked osu! auto search with me",

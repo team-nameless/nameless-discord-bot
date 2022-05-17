@@ -3,7 +3,7 @@ import datetime
 import logging
 import math
 import random
-from typing import List, Any, Type
+from typing import List, Any, Type, Union
 
 import DiscordUtils
 import discord
@@ -65,7 +65,7 @@ class VoteMenu:
     def __init__(
         self,
         action: str,
-        content: (wavelink.Track, str),
+        content: Union[wavelink.Track, str],
         ctx: commands.Context,
         voice_client: discord.VoiceClient,
     ):

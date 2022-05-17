@@ -10,16 +10,30 @@ start_time = datetime.now()
 class Nameless(commands.AutoShardedBot):
     async def __register_all_cogs(self):
         if Config.LAB:
-            await client.add_cog(cogs.ExperimentalCog(client))
+            await self.load_extension(cogs.ExperimentalCog.__module__)
+        else:
+            logging.warning(
+                "Experimental commands will not be available since you did not enable it"
+            )
 
-        await client.add_cog(cogs.OwnerCog(client))
-        await client.add_cog(cogs.ActivityCog(client))
-        await client.add_cog(cogs.ConfigCog(client))
-        await client.add_cog(cogs.ModeratorCog(client))
-        await client.add_cog(cogs.OsuCog(client))
+        await self.load_extension(cogs.OwnerCog.__module__)
+        await self.load_extension(cogs.ActivityCog.__module__)
+        await self.load_extension(cogs.ConfigCog.__module__)
+        await self.load_extension(cogs.ModeratorCog.__module__)
 
-        if Config.LAVALINK:
-            await client.add_cog(cogs.MusicCog(client))
+        if Config.OSU and Config.OSU["client_id"] and Config.OSU["client_secret"]:
+            await self.load_extension(cogs.OsuCog.__module__)
+        else:
+            logging.warning(
+                "osu! commands will not be loaded since you did not provide enough credentials"
+            )
+
+        if Config.LAVALINK and Config.LAVALINK["nodes"]:
+            await self.load_extension(cogs.MusicCog.__module__)
+        else:
+            logging.warning(
+                "Music commands will not be loaded since you did not provide enough credentials"
+            )
 
     async def on_shard_ready(self, shard_id: int):
         logging.info("Shard #{0} is ready".format(shard_id))
@@ -30,15 +44,15 @@ class Nameless(commands.AutoShardedBot):
 
         if Config.GUILD_IDs:
             for _id in Config.GUILD_IDs:
-                logging.info(f"Syncing commands with guild id {_id}")
+                logging.info(f"Syncing commands with guild ID {_id}")
                 sf = discord.Object(_id)
-                await client.tree.sync(guild=sf)
+                await self.tree.sync(guild=sf)
         else:
             logging.info(f"Syncing commands globally")
-            await client.tree.sync()
+            await self.tree.sync()
 
         logging.info(msg="Setting presence")
-        await client.change_presence(
+        await self.change_presence(
             status=Config.STATUS["user_status"],
             activity=discord.Activity(
                 type=Config.STATUS["type"]

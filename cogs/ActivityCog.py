@@ -1,3 +1,5 @@
+import logging
+
 import discord
 import discord_together
 from discord import app_commands
@@ -37,3 +39,13 @@ class ActivityCog(commands.Cog):
         ).create_link(voice_channel.id, target)
 
         await msg.edit(content=f"Here is your link: {inv}")
+
+
+async def setup(bot: commands.AutoShardedBot):
+    await bot.add_cog(ActivityCog(bot))
+    logging.info(f"Cog of {__name__} added!")
+
+
+async def teardown(bot: commands.AutoShardedBot):
+    await bot.remove_cog("ActivityCog")
+    logging.info(f"Cog of {__name__} removed!")

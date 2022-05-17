@@ -1,3 +1,4 @@
+import logging
 from typing import Callable, Awaitable, Any
 
 import discord
@@ -7,8 +8,6 @@ from discord.ext import commands
 from config import Config
 from customs import Utility
 from global_deps import crud_database
-
-MUTE_ROLE_NAME = "you-are-muted"
 
 __all__ = ["ModeratorCog"]
 
@@ -109,29 +108,19 @@ class ModeratorCog(commands.Cog):
         mute: bool = 1,
     ):
         await ctx.defer()
-        mute_role, is_new = await Utility.get_or_create_role(
-            MUTE_ROLE_NAME, "Mute role creation", ctx
-        )
 
-        if is_new:
-            for channel in ctx.guild.channels:
-                await channel.set_permissions(
-                    mute_role,
-                    send_messages=False,
-                    send_messages_in_threads=False,
-                    reason="Mute role channel override",
-                )
-
-        is_muted = mute_role in member.roles
+        is_muted = member.is_timed_out()
         if is_muted:
             if not mute:
-                await member.remove_roles(mute_role, reason=reason)
+                await member.timeout(None, reason=reason)
                 await ctx.send("Unmuted")
             else:
                 await ctx.send("Already muted")
         else:
             if mute:
-                await member.add_roles(mute_role, reason=reason)
+                await member.timeout(
+                    discord.utils.utcnow().replace(day=7), reason=reason
+                )
                 await ctx.send("Muted")
             else:
                 await ctx.send("Already unmuted")
@@ -195,21 +184,7 @@ class ModeratorCog(commands.Cog):
             pass
 
         async def three_fn(_ctx: commands.Context, m: discord.Member, r: str):
-            role, no = await Utility.get_or_create_role(
-                MUTE_ROLE_NAME, "Mute role creation", _ctx
-            )
-
-            if no:
-                for channel in _ctx.guild.channels:
-                    await channel.set_permissions(
-                        role,
-                        send_messages=False,
-                        send_messages_in_threads=False,
-                        reason="Mute role channel override",
-                    )
-
-            if not any(grole.name == MUTE_ROLE_NAME for grole in m.roles):
-                await m.add_roles(role, reason=r)
+            await m.timeout(discord.utils.utcnow().replace(day=7), reason=r)
 
         await ModeratorCog.__generic_warn(
             ctx, member, reason, 1, zero_fn, three_fn, diff_fn
@@ -234,11 +209,7 @@ class ModeratorCog(commands.Cog):
             _ctx: commands.Context, m: discord.Member, r: str, current: int, prev: int
         ):
             if prev == 3:
-                role, _ = await Utility.get_or_create_role(
-                    MUTE_ROLE_NAME, "Mute role creation", _ctx
-                )
-                if any(grole.name == MUTE_ROLE_NAME for grole in m.roles):
-                    await m.remove_roles(role, reason=r)
+                await m.timeout(None, reason=r)
 
         async def three_fn(_ctx: commands.Context, m: discord.Member, r: str):
             pass
@@ -271,3 +242,13 @@ class ModeratorCog(commands.Cog):
         reason: str = "Good behavior",
     ):
         await self.__generic_mute(ctx, member, reason, False)
+
+
+async def setup(bot: commands.AutoShardedBot):
+    await bot.add_cog(ModeratorCog(bot))
+    logging.info(f"Cog of {__name__} added!")
+
+
+async def teardown(bot: commands.AutoShardedBot):
+    await bot.remove_cog("ModeratorCog")
+    logging.info(f"Cog of {__name__} removed!")

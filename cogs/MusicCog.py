@@ -436,9 +436,9 @@ class MusicCog(commands.Cog):
         dbg, _ = global_deps.crud_database.get_or_create_guild_record(ctx.guild)
 
         try:
-            next_track = vc.queue.copy().get()
+            next_tr = vc.queue.copy().get()
         except wavelink.QueueEmpty:
-            next_track = None
+            next_tr = None
 
         await ctx.send(
             embeds=[
@@ -465,8 +465,8 @@ class MusicCog(commands.Cog):
                 .add_field(name="Paused", value=vc.is_paused())
                 .add_field(
                     name="Next track",
-                    value=f"[{escape_markdown(next_track.title)} from {escape_markdown(next_track.author)}]({next_track.uri})"
-                    if next_track
+                    value=f"[{escape_markdown(next_tr.title)} by {escape_markdown(next_tr.author)}]({next_tr.uri})"
+                    if next_tr
                     else None,
                 )
             ]
@@ -883,3 +883,16 @@ class MusicCog(commands.Cog):
             raise commands.CommandError("Stream is not allowed")
         else:
             raise commands.CommandError("Wait what?")
+
+
+async def setup(bot: commands.AutoShardedBot):
+    if Config.LAVALINK and Config.LAVALINK["nodes"]:
+        await bot.add_cog(MusicCog(bot))
+        logging.info(f"Cog of {__name__} added!")
+    else:
+        raise commands.ExtensionFailed
+
+
+async def teardown(bot: commands.AutoShardedBot):
+    await bot.remove_cog("MusicCog")
+    logging.info(f"Cog of {__name__} removed!")

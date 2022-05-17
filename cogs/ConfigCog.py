@@ -1,4 +1,5 @@
 import datetime
+import logging
 from typing import Union
 
 import discord
@@ -154,3 +155,13 @@ class ConfigCog(commands.Cog):
         await ctx.send(
             "\n".join(f"**{key}**\n{value}\n" for key, value in placeholders.items())
         )
+
+
+async def setup(bot: commands.AutoShardedBot):
+    await bot.add_cog(ConfigCog(bot))
+    logging.info(f"Cog of {__name__} added!")
+
+
+async def teardown(bot: commands.AutoShardedBot):
+    await bot.remove_cog("ConfigCog")
+    logging.info(f"Cog of {__name__} removed!")

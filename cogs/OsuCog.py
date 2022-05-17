@@ -1,4 +1,5 @@
 import datetime
+import logging
 from typing import Optional, List, Dict
 
 import discord
@@ -208,11 +209,10 @@ class OsuCog(commands.Cog):
             limit: int
             prompt: str
             include_fails: bool
-            msg: discord.Message
 
             # limit count
             if not is_from_context:
-                pr = await m.edit(content="How many records do you want to get?")
+                m = await m.edit(content="How many records do you want to get?")
 
                 try:
                     msg: discord.Message = await self.bot.wait_for(
@@ -221,7 +221,7 @@ class OsuCog(commands.Cog):
                     prompt = msg.content
                     await msg.delete(delay=1.0)
                 except TimeoutError:
-                    await pr.edit(content="Timed out")
+                    await m.edit(content="Timed out")
                     return
             else:
                 prompt = "1"
@@ -237,12 +237,12 @@ class OsuCog(commands.Cog):
             # fail inclusion prompt
             if not is_from_context and request == "recents":
                 view = FailInclusionConfirmationView()
-                pr = await pr.edit(
+                m = await m.edit(
                     content="Do you want to include fail scores?", view=view
                 )
 
                 if await view.wait():
-                    await pr.edit(content="Timed out", view=None)
+                    await m.edit(content="Timed out", view=None)
                     return
 
                 view.stop()
@@ -255,7 +255,7 @@ class OsuCog(commands.Cog):
             )
 
             if len(scores) == 0:
-                await pr.edit(content="No suitable scores found", view=None)
+                await m.edit(content="No suitable scores found", view=None)
                 return
 
             embeds = []
@@ -319,7 +319,7 @@ class OsuCog(commands.Cog):
             else:
                 # Since we are in context menu command
                 # Or either the embed list is so small
-                await pr.edit(embed=embeds[0], view=None)
+                await m.edit(embed=embeds[0], view=None)
 
     @osu.command()
     @app_commands.describe(
@@ -369,3 +369,16 @@ class OsuCog(commands.Cog):
         """Check a custom osu! profile"""
         await ctx.defer()
         await self.__generic_check(ctx, request, username, mode)
+
+
+async def setup(bot: commands.AutoShardedBot):
+    if Config.OSU and Config.OSU["client_id"] and Config.OSU["client_secret"]:
+        await bot.add_cog(OsuCog(bot))
+        logging.info(f"Cog of {__name__} added!")
+    else:
+        raise commands.ExtensionFailed
+
+
+async def teardown(bot: commands.AutoShardedBot):
+    await bot.remove_cog("OsuCog")
+    logging.info(f"Cog of {__name__} removed!")

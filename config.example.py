@@ -46,29 +46,10 @@ class Config:
 
     # Configurations for Lavalink servers for music commands
     LAVALINK = {
-        "nodes": [
-            {
-                "host": "lavalink.darrenofficial.com",
-                "port": 80,
-                "password": "lavalink_is_cool",
-                "is_secure": False,
-            },
-            {
-                "host": "usui-linku.kadantte.moe",
-                "port": 443,
-                "password": "Usui#0256",
-                "is_secure": True,
-            },
-            {
-                "host": "lavalink.oops.wtf",
-                "port": 443,
-                "password": "www.freelavalink.ga",
-                "is_secure": True,
-            },
-        ],
+        "nodes": [],
         "spotify": {
-            "client_id": "c6716be485d048e7a1b1ef4ed1a7b648",
-            "client_secret": "202cb8c313854c058ba5576e68215c14",
+            "client_id": "",
+            "client_secret": "",
         },
     }
 

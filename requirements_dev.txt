@@ -4,3 +4,4 @@ alembic
 pycodestyle
 pip
 setuptools
+wheel

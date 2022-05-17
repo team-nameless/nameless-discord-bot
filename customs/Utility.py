@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Tuple
 from urllib.parse import quote_plus as qp
 
 import discord
@@ -55,15 +55,7 @@ class Utility:
     @staticmethod
     async def get_or_create_role(
         name: str, reason: str, ctx: commands.Context
-    ) -> tuple[discord.Role, bool]:
-        """
-        Get or create new role.
-        :param ctx: Current context.
-        :param name: Role name.
-        :param reason: Reason to create role name, as in the audit log.
-        :return: The role. True if the returned one is new, False otherwise.
-        """
-
+    ) -> Tuple[discord.Role, bool]:
         guild_roles = ctx.guild.roles
         role_exists = any(role.name == name for role in guild_roles)
         if role_exists:

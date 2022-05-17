@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 import discord
 import pymongo
@@ -63,7 +63,7 @@ class CRUD:
         """
         return self.session.new
 
-    def get_or_create_user_record(self, user: discord.User) -> tuple[DbUser, bool]:
+    def get_or_create_user_record(self, user: discord.User) -> Tuple[DbUser, bool]:
         """
         Get an existing user record, create a new record if one doesn't exist.
         :param user: User entity of discord.
@@ -75,7 +75,7 @@ class CRUD:
 
         return u, False
 
-    def get_or_create_guild_record(self, guild: discord.Guild) -> tuple[DbGuild, bool]:
+    def get_or_create_guild_record(self, guild: discord.Guild) -> Tuple[DbGuild, bool]:
         """
         Get an existing guild record, create a new record if one doesn't exist.
         :param guild: Guild entity of discord.

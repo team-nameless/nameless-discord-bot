@@ -19,6 +19,8 @@ from config import Config
 
 __all__ = ["MusicCog"]
 
+music_default_sources: List[str] = ["youtube", "soundcloud", "ytmusic"]
+
 
 class VoteMenuView(discord.ui.View):
     __slots__ = ("user", "value")
@@ -174,6 +176,24 @@ class TrackPickDropdown(discord.ui.Select):
 class MusicCog(commands.Cog):
     def __init__(self, bot: commands.AutoShardedBot):
         self.bot = bot
+        self.can_use_spotify = (
+            True
+            if Config.LAVALINK.get("spotify")
+            and Config.LAVALINK["spotify"]
+            and Config.LAVALINK["spotify"]["client_id"]
+            and Config.LAVALINK["spotify"]["client_secret"]
+            else False
+        )
+
+        if not self.can_use_spotify:
+            logging.warning(
+                "Spotify option will be removed since you did not provide enough credentials."
+            )
+        else:
+            # I know, bad design
+            global music_default_sources
+            music_default_sources += ["spotify"]
+
         bot.loop.create_task(self.connect_nodes())
 
     async def connect_nodes(self):
@@ -189,9 +209,7 @@ class MusicCog(commands.Cog):
                     client_id=Config.LAVALINK["spotify"]["client_id"],
                     client_secret=Config.LAVALINK["spotify"]["client_secret"],
                 )
-                if Config.LAVALINK["spotify"]
-                and Config.LAVALINK["spotify"]["client_id"]
-                and Config.LAVALINK["spotify"]["client_secret"]
+                if self.can_use_spotify
                 else None,
             )
 
@@ -531,7 +549,7 @@ class MusicCog(commands.Cog):
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
     async def delete(self, ctx: commands.Context, indexes: str):
-        """Remove tracks from queue atomically (remove as much as possible)"""
+        """Remove tracks from queue atomically"""
         await ctx.defer()
 
         vc: wavelink.Player = ctx.voice_client  # type: ignore
@@ -564,10 +582,7 @@ class MusicCog(commands.Cog):
     @queue.command()
     @app_commands.describe(search="Search query", source="Source to search")
     @app_commands.choices(
-        source=[
-            Choice(name=k, value=k)
-            for k in ["youtube", "soundcloud", "spotify", "ytmusic"]
-        ]
+        source=[Choice(name=k, value=k) for k in music_default_sources]
     )
     async def add(self, ctx: commands.Context, search: str, source: str = "youtube"):
         """Add selected track(s) to queue"""
@@ -623,10 +638,7 @@ class MusicCog(commands.Cog):
     @queue.command()
     @app_commands.describe(url="Playlist URL", source="Source to get playlist")
     @app_commands.choices(
-        source=[
-            Choice(name=k, value=k)
-            for k in ["youtube", "soundcloud", "spotify", "ytmusic"]
-        ]
+        source=[Choice(name=k, value=k) for k in music_default_sources]
     )
     async def add_playlist(
         self, ctx: commands.Context, url: str, source: str = "youtube"

@@ -879,8 +879,8 @@ class MusicCog(commands.Cog):
         if vc and vc.queue.is_empty:
             await ctx.send("Queue is empty")
             raise commands.CommandError("Queue is empty")
-        else:
-            raise commands.CommandError("Wait what?")
+
+        raise commands.CommandError("Wait what?")
 
     @skip.before_invoke
     @loop.before_invoke
@@ -893,8 +893,8 @@ class MusicCog(commands.Cog):
         if vc and track and track.is_stream():
             await ctx.send("Stream is not allowed on this command")
             raise commands.CommandError("Stream is not allowed")
-        else:
-            raise commands.CommandError("Wait what?")
+
+        raise commands.CommandError("Wait what?")
 
 
 async def setup(bot: commands.AutoShardedBot):

@@ -187,7 +187,7 @@ class MusicCog(commands.Cog):
 
         if not self.can_use_spotify:
             logging.warning(
-                "Spotify option will be removed since you did not provide enough credentials."
+                "Spotify command option will be removed since you did not provide enough credentials."
             )
         else:
             # I know, bad design

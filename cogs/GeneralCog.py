@@ -24,18 +24,20 @@ class ActivityCog(commands.Cog):
     @app_commands.choices(
         target=[Choice(name=k, value=k) for k, _ in defaultApplications.items()]
     )
-    async def activity(
-            self,
-            ctx: commands.Context,
-            voice_channel: discord.VoiceChannel,
-            target: str = "youtube",
+    async def create_activity(
+        self,
+        ctx: commands.Context,
+        voice_channel: discord.VoiceChannel,
+        target: str = "youtube",
     ):
         """Generate an embedded activity link"""
 
         msg = await ctx.send("Generating link")
 
         inv = await (
-            await discord_together.DiscordTogether(Config.TOKEN, debug=Config.LAB)
+            await discord_together.DiscordTogether(
+                Config.TOKEN, debug=Config.LAB
+            )  # noqa
         ).create_link(voice_channel.id, target)
 
         await msg.edit(content=f"Here is your link: {inv}")

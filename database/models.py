@@ -22,15 +22,6 @@ class DbUser(Base, Mongo):
     def from_dict(d: dict):
         return DbUser(d["id"], d["warn_count"], d["osu_mode"], d["osu_username"])
 
-    def __init__(
-        self, _id: int, warn_count: int = 0, osu_mode: str = "", osu_username: str = ""
-    ):
-        super().__init__()
-        self.id: int = _id
-        self.warn_count: int = warn_count
-        self.osu_mode: str = osu_mode
-        self.osu_username: str = osu_username
-
     def to_dict(self):
         return {
             "id": self.id,
@@ -47,27 +38,6 @@ class DbUser(Base, Mongo):
 
 
 class DbGuild(Base, Mongo):
-    def __init__(
-        self,
-        _id: int,
-        is_welcome_enabled: bool = False,
-        is_goodbye_enabled: bool = False,
-        welcome_channel_id: int = 0,
-        goodbye_channel_id: int = 0,
-        welcome_message: str = "",
-        goodbye_message: str = "",
-        radio_start_time: datetime.datetime = datetime.datetime.min,
-    ):
-        super().__init__()
-        self.id: int = _id
-        self.is_welcome_enabled: bool = is_welcome_enabled
-        self.is_goodbye_enabled: bool = is_goodbye_enabled
-        self.welcome_channel_id: int = welcome_channel_id
-        self.goodbye_channel_id: int = goodbye_channel_id
-        self.welcome_message: str = welcome_message
-        self.goodbye_message: str = goodbye_message
-        self.radio_start_time: datetime.datetime = radio_start_time
-
     @staticmethod
     def from_dict(d: dict):
         return DbGuild(

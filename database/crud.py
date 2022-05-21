@@ -108,9 +108,9 @@ class CRUD:
         return self.session.query(DbGuild).filter_by(id=guild.id).one_or_none()
 
     def create_user_record(self, user: discord.User) -> DbUser:
-        decoy_user = DbUser(_id=user.id)
+        decoy_user = DbUser(id=user.id)
 
-        if self.is_mongo:
+        if self.is_mongo:  # noqa
             self.mongo_users.insert_one(decoy_user.to_dict())
             return decoy_user
 
@@ -122,9 +122,9 @@ class CRUD:
         return self.session.query(DbUser).filter_by(id=user.id).one()
 
     def create_guild_record(self, guild: discord.Guild) -> DbGuild:
-        decoy_guild = DbGuild(_id=guild.id)
+        decoy_guild = DbGuild(id=guild.id)
 
-        if self.is_mongo:
+        if self.is_mongo:  # noqa
             self.mongo_guilds.insert_one(decoy_guild.to_dict())
             return decoy_guild
 

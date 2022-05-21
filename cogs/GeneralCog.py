@@ -35,9 +35,9 @@ class ActivityCog(commands.Cog):
         msg = await ctx.send("Generating link")
 
         inv = await (
-            await discord_together.DiscordTogether(
+            await discord_together.DiscordTogether(  # noqa
                 Config.TOKEN, debug=Config.LAB
-            )  # noqa
+            )
         ).create_link(voice_channel.id, target)
 
         await msg.edit(content=f"Here is your link: {inv}")

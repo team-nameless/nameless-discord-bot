@@ -9,10 +9,10 @@ from discord_together.discordTogetherMain import defaultApplications
 
 from config import Config
 
-__all__ = ["ActivityCog"]
+__all__ = ["GeneralCog"]
 
 
-class ActivityCog(commands.Cog):
+class GeneralCog(commands.Cog):
     def __init__(self, bot: commands.AutoShardedBot) -> None:
         self.bot = bot
 

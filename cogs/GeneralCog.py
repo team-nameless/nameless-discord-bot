@@ -44,10 +44,10 @@ class GeneralCog(commands.Cog):
 
 
 async def setup(bot: commands.AutoShardedBot):
-    await bot.add_cog(ActivityCog(bot))
+    await bot.add_cog(GeneralCog(bot))
     logging.info(f"Cog of {__name__} added!")
 
 
 async def teardown(bot: commands.AutoShardedBot):
-    await bot.remove_cog("ActivityCog")
+    await bot.remove_cog("GeneralCog")
     logging.info(f"Cog of {__name__} removed!")

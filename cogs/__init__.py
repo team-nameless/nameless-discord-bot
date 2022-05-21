@@ -1,4 +1,3 @@
-from .ActivityCog import *
 from .ConfigCog import *
 from .ExperimentalCog import *
 from .ModeratorCog import *

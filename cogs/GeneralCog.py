@@ -25,10 +25,10 @@ class ActivityCog(commands.Cog):
         target=[Choice(name=k, value=k) for k, _ in defaultApplications.items()]
     )
     async def activity(
-        self,
-        ctx: commands.Context,
-        voice_channel: discord.VoiceChannel,
-        target: str = "youtube",
+            self,
+            ctx: commands.Context,
+            voice_channel: discord.VoiceChannel,
+            target: str = "youtube",
     ):
         """Generate an embedded activity link"""
 

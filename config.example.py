@@ -4,7 +4,7 @@ import discord
 
 
 class Config:
-    # Enable experimental changes
+    # Enable experimental stuffs
     # Set to True if you know what you are doing
     LAB: bool = False
 
@@ -15,6 +15,14 @@ class Config:
     # Guild IDs to register commands
     # Leave empty array for global (slash commands takes one hour to mitigate, text takes immediately)
     GUILD_IDs = []
+
+    # Choose which cog(s) to load
+    # Available options: Config, Experimental (requires `LAB` set as True), General, Moderator,
+    #                    Music (requires `LAVALINK` to be properly provided),
+    #                    Osu (requires `OSU` to be properly provided), Owner
+    COGS: List[str] = ["Music", "Osu", "General"]
+
+    # Guild prefixes for text commands
     PREFIXES: List[str] = ["alongprefix."]
 
     # Bot status
@@ -33,15 +41,16 @@ class Config:
     # It is recommended that you set a simple database such as SQLite or MongoDB/MongoDB Atlas
     # Use "mongodb" dialect for Mongo ("srv" as "driver" if using Atlas), "sqlite" for SQLite of Python, "" as "driver)
     # Please note: Install driver BY YOURSELF if NOT using SQLite or MongoDB/MongoDB Atlas.
-    # For example with PostgreSQL: pip install psycopg2-binary, then fill "psycopg2" as "driver" below.
+    # For example with PostgreSQL: pip install psycopg2-binary, then use "psycopg2" as "driver" below.
+    # If you are too lazy to set this, leave this as default.
     DATABASE: Optional[Dict[str, Any]] = {
-        "dialect": "postgresql",
-        "driver": None,
-        "username": "swyrin",
-        "password": "uwu",
-        "host": "localhost",
-        "port": 5432,
-        "db_name": "lilia",
+        "dialect": "sqlite",
+        "driver": "",
+        "username": "",
+        "password": "",
+        "host": "",
+        "port": None,
+        "db_name": "lilia.db",
     }
 
     # Configurations for Lavalink servers for music commands

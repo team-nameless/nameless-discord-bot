@@ -5,7 +5,7 @@ A rewrite of [original nameless*](https://github.com/FoxeiZ/nameless)
 [![CodeFactor](https://www.codefactor.io/repository/github/lilia-workshop/nameless/badge/main)](https://www.codefactor.io/repository/github/lilia-workshop/nameless/overview/main)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Python](https://badgen.net/badge/Python/3.8/)](https://python.org/)
-[![pypy](https://badgen.net/badge/pypy/3.8%20(with%20compatibility%20layer)/)](https://pypy.org/)
+[![pypy](https://badgen.net/badge/pypy/3.8/)](https://pypy.org/)
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/Lilia-Workshop/nameless.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Lilia-Workshop/nameless/alerts/)
 [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/Lilia-Workshop/nameless.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Lilia-Workshop/nameless/context:python)
 
@@ -13,12 +13,12 @@ A rewrite of [original nameless*](https://github.com/FoxeiZ/nameless)
 
 ## How to run this bot?
 
-- First, install `python3`, latest version preferred.
-- Second, create a virtual environment so your global `python3` won't be badly affected and activate it (most IDEs
+- First, install `python3` or `pypy`, latest version preferred.
+- Second, create a virtual environment so your global "python" won't be badly affected and activate it (most IDEs
   automatically activate it for you)
 
 ```shell
-python3 -m venv venv
+python3/pypy -m venv venv
 source venv/bin/activate
 ```
 
@@ -28,15 +28,12 @@ source venv/bin/activate
 pip install -r requirements_core.txt
 ```
 
-- After that, create a config file naming `config.py`
-  and [fill it](https://github.com/Lilia-Workshop/nameless/wiki/config.py).
-  Also [setup your database](https://github.com/Lilia-Workshop/nameless/wiki/Setup-database-(PostgreSQL)) (PostgreSQL
-  for example, YMMV. We also support MongoDB/MongoDB Atlas).
+- After that, edit `config.example.py` then rename to `config.py`.
 
 - Lastly, run the `main.py` file:
 
 ```shell
-python3 main.py
+python main.py
 ```
 
 ## Noice, your code is so cool, and I wanna contribute my parts on them

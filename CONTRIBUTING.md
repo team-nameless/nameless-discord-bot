@@ -38,11 +38,12 @@ pip install -U -r requirements_dev.txt
 - Database contribution guides:
     - We follow PascalCase SQLAlchemy name override convention.
     - Every column edits
-        - Must include the property in constructor:
+        - Must add a property in class body (remember to type it):
 
           ```python
-          def __init__(self, anything_else, your_new_field):
-            self.your_new_field = your_new_field
+          class ACoolClass(Base, Mongo):
+            ...
+            your_new_field = Column(...)
           ```
 
         - Must include the change in both `from_dict` and `to_dict`:

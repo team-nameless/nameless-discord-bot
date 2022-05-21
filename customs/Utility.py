@@ -1,4 +1,4 @@
-from typing import Callable, Tuple
+from typing import Callable
 from urllib.parse import quote_plus as qp
 
 import discord

@@ -684,7 +684,7 @@ class MusicCog(commands.Cog):
 
         vc: wavelink.Player = ctx.voice_client  # type: ignore
 
-        int_queue = vc.queue._queue
+        int_queue = vc.queue._queue  # noqa
         queue_length = len(int_queue)
 
         if not (
@@ -721,7 +721,7 @@ class MusicCog(commands.Cog):
         await ctx.defer()
 
         vc: wavelink.Player = ctx.voice_client  # type: ignore
-        int_q = vc.queue._queue
+        int_q = vc.queue._queue  # noqa
         q_length = len(int_q)
 
         a1 = pos1.replace(" ", "").split(",")
@@ -761,7 +761,7 @@ class MusicCog(commands.Cog):
 
         vc: wavelink.Player = ctx.voice_client  # type: ignore
 
-        random.shuffle(vc.queue._queue)
+        random.shuffle(vc.queue._queue)  # noqa
         await ctx.send("Shuffled the queue")
 
     @queue.command()
@@ -811,7 +811,6 @@ class MusicCog(commands.Cog):
     @swap.before_invoke
     async def user_in_voice_before_invoke(self, ctx: commands.Context):
         if not ctx.author.voice:
-            await ctx.send("You need to be in a voice channel")
             raise commands.CommandError("User did not join voice")
 
     @music.before_invoke
@@ -837,7 +836,6 @@ class MusicCog(commands.Cog):
     @swap.before_invoke
     async def bot_in_voice_before_invoke(self, ctx: commands.Context):
         if not ctx.voice_client:
-            await ctx.send("I need to be in a voice channel")
             raise commands.CommandError("Bot did not join voice")
 
     @music.before_invoke
@@ -846,7 +844,6 @@ class MusicCog(commands.Cog):
         vc: wavelink.Player = ctx.voice_client  # type: ignore
 
         if vc and vc.is_playing():
-            await ctx.send("I am playing something else.")
             raise commands.CommandError("Something else is being played")
 
     @loop.before_invoke
@@ -862,7 +859,6 @@ class MusicCog(commands.Cog):
         track: wavelink.Track = vc.track  # type: ignore
 
         if not track:
-            await ctx.send("Nothing is being played right now")
             raise commands.CommandError("No track is being played")
 
     @queue.before_invoke
@@ -877,7 +873,6 @@ class MusicCog(commands.Cog):
         vc: wavelink.Player = ctx.voice_client  # type: ignore
 
         if vc and vc.queue.is_empty:
-            await ctx.send("Queue is empty")
             raise commands.CommandError("Queue is empty")
 
         raise commands.CommandError("Wait what?")
@@ -891,7 +886,6 @@ class MusicCog(commands.Cog):
         track: wavelink.Track = vc.track  # type: ignore
 
         if vc and track and track.is_stream():
-            await ctx.send("Stream is not allowed on this command")
             raise commands.CommandError("Stream is not allowed")
 
         raise commands.CommandError("Wait what?")

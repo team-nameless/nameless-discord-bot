@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ '3.8', 'pypy-3.8', '3.x' ]
+        python-version: [ '3.8', 'pypy-3.8' ]
         language: [ 'en' ]
 
     name: CI on Python ${{ matrix.python-version }}
@@ -27,14 +27,26 @@ jobs:
       - name: Install dependencies
         id: install-deps
         run: |
-          python -m pip install --upgrade pip
+          pip install --upgrade pip
           pip install --upgrade pip setuptools wheel
           pip install -U -r requirements_core.txt
           pip install -U -r requirements_dev.txt
-
+      
       - name: Create dummy config file
         run: |
           mv config.example.py config.py
+          
+      - name: Setup node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+
+      - name: Run Pyright
+        uses: jakebailey/pyright-action@v1
+        with:
+          version: '1.1.242'
+          warnings: false
+          no-comments: true
 
       - name: Run black
         run: |

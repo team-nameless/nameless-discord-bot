@@ -7,7 +7,7 @@ from DiscordUtils import Pagination
 from discord import Color, app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
-from ossapi import *
+from ossapi import User, UserLookupKey, Score, ScoreType, GameMode, OssapiV2
 
 import global_deps
 from config import Config
@@ -137,7 +137,6 @@ class OsuCog(commands.Cog):
     ):
         m = await ctx.send("Processing")
 
-        osu_user: Optional[User]
         the_mode = None if mode == "default" else convert_to_game_mode(mode)
 
         osu_user: User = self.api.user(username, the_mode, key=UserLookupKey.USERNAME)

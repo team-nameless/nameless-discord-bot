@@ -75,17 +75,18 @@ class CRUD:
 
         return u, False
 
-    def get_or_create_guild_record(self, guild: discord.Guild) -> Tuple[DbGuild, bool]:
+    def get_or_create_guild_record(self, guild: Optional[discord.Guild]) -> Tuple[DbGuild, bool]:
         """
         Get an existing guild record, create a new record if one doesn't exist.
         :param guild: Guild entity of discord.
         :return: Guild record in database. True if the returned record is the new one, False otherwise.
         """
-        g = self.get_guild_record(guild)
-        if not g:
-            return self.create_guild_record(guild), True
+        if guild:
+            g = self.get_guild_record(guild)
+            if not g:
+                return self.create_guild_record(guild), True
 
-        return g, False
+            return g, False
 
     def get_user_record(self, user: discord.User) -> Optional[DbUser]:
         if self.is_mongo:
@@ -97,15 +98,16 @@ class CRUD:
 
         return self.session.query(DbUser).filter_by(id=user.id).one_or_none()
 
-    def get_guild_record(self, guild: discord.Guild) -> Optional[DbGuild]:
-        if self.is_mongo:
-            record = self.mongo_guilds.find_one({"id": guild.id})
-            if record:
-                return DbGuild.from_dict(dict(record))
+    def get_guild_record(self, guild: Optional[discord.Guild]) -> Optional[DbGuild]:
+        if guild:
+            if self.is_mongo:
+                record = self.mongo_guilds.find_one({"id": guild.id})
+                if record:
+                    return DbGuild.from_dict(dict(record))
 
-            return None
+                return None
 
-        return self.session.query(DbGuild).filter_by(id=guild.id).one_or_none()
+            return self.session.query(DbGuild).filter_by(id=guild.id).one_or_none()
 
     def create_user_record(self, user: discord.User) -> DbUser:
         decoy_user = DbUser(id=user.id)
@@ -121,19 +123,20 @@ class CRUD:
 
         return self.session.query(DbUser).filter_by(id=user.id).one()
 
-    def create_guild_record(self, guild: discord.Guild) -> DbGuild:
-        decoy_guild = DbGuild(id=guild.id)
+    def create_guild_record(self, guild: Optional[discord.Guild]) -> DbGuild:
+        if guild:
+            decoy_guild = DbGuild(id=guild.id)
 
-        if self.is_mongo:  # noqa
-            self.mongo_guilds.insert_one(decoy_guild.to_dict())
-            return decoy_guild
+            if self.is_mongo:  # noqa
+                self.mongo_guilds.insert_one(decoy_guild.to_dict())
+                return decoy_guild
 
-        if not self.session.query(DbGuild).filter_by(id=guild.id).one_or_none():
-            self.session.add(decoy_guild)
-            self.save_changes()
-            return decoy_guild
+            if not self.session.query(DbGuild).filter_by(id=guild.id).one_or_none():
+                self.session.add(decoy_guild)
+                self.save_changes()
+                return decoy_guild
 
-        return self.session.query(DbGuild).filter_by(id=guild.id).one()
+            return self.session.query(DbGuild).filter_by(id=guild.id).one()
 
     def delete_guild_record(self, guild_record: DbGuild) -> None:
         """

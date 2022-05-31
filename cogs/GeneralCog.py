@@ -51,7 +51,8 @@ class GeneralCog(commands.Cog):
         """View someone's information"""
         await ctx.defer()
 
-        member = member if member else ctx.author
+        if not member:
+            member = ctx.author
 
         account_create_date = member.created_at
         join_date = member.joined_at

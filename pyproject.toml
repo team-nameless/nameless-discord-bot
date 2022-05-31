@@ -1,0 +1,21 @@
+[tool.pyright]
+include = [
+    "alembic",
+    "cogs",
+    "customs",
+    "./config.example.py",
+    "./main.py",
+]
+exclude = [
+    "**/__pycache__",
+]
+
+reportUnnecessaryTypeIgnoreComment = "warning"
+reportUnusedImport = "error"
+pythonVersion = "3.8"
+typeCheckingMode = "basic"
+
+[tool.isort]
+profile = "black"
+combine_as_imports = true
+combine_star = true

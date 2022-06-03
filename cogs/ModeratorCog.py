@@ -146,12 +146,13 @@ class ModeratorCog(commands.Cog):
             )
         else:
             await self.__generic_ban_kick(
-                ctx, reason, "ban", ctx.guild.ban, delete_message_days
+                ctx, reason, "ban", ctx.guild.ban, delete_message_days  # pyright: ignore
             )
 
     @mod.command()
     @commands.has_guild_permissions(kick_members=True)
     @commands.bot_has_guild_permissions(kick_members=True)
+    @commands.guild_only()
     @app_commands.checks.has_permissions(kick_members=True)
     @app_commands.checks.bot_has_permissions(kick_members=True)
     @app_commands.describe(reason="Kick reason")
@@ -161,7 +162,7 @@ class ModeratorCog(commands.Cog):
         reason: str = "Rule violation",
     ):
         """Kick members, in batch"""
-        await self.__generic_ban_kick(ctx, reason, "kick", ctx.guild.kick)
+        await self.__generic_ban_kick(ctx, reason, "kick", ctx.guild.kick)  # pyright: ignore
 
     @mod.command()
     @commands.has_guild_permissions(moderate_members=True)

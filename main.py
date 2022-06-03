@@ -95,7 +95,7 @@ class Nameless(commands.AutoShardedBot):
             ),
         )
 
-        logging.info(msg=f"Logged in as {self.user} (ID: {self.user.id})")
+        logging.info(msg=f"Logged in as {self.user} (ID: {self.user.id})")  # pyright: ignore
 
     async def on_error(self, event_method: str, /, *args, **kwargs) -> None:
         logging.error(
@@ -110,11 +110,10 @@ class Nameless(commands.AutoShardedBot):
 
         if db_guild.is_welcome_enabled:
             if db_guild.welcome_message != "":
-                if (
-                    the_channel := member.guild.get_channel(db_guild.welcome_channel_id)
-                    is not None
+                if the_channel := member.guild.get_channel_or_thread(
+                    db_guild.welcome_channel_id
                 ):
-                    await the_channel.send(
+                    await the_channel.send(  # pyright: ignore
                         content=db_guild.welcome_message.replace(
                             "{guild}", f"{member.guild=}"
                         )
@@ -128,11 +127,10 @@ class Nameless(commands.AutoShardedBot):
 
         if db_guild.is_goodbye_enabled:
             if db_guild.goodbye_message != "":
-                if (
-                    the_channel := member.guild.get_channel(db_guild.goodbye_channel_id)
-                    is not None
+                if the_channel := member.guild.get_channel_or_thread(
+                    db_guild.goodbye_channel_id
                 ):
-                    await the_channel.send(
+                    await the_channel.send(  # pyright: ignore
                         content=db_guild.goodbye_message.replace(
                             "{guild}", f"{member.guild=}"
                         )

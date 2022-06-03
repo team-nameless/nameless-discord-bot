@@ -72,17 +72,13 @@ class VoteMenu:
         voice_client: discord.VoiceClient,
     ):
         self.action = action
-        self.content = (
-            f"{content.title[:50]}..."
-            if isinstance(content, wavelink.Track)
-            else content
-        )
+        self.content = f"{content[:50]}..."
         self.ctx = ctx
         self.max_vote_user = math.ceil(len(voice_client.channel.members) / 2)
         self.total_vote = 1
 
-        self.approve_member = [ctx.author.mention]
-        self.disapprove_member = []
+        self.approve_member: List[str] = [ctx.author.mention]
+        self.disapprove_member: List[str] = []
 
     async def start(self):
         if self.max_vote_user <= 1:
@@ -104,9 +100,9 @@ class VoteMenu:
             self.total_vote += 1
 
             if menu.value:
-                self.approve_member.append(menu.user)
+                self.approve_member.append(menu.user)  # pyright: ignore
             else:
-                self.disapprove_member.append(menu.user)
+                self.disapprove_member.append(menu.user)  # pyright: ignore
 
         pred = len(self.disapprove_member) > len(self.approve_member)
         if pred:
@@ -154,7 +150,7 @@ class TrackPickDropdown(discord.ui.Select):
         ] + [
             discord.SelectOption(
                 label=f"{track.author} - {track.title}"[:100],
-                description=track.uri[:100],
+                description=track.uri[:100] if track.uri else "No URI",
                 value=str(index),
             )
             for index, track in enumerate(tracks[:25])
@@ -169,7 +165,7 @@ class TrackPickDropdown(discord.ui.Select):
         )
 
     async def callback(self, _: discord.Interaction) -> Any:
-        v: discord.ui.View = self.view
+        v: discord.ui.View = self.view  # pyright: ignore
         v.stop()
 
 
@@ -180,8 +176,8 @@ class MusicCog(commands.Cog):
             True
             if Config.LAVALINK.get("spotify")
             and Config.LAVALINK["spotify"]
-            and Config.LAVALINK["spotify"]["client_id"]
-            and Config.LAVALINK["spotify"]["client_secret"]
+            and Config.LAVALINK["spotify"]["client_id"]  # pyright: ignore
+            and Config.LAVALINK["spotify"]["client_secret"]  # pyright: ignore
             else False
         )
 
@@ -206,8 +202,8 @@ class MusicCog(commands.Cog):
                 password=node["password"],
                 https=node["is_secure"],
                 spotify_client=spotify.SpotifyClient(
-                    client_id=Config.LAVALINK["spotify"]["client_id"],
-                    client_secret=Config.LAVALINK["spotify"]["client_secret"],
+                    client_id=Config.LAVALINK["spotify"]["client_id"],  # pyright: ignore
+                    client_secret=Config.LAVALINK["spotify"]["client_secret"],  # pyright: ignore
                 )
                 if self.can_use_spotify
                 else None,
@@ -221,9 +217,10 @@ class MusicCog(commands.Cog):
     async def on_wavelink_track_start(
         self, player: wavelink.Player, track: wavelink.Track
     ):
-        chn = player.guild.get_channel(player.trigger_channel_id)  # type: ignore
-        if not player.loop_sent and player.play_now_allowed:  # type: ignore
-            await chn.send(
+        chn = player.guild.get_channel(player.trigger_channel_id)  # pyright: ignore
+
+        if chn and not (player.loop_sent and player.play_now_allowed):  # pyright: ignore
+            await chn.send(  # pyright: ignore
                 f"Playing: **{track.title}** from **{track.author}** ({track.uri})"
             )
 
@@ -240,12 +237,13 @@ class MusicCog(commands.Cog):
             if player.loop_sent and not player.skip_sent:  # type: ignore
                 pass
             else:
-                player.skip_sent = False
-                track = await player.queue.get_wait()
+                player.skip_sent = False  # pyright: ignore
+                track = await player.queue.get_wait()  # pyright: ignore
 
-            await self.__internal_play2(player, track.uri)
+            await self.__internal_play2(player, track.uri)  # pyright: ignore
         except wavelink.QueueEmpty:
-            await chn.send("The queue is empty now")
+            if chn:
+                await chn.send("The queue is empty now")  # pyright: ignore
 
     async def __internal_play(
         self, ctx: commands.Context, url: str, is_radio: bool = False
@@ -253,14 +251,14 @@ class MusicCog(commands.Cog):
         vc: wavelink.Player = ctx.voice_client  # type: ignore
 
         # Props set
-        vc.skip_sent = False
-        vc.stop_sent = False
-        vc.loop_sent = False
-        vc.play_now_allowed = True
-        vc.trigger_channel_id = ctx.channel.id
+        vc.skip_sent = False  # pyright: ignore
+        vc.stop_sent = False  # pyright: ignore
+        vc.loop_sent = False  # pyright: ignore
+        vc.play_now_allowed = True  # pyright: ignore
+        vc.trigger_channel_id = ctx.channel.id  # pyright: ignore
 
         if is_radio:
-            dbg, _ = global_deps.crud_database.get_or_create_guild_record(ctx.guild)
+            dbg, _ = global_deps.crud_database.get_or_create_guild_record(ctx.guild)  # pyright: ignore
             dbg.radio_start_time = datetime.datetime.now()
             global_deps.crud_database.save_changes(guild_record=dbg)
 
@@ -296,7 +294,7 @@ class MusicCog(commands.Cog):
         await ctx.defer()
 
         try:
-            await ctx.voice_client.disconnect(force=True)
+            await ctx.voice_client.disconnect(force=True)  # pyright: ignore
             await ctx.send("Disconnected from my own voice channel")
         except AttributeError:
             await ctx.send("Already disconnected")
@@ -308,9 +306,9 @@ class MusicCog(commands.Cog):
 
         vc: wavelink.Player = ctx.voice_client  # type: ignore
 
-        vc.loop_sent = not vc.loop_sent
+        vc.loop_sent = not vc.loop_sent  # pyright: ignore
 
-        await ctx.send(f"Loop set to {'on' if vc.loop_sent else 'off'}")
+        await ctx.send(f"Loop set to {'on' if vc.loop_sent else 'off'}")  # pyright: ignore
 
     @music.command()
     async def pause(self, ctx: commands.Context):
@@ -346,7 +344,7 @@ class MusicCog(commands.Cog):
         await ctx.defer()
 
         vc: wavelink.Player = ctx.voice_client  # type: ignore
-        vc.stop_sent = True
+        vc.stop_sent = True  # pyright: ignore
 
         await vc.stop()
         await ctx.send("Stopping")
@@ -363,7 +361,7 @@ class MusicCog(commands.Cog):
             return
 
         track = vc.queue.get()
-        await self.__internal_play(ctx, track.uri)
+        await self.__internal_play(ctx, track.uri)  # pyright: ignore
 
     @music.command()
     async def skip(self, ctx: commands.Context):
@@ -373,8 +371,8 @@ class MusicCog(commands.Cog):
         vc: wavelink.Player = ctx.voice_client  # type: ignore
         track: wavelink.Track = vc.track  # type: ignore
 
-        if await VoteMenu("skip", track, ctx, vc).start():  # type: ignore
-            vc.skip_sent = True
+        if await VoteMenu("skip", track.title, ctx, vc).start():  # type: ignore
+            vc.skip_sent = True  # pyright: ignore
             await vc.stop()
 
     @music.command()
@@ -435,7 +433,7 @@ class MusicCog(commands.Cog):
         vc.play_now_allowed = not vc.play_now_allowed  # type: ignore
 
         await ctx.send(
-            f"'Now playing' delivery is now {'on' if vc.play_now_allowed else 'off'}"
+            f"'Now playing' delivery is now {'on' if vc.play_now_allowed else 'off'}"  # pyright: ignore
         )
 
     @music.command()
@@ -451,7 +449,7 @@ class MusicCog(commands.Cog):
             return
 
         is_stream = track.is_stream()
-        dbg, _ = global_deps.crud_database.get_or_create_guild_record(ctx.guild)
+        dbg, _ = global_deps.crud_database.get_or_create_guild_record(ctx.guild)  # pyright: ignore
 
         try:
             next_tr = vc.queue.copy().get()
@@ -463,14 +461,14 @@ class MusicCog(commands.Cog):
                 discord.Embed(
                     timestamp=datetime.datetime.now(), color=discord.Color.orange()
                 )
-                .set_author(name="Now playing track", icon_url=ctx.author.avatar.url)
+                .set_author(name="Now playing track", icon_url=ctx.author.avatar.url)  # pyright: ignore
                 .add_field(
                     name="Title",
                     value=escape_markdown(track.title),
                     inline=False,
                 )
-                .add_field(name="Author", value=escape_markdown(track.author))
-                .add_field(name="Source", value=escape_markdown(track.uri))
+                .add_field(name="Author", value=escape_markdown(track.author))  # pyright: ignore
+                .add_field(name="Source", value=escape_markdown(track.uri))  # pyright: ignore
                 .add_field(
                     name="Playtime" if is_stream else "Position",
                     value=str(
@@ -483,7 +481,7 @@ class MusicCog(commands.Cog):
                 .add_field(name="Paused", value=vc.is_paused())
                 .add_field(
                     name="Next track",
-                    value=f"[{escape_markdown(next_tr.title)} by {escape_markdown(next_tr.author)}]({next_tr.uri})"
+                    value=f"[{escape_markdown(next_tr.title)} by {escape_markdown(next_tr.author)}]({next_tr.uri})"  # pyright: ignore
                     if next_tr
                     else None,
                 )

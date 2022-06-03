@@ -3,6 +3,6 @@
   "python.linting.pycodestyleEnabled": true,
   "python.formatting.provider": "black",
   "python.linting.pycodestyleArgs": [
-    "--max-line-length=88"
+    "--max-line-length=120"
   ]
 }

@@ -43,14 +43,14 @@ class FailInclusionConfirmationView(discord.ui.View):
         super().__init__()
         self.is_confirmed = False
 
-    @discord.ui.button(label="Yep!", style=discord.ButtonStyle.green)
+    @discord.ui.button(label="Yep!", style=discord.ButtonStyle.green)  # pyright: ignore
     async def confirm(
         self, button: discord.ui.Button, interaction: discord.Interaction
     ):
         self.is_confirmed = True
         self.stop()
 
-    @discord.ui.button(label="Nope!", style=discord.ButtonStyle.red)
+    @discord.ui.button(label="Nope!", style=discord.ButtonStyle.red)  # pyright: ignore
     async def cancel(self, button: discord.ui.Button, interaction: discord.Interaction):
         self.stop()
 
@@ -66,9 +66,9 @@ class OsuCog(commands.Cog):
 
         # Workaround for logging dupe
         self.api.log.propagate = False
-        self.api.log.parent.propagate = False
+        self.api.log.parent.propagate = False  # pyright: ignore
         self.api.log.handlers[:] = [global_deps.handler]
-        self.api.log.parent.handlers[:] = [global_deps.handler]
+        self.api.log.parent.handlers[:] = [global_deps.handler]  # pyright: ignore
 
     @commands.hybrid_group(fallback="get")
     @app_commands.guilds(*Config.GUILD_IDs)
@@ -140,7 +140,16 @@ class OsuCog(commands.Cog):
         the_mode = None if mode == "default" else convert_to_game_mode(mode)
 
         osu_user: User = self.api.user(username, the_mode, key=UserLookupKey.USERNAME)
+
+        if not osu_user:
+            await m.edit(content="Unable to find the user!")
+            return
+
         user_stats = osu_user.statistics
+
+        if not user_stats:
+            await m.edit(content="Something went wrong!")
+            return
 
         if request == "profile":
             eb = (
@@ -272,12 +281,12 @@ class OsuCog(commands.Cog):
                         timestamp=datetime.datetime.now(),
                     )
                     .set_author(
-                        name=f"{beatmap_set.artist} - {beatmap_set.title} [{beatmap.version}] "
+                        name=f"{beatmap_set.artist} - {beatmap_set.title} [{beatmap.version}] "  # pyright: ignore
                         f"+{score.mods.long_name().replace(' ', '')}",
-                        url=beatmap.url,
+                        url=beatmap.url,  # pyright: ignore
                         icon_url=sender.avatar_url,
                     )
-                    .set_thumbnail(url=beatmap_set.covers.cover_2x)
+                    .set_thumbnail(url=beatmap_set.covers.cover_2x)  # pyright: ignore
                     .add_field(
                         name="Score",
                         value=f"{sender.country_code} #{score.rank_country} - GLB #{score.rank_global}",
@@ -289,7 +298,7 @@ class OsuCog(commands.Cog):
                     )
                     .add_field(
                         name="Max combo",
-                        value=f"{score.max_combo}x/{beatmap.max_combo}",
+                        value=f"{score.max_combo}x/{beatmap.max_combo}",  # pyright: ignore
                     )
                     .add_field(
                         name="Hit count",
@@ -375,7 +384,7 @@ async def setup(bot: commands.AutoShardedBot):
         await bot.add_cog(OsuCog(bot))
         logging.info(f"Cog of {__name__} added!")
     else:
-        raise commands.ExtensionFailed
+        raise ValueError("You did not provide enough config values!")
 
 
 async def teardown(bot: commands.AutoShardedBot):

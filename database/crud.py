@@ -1,7 +1,7 @@
 from typing import Optional, Tuple
 
 import discord
-import pymongo
+from pymongo.mongo_client import MongoClient
 from pymongo.collection import Collection
 from pymongo.database import Database
 from sqlalchemy import create_engine
@@ -22,7 +22,7 @@ class CRUD:
     """
 
     def __init__(self):
-        self.is_mongo = Config.DATABASE["dialect"] == "mongodb"
+        self.is_mongo: bool = Config.DATABASE["dialect"] == "mongodb"
 
         if self.is_mongo:
             self.mongo_client = pymongo.MongoClient(Utility.get_db_url())
@@ -67,7 +67,7 @@ class CRUD:
         """
         Get an existing user record, create a new record if one doesn't exist.
         :param user: User entity of discord.
-        :return: User record in database. True if the returned record is the new one, False otherwise.
+        :return: User record in database, True if the record is new.
         """
         u = self.get_user_record(user)
         if not u:
@@ -75,16 +75,18 @@ class CRUD:
 
         return u, False
 
-    def get_or_create_guild_record(self, guild: Optional[discord.Guild]) -> Tuple[DbGuild, bool]:
+    def get_or_create_guild_record(
+        self, guild: discord.Guild
+    ) -> Tuple[DbGuild, bool]:
         """
         Get an existing guild record, create a new record if one doesn't exist.
         :param guild: Guild entity of discord.
-        :return: Guild record in database. True if the returned record is the new one, False otherwise.
+        :return: Guild record in database, True if therecord is new.
         """
-        if guild:
-            g = self.get_guild_record(guild)
-            if not g:
-                return self.create_guild_record(guild), True
+        g = self.get_guild_record(guild)
+
+        if not g:
+            return self.create_guild_record(guild), True
 
             return g, False
 
@@ -123,20 +125,21 @@ class CRUD:
 
         return self.session.query(DbUser).filter_by(id=user.id).one()
 
-    def create_guild_record(self, guild: Optional[discord.Guild]) -> DbGuild:
-        if guild:
-            decoy_guild = DbGuild(id=guild.id)
+    def create_guild_record(
+        self, guild: discord.Guild
+    ) -> DbGuild:
+        decoy_guild = DbGuild(id=guild.id)
 
-            if self.is_mongo:  # noqa
-                self.mongo_guilds.insert_one(decoy_guild.to_dict())
-                return decoy_guild
+        if self.is_mongo:
+            self.mongo_guilds.insert_one(decoy_guild.to_dict())
+            return decoy_guild
 
-            if not self.session.query(DbGuild).filter_by(id=guild.id).one_or_none():
-                self.session.add(decoy_guild)
-                self.save_changes()
-                return decoy_guild
+        if not self.session.query(DbGuild).filter_by(id=guild.id).one_or_none():
+            self.session.add(decoy_guild)
+            self.save_changes()
+            return decoy_guild
 
-            return self.session.query(DbGuild).filter_by(id=guild.id).one()
+        return self.session.query(DbGuild).filter_by(id=guild.id).one()
 
     def delete_guild_record(self, guild_record: DbGuild) -> None:
         """
@@ -160,8 +163,8 @@ class CRUD:
 
     def rollback(self) -> None:
         """
-        Revert ALL changes made on current session. If you use this after save_changes(), congrats, you did nothing!
-
+        Revert ALL changes made on current session.
+        Non-Mongo only.
         """
         if self.is_mongo:
             pass
@@ -169,10 +172,13 @@ class CRUD:
             self.session.rollback()
 
     def save_changes(
-        self, user_record: DbUser = None, guild_record: DbGuild = None
+        self,
+        user_record: Optional[DbUser] = None,
+        guild_record: Optional[DbGuild] = None,
     ) -> None:
         """
-        Save changes made on current session. In some cases, this will clear the pending queue of rollback().
+        Save changes made on current session. Clears rollback() queue.
+        Non-Mongo only.
 
         "Mom, but it works in my codes!"
                     - Swyrin

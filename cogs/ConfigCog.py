@@ -17,13 +17,16 @@ class ConfigCog(commands.Cog):
         self.bot = bot
 
     @commands.hybrid_group(fallback="get")
+    @commands.guild_only()
+    @app_commands.checks.has_permissions(manage_guild=True)
+    @commands.has_guild_permissions(manage_guild=True)
     @app_commands.guilds(*Config.GUILD_IDs)
     async def config(self, ctx: commands.Context):
         """View configured properties"""
         await ctx.defer()
-        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
-        wc_chn = ctx.guild.get_channel(dbg.welcome_channel_id)
-        gb_chn = ctx.guild.get_channel(dbg.goodbye_channel_id)
+        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)  # type: ignore
+        wc_chn = ctx.guild.get_channel(dbg.welcome_channel_id)  # type: ignore
+        gb_chn = ctx.guild.get_channel(dbg.goodbye_channel_id)  # type: ignore
 
         embed = (
             discord.Embed(
@@ -57,7 +60,9 @@ class ConfigCog(commands.Cog):
         await ctx.send(embeds=[embed])
 
     @config.command()
+    @commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
+    @commands.has_guild_permissions(manage_guild=True)
     @app_commands.describe(message="New welcome message")
     async def set_welcome_message(
         self,
@@ -66,13 +71,15 @@ class ConfigCog(commands.Cog):
     ):
         """Change welcome message"""
         await ctx.defer()
-        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)  # type: ignore
         dbg.welcome_message = message
         crud_database.save_changes(guild_record=dbg)
         await ctx.send("Done updating welcome message")
 
     @config.command()
+    @commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
+    @commands.has_guild_permissions(manage_guild=True)
     @app_commands.describe(message="New goodbye message")
     async def set_goodbye_message(
         self,
@@ -81,13 +88,15 @@ class ConfigCog(commands.Cog):
     ):
         """Change goodbye message"""
         await ctx.defer()
-        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)  # type: ignore
         dbg.goodbye_message = message
         crud_database.save_changes(guild_record=dbg)
         await ctx.send("Done updating goodbye message")
 
     @config.command()
+    @commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
+    @commands.has_guild_permissions(manage_guild=True)
     @app_commands.describe(dest_channel="Goodbye message delivery channel")
     async def set_goodbye_channel(
         self,
@@ -96,13 +105,15 @@ class ConfigCog(commands.Cog):
     ):
         """Change goodbye message delivery channel"""
         await ctx.defer()
-        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)  # type: ignore
         dbg.goodbye_channel_id = dest_channel.id
         crud_database.save_changes(guild_record=dbg)
         await ctx.send(f"Done updating goodbye channel to {dest_channel.mention}")
 
     @config.command()
+    @commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
+    @commands.has_guild_permissions(manage_guild=True)
     @app_commands.describe(dest_channel="Welcome message delivery channel")
     async def set_welcome_channel(
         self,
@@ -111,37 +122,43 @@ class ConfigCog(commands.Cog):
     ):
         """Change welcome message delivery channel"""
         await ctx.defer()
-        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)  # type: ignore
         dbg.welcome_channel_id = dest_channel.id
         crud_database.save_changes(guild_record=dbg)
         await ctx.send(f"Done updating welcome channel to {dest_channel.mention}")
 
     @config.command()
+    @commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
+    @commands.has_guild_permissions(manage_guild=True)
     async def toggle_welcome(self, ctx: commands.Context):
         """Toggle welcome message delivery allowance"""
         await ctx.defer()
-        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)  # type: ignore
         dbg.is_welcome_enabled = not dbg.is_welcome_enabled
         crud_database.save_changes(guild_record=dbg)
         await ctx.send(
-            f"Welcome message delivery is now {'enabled' if dbg.is_welcome_enabled else 'disabled'}"
+            f"Welcome message delivery: {'on' if dbg.is_welcome_enabled else 'off'}"
         )
 
     @config.command()
+    @commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
+    @commands.has_guild_permissions(manage_guild=True)
     async def toggle_goodbye(self, ctx: commands.Context):
         """Toggle goodbye message delivery allowance"""
         await ctx.defer()
-        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)  # type: ignore
         dbg.is_goodbye_enabled = not dbg.is_goodbye_enabled
         crud_database.save_changes(guild_record=dbg)
         await ctx.send(
-            f"Goodbye message delivery is now {'enabled' if dbg.is_welcome_enabled else 'disabled'}"
+            f"Goodbye message delivery: {'on' if dbg.is_welcome_enabled else 'off'}"
         )
 
     @config.command()
+    @commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
+    @commands.has_guild_permissions(manage_guild=True)
     async def view_placeholders(self, ctx: commands.Context):
         """View available placeholders"""
         await ctx.defer()

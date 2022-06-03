@@ -24,9 +24,9 @@ class ConfigCog(commands.Cog):
     async def config(self, ctx: commands.Context):
         """View configured properties"""
         await ctx.defer()
-        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)  # type: ignore
-        wc_chn = ctx.guild.get_channel(dbg.welcome_channel_id)  # type: ignore
-        gb_chn = ctx.guild.get_channel(dbg.goodbye_channel_id)  # type: ignore
+        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        wc_chn = ctx.guild.get_channel(dbg.welcome_channel_id)  # pyright: ignore
+        gb_chn = ctx.guild.get_channel(dbg.goodbye_channel_id)  # pyright: ignore
 
         embed = (
             discord.Embed(
@@ -71,7 +71,7 @@ class ConfigCog(commands.Cog):
     ):
         """Change welcome message"""
         await ctx.defer()
-        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)  # type: ignore
+        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.welcome_message = message
         crud_database.save_changes(guild_record=dbg)
         await ctx.send("Done updating welcome message")
@@ -88,7 +88,7 @@ class ConfigCog(commands.Cog):
     ):
         """Change goodbye message"""
         await ctx.defer()
-        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)  # type: ignore
+        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.goodbye_message = message
         crud_database.save_changes(guild_record=dbg)
         await ctx.send("Done updating goodbye message")
@@ -105,7 +105,7 @@ class ConfigCog(commands.Cog):
     ):
         """Change goodbye message delivery channel"""
         await ctx.defer()
-        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)  # type: ignore
+        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.goodbye_channel_id = dest_channel.id
         crud_database.save_changes(guild_record=dbg)
         await ctx.send(f"Done updating goodbye channel to {dest_channel.mention}")
@@ -122,7 +122,7 @@ class ConfigCog(commands.Cog):
     ):
         """Change welcome message delivery channel"""
         await ctx.defer()
-        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)  # type: ignore
+        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.welcome_channel_id = dest_channel.id
         crud_database.save_changes(guild_record=dbg)
         await ctx.send(f"Done updating welcome channel to {dest_channel.mention}")
@@ -134,7 +134,7 @@ class ConfigCog(commands.Cog):
     async def toggle_welcome(self, ctx: commands.Context):
         """Toggle welcome message delivery allowance"""
         await ctx.defer()
-        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)  # type: ignore
+        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.is_welcome_enabled = not dbg.is_welcome_enabled
         crud_database.save_changes(guild_record=dbg)
         await ctx.send(
@@ -148,7 +148,7 @@ class ConfigCog(commands.Cog):
     async def toggle_goodbye(self, ctx: commands.Context):
         """Toggle goodbye message delivery allowance"""
         await ctx.defer()
-        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)  # type: ignore
+        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.is_goodbye_enabled = not dbg.is_goodbye_enabled
         crud_database.save_changes(guild_record=dbg)
         await ctx.send(

@@ -25,7 +25,7 @@ class CRUD:
         self.is_mongo: bool = Config.DATABASE["dialect"] == "mongodb"
 
         if self.is_mongo:
-            self.mongo_client = pymongo.MongoClient(Utility.get_db_url())
+            self.mongo_client = MongoClient(Utility.get_db_url())
             self.mongo_engine: Database = self.mongo_client[Config.DATABASE["db_name"]]
 
             self.mongo_guilds: Collection = self.mongo_engine.get_collection(
@@ -75,9 +75,7 @@ class CRUD:
 
         return u, False
 
-    def get_or_create_guild_record(
-        self, guild: discord.Guild
-    ) -> Tuple[DbGuild, bool]:
+    def get_or_create_guild_record(self, guild: discord.Guild) -> Tuple[DbGuild, bool]:
         """
         Get an existing guild record, create a new record if one doesn't exist.
         :param guild: Guild entity of discord.
@@ -125,9 +123,7 @@ class CRUD:
 
         return self.session.query(DbUser).filter_by(id=user.id).one()
 
-    def create_guild_record(
-        self, guild: discord.Guild
-    ) -> DbGuild:
+    def create_guild_record(self, guild: discord.Guild) -> DbGuild:
         decoy_guild = DbGuild(id=guild.id)
 
         if self.is_mongo:

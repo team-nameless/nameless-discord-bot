@@ -37,9 +37,7 @@ class GeneralCog(commands.Cog):
         msg = await ctx.send("Generating link")
 
         inv = await (
-            await discord_together.DiscordTogether(
-                Config.TOKEN, debug=Config.LAB
-            )  # pyright: ignore
+            await discord_together.DiscordTogether(Config.TOKEN, debug=Config.LAB)
         ).create_link(voice_channel.id, target)
 
         await msg.edit(content=f"Here is your link: {inv}")
@@ -55,14 +53,15 @@ class GeneralCog(commands.Cog):
         """View someone's information"""
         await ctx.defer()
 
-        member = member if member else ctx.author  # pyright: ignore
+        member = member if member else ctx.author
 
         account_create_date = member.created_at  # pyright: ignore
         join_date = member.joined_at  # pyright: ignore
 
         flags = [
             flag.replace("_", " ").title()
-            for flag, has in member.public_flags if has  # pyright: ignore
+            for flag, has in member.public_flags  # pyright: ignore
+            if has
         ]
 
         # should add to cache if possible
@@ -83,9 +82,13 @@ class GeneralCog(commands.Cog):
                 value=f"<t:{int(account_create_date.timestamp())}:R>",
             )
             .add_field(
-                name="Membership date", value=f"<t:{int(join_date.timestamp())}:R>"  # pyright: ignore
+                name="Membership date",
+                value=f"<t:{int(join_date.timestamp())}:R>",  # pyright: ignore
             )
-            .add_field(name="Guild owner?", value=member.guild.owner == member)  # pyright: ignore
+            .add_field(
+                name="Guild owner?",
+                value=member.guild.owner == member,  # pyright: ignore
+            )
             .add_field(name="Bot?", value=member.bot)  # pyright: ignore
             .add_field(name="Badges", value=", ".join(flags) if flags else "None")
             .add_field(
@@ -97,6 +100,7 @@ class GeneralCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.hybrid_command()
+    @commands.guild_only()
     @app_commands.guilds(*Config.GUILD_IDs)
     async def guild(self, ctx: commands.Context):
         """View this guild's information"""
@@ -110,7 +114,11 @@ class GeneralCog(commands.Cog):
         humans_count = len([member for member in members if not member.bot])
         total_count = bots_count + humans_count
         public_threads_count = len(
-            [thread for thread in guild.threads if not thread.is_private()]  # pyright: ignore
+            [
+                thread
+                for thread in guild.threads  # pyright: ignore
+                if not thread.is_private()
+            ]
         )
         events = guild.scheduled_events  # pyright: ignore
         boosters_count = len(guild.premium_subscribers)  # pyright: ignore
@@ -127,7 +135,9 @@ class GeneralCog(commands.Cog):
                 title=f"Something about '{guild.name}'",  # pyright: ignore
                 color=discord.Color.orange(),
             )
-            .set_thumbnail(url=guild.banner.url if guild.banner else "")  # pyright: ignore
+            .set_thumbnail(
+                url=guild.banner.url if guild.banner else ""  # pyright: ignore
+            )
             .add_field(
                 name="Guild creation date",
                 value=f"<t:{int(guild_create_date.timestamp())}:R>",
@@ -142,7 +152,9 @@ class GeneralCog(commands.Cog):
                 name="Channel(s)",
                 value=f"{len(guild.channels)} channel(s) - {public_threads_count} public thread(s)",  # pyright: ignore
             )
-            .add_field(name="Role(s) count", value=str(len(guild.roles)))  # pyright: ignore
+            .add_field(
+                name="Role(s) count", value=str(len(guild.roles))  # pyright: ignore
+            )
             .add_field(
                 name="Pending event(s) count", value=f"{len(events)} pending event(s)"
             )

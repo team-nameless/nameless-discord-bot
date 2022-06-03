@@ -3,6 +3,7 @@ include = [
     "alembic",
     "cogs",
     "customs",
+    "database",
     "./config.example.py",
     "./main.py",
 ]
@@ -14,9 +15,8 @@ reportUnnecessaryTypeIgnoreComment = "warning"
 reportOptionalMemberAccess = "warning"
 reportOptionalSubscript = "warning"
 reportUnusedImport = "error"
-
 pythonVersion = "3.8"
-typeCheckingMode = "basic"
+typeCheckingMode = "off"
 
 [tool.isort]
 profile = "black"

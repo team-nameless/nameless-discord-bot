@@ -51,9 +51,9 @@ class ModeratorCog(commands.Cog):
                 try:
                     # ignore kwargs typings
                     if d != -1:
-                        await caller(member, reason=reason, delete_message_days=d)  # type: ignore
+                        await caller(member, reason=reason, delete_message_days=d)
                     else:
-                        await caller(member, reason=reason)  # type: ignore
+                        await caller(member, reason=reason)
                 except Forbidden:
                     response += "And I lack the permissions to do it."
                 except HTTPException:
@@ -126,6 +126,7 @@ class ModeratorCog(commands.Cog):
                 await ctx.send("Already unmuted")
 
     @mod.command()
+    @commands.guild_only()
     @commands.has_guild_permissions(ban_members=True)
     @commands.bot_has_guild_permissions(ban_members=True)
     @app_commands.checks.has_permissions(ban_members=True)
@@ -146,13 +147,17 @@ class ModeratorCog(commands.Cog):
             )
         else:
             await self.__generic_ban_kick(
-                ctx, reason, "ban", ctx.guild.ban, delete_message_days  # pyright: ignore
+                ctx,
+                reason,
+                "ban",
+                ctx.guild.ban,  # pyright: ignore
+                delete_message_days,
             )
 
     @mod.command()
+    @commands.guild_only()
     @commands.has_guild_permissions(kick_members=True)
     @commands.bot_has_guild_permissions(kick_members=True)
-    @commands.guild_only()
     @app_commands.checks.has_permissions(kick_members=True)
     @app_commands.checks.bot_has_permissions(kick_members=True)
     @app_commands.describe(reason="Kick reason")
@@ -162,9 +167,12 @@ class ModeratorCog(commands.Cog):
         reason: str = "Rule violation",
     ):
         """Kick members, in batch"""
-        await self.__generic_ban_kick(ctx, reason, "kick", ctx.guild.kick)  # pyright: ignore
+        await self.__generic_ban_kick(
+            ctx, reason, "kick", ctx.guild.kick  # pyright: ignore
+        )
 
     @mod.command()
+    @commands.guild_only()
     @commands.has_guild_permissions(moderate_members=True)
     @app_commands.checks.has_permissions(moderate_members=True)
     @app_commands.describe(member="Target member", reason="Warn addition reason")
@@ -192,6 +200,7 @@ class ModeratorCog(commands.Cog):
         )
 
     @mod.command()
+    @commands.guild_only()
     @commands.has_guild_permissions(moderate_members=True)
     @app_commands.checks.has_permissions(moderate_members=True)
     @app_commands.describe(member="Target member", reason="Warn removal reason")
@@ -220,6 +229,7 @@ class ModeratorCog(commands.Cog):
         )
 
     @mod.command()
+    @commands.guild_only()
     @commands.has_guild_permissions(moderate_members=True)
     @app_commands.checks.has_permissions(moderate_members=True)
     @app_commands.describe(member="Target member", reason="Mute reason")
@@ -233,6 +243,7 @@ class ModeratorCog(commands.Cog):
         await self.__generic_mute(ctx, member, reason)
 
     @mod.command(description="Unmute a member")
+    @commands.guild_only()
     @commands.has_guild_permissions(moderate_members=True)
     @app_commands.checks.has_permissions(moderate_members=True)
     @app_commands.describe(member="Target member", reason="Unmute reason")

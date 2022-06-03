@@ -43,14 +43,14 @@ class FailInclusionConfirmationView(discord.ui.View):
         super().__init__()
         self.is_confirmed = False
 
-    @discord.ui.button(label="Yep!", style=discord.ButtonStyle.green)  # pyright: ignore
+    @discord.ui.button(label="Yep!", style=discord.ButtonStyle.green)
     async def confirm(
         self, button: discord.ui.Button, interaction: discord.Interaction
     ):
         self.is_confirmed = True
         self.stop()
 
-    @discord.ui.button(label="Nope!", style=discord.ButtonStyle.red)  # pyright: ignore
+    @discord.ui.button(label="Nope!", style=discord.ButtonStyle.red)
     async def cancel(self, button: discord.ui.Button, interaction: discord.Interaction):
         self.stop()
 
@@ -107,6 +107,7 @@ class OsuCog(commands.Cog):
         await ctx.send("Updated")
 
     @osu.command()
+    @commands.guild_only()
     @app_commands.describe(
         member="Target member", username="osu! username", mode="osu! mode"
     )
@@ -330,6 +331,7 @@ class OsuCog(commands.Cog):
                 await m.edit(embed=embeds[0], view=None)
 
     @osu.command()
+    @commands.guild_only()
     @app_commands.describe(
         member="Target member", request="Request type", mode="osu! mode"
     )
@@ -360,6 +362,7 @@ class OsuCog(commands.Cog):
         )
 
     @osu.command()
+    @commands.guild_only()
     @app_commands.describe(
         username="osu! username", request="Request type", mode="osu! mode"
     )

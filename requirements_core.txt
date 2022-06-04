@@ -6,3 +6,4 @@ pymongo[srv]
 git+https://github.com/Rapptz/discord.py
 DiscordUtils
 wavelink
+alembic

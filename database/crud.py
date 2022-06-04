@@ -98,16 +98,15 @@ class CRUD:
 
         return self.session.query(DbUser).filter_by(id=user.id).one_or_none()
 
-    def get_guild_record(self, guild: Optional[discord.Guild]) -> Optional[DbGuild]:
-        if guild:
-            if self.is_mongo:
-                record = self.mongo_guilds.find_one({"id": guild.id})
-                if record:
-                    return DbGuild.from_dict(dict(record))
+    def get_guild_record(self, guild: discord.Guild) -> Optional[DbGuild]:
+        if self.is_mongo:
+            record = self.mongo_guilds.find_one({"id": guild.id})
+            if record:
+                return DbGuild.from_dict(dict(record))
 
-                return None
+            return None
 
-            return self.session.query(DbGuild).filter_by(id=guild.id).one_or_none()
+        return self.session.query(DbGuild).filter_by(id=guild.id).one_or_none()
 
     def create_user_record(self, user: discord.User) -> DbUser:
         decoy_user = DbUser(id=user.id)

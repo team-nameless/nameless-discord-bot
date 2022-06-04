@@ -86,7 +86,7 @@ class CRUD:
         if not g:
             return self.create_guild_record(guild), True
 
-            return g, False
+        return g, False
 
     def get_user_record(self, user: discord.User) -> Optional[DbUser]:
         if self.is_mongo:

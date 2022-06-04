@@ -1,5 +1,6 @@
 config.py
-lilia.db
+*.db
+*.db-journal
 
 # Created by https://www.toptal.com/developers/gitignore/api/pycharm+all,visualstudiocode,python,pythonvanilla,circuitpython,pycharm+iml,pycharm,visualstudio
 # Edit at https://www.toptal.com/developers/gitignore?templates=pycharm+all,visualstudiocode,python,pythonvanilla,circuitpython,pycharm+iml,pycharm,visualstudio

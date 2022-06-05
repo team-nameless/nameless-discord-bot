@@ -3,7 +3,6 @@ from typing import Optional, Tuple
 import discord
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.orm.session import close_all_sessions
 from sqlalchemy.util import IdentitySet
 
 from config import Config

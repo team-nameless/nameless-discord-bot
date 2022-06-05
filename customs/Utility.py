@@ -5,7 +5,6 @@ import discord
 from discord.ext import commands
 
 import config
-from config import Config
 
 __all__ = ["Utility"]
 

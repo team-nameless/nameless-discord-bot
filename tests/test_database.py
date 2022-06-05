@@ -73,3 +73,58 @@ class TestSQLAlchemyDatabase:
         assert (g := self.crud.get_guild_record(self.mock_guild)) is not None
         self.crud.delete_guild_record(g)
         assert self.crud.get_guild_record(self.mock_user) is None
+
+    @pytest.mark.order(9)
+    def test_guild_write_once(self):
+        self.crud.create_guild_record(self.mock_guild)
+        assert self.crud.get_guild_record(self.mock_guild) is not None
+
+    @pytest.mark.order(10)
+    def test_guild_write_once_more(self):
+        self.crud.create_guild_record(self.mock_guild)
+        self.crud.create_guild_record(self.mock_guild)
+        assert self.crud.get_guild_record(self.mock_guild) is not None
+
+    @pytest.mark.order(11)
+    def test_user_write_once(self):
+        self.crud.create_user_record(self.mock_user)
+        assert self.crud.get_user_record(self.mock_user) is not None
+
+    @pytest.mark.order(12)
+    def test_user_write_once_more(self):
+        self.crud.create_user_record(self.mock_user)
+        self.crud.create_user_record(self.mock_user)
+        assert self.crud.get_user_record(self.mock_user) is not None
+
+    @pytest.mark.order(13)
+    def test_props(self):
+        assert self.crud.current_session is not None
+        assert self.crud.dirty is not None
+        assert self.crud.db_url is not None
+        assert self.crud.new is not None
+
+    @pytest.mark.order(14)
+    def test_get_or_create_user(self):
+        assert self.crud.get_user_record(self.mock_user) is None
+        self.crud.get_or_create_user_record(self.mock_user)
+        assert self.crud.get_user_record(self.mock_user) is not None
+
+    @pytest.mark.order(15)
+    def test_get_or_create_guild(self):
+        assert self.crud.get_guild_record(self.mock_guild) is None
+        self.crud.get_or_create_guild_record(self.mock_guild)
+        assert self.crud.get_guild_record(self.mock_guild) is not None
+
+    @pytest.mark.order(16)
+    def test_get_or_create_user_none_before(self):
+        self.crud.create_user_record(self.mock_user)
+        assert self.crud.get_user_record(self.mock_user) is not None
+        self.crud.get_or_create_user_record(self.mock_user)
+        assert self.crud.get_user_record(self.mock_user) is not None
+
+    @pytest.mark.order(17)
+    def test_get_or_create_guild_none_before(self):
+        self.crud.create_guild_record(self.mock_guild)
+        assert self.crud.get_guild_record(self.mock_guild) is not None
+        self.crud.get_or_create_guild_record(self.mock_guild)
+        assert self.crud.get_guild_record(self.mock_guild) is not None

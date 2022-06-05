@@ -4,6 +4,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from sqlalchemy.orm import close_all_sessions
 import discord
 from discord.ext import commands
 
@@ -142,7 +143,7 @@ class Nameless(commands.AutoShardedBot):
 
     async def close(self) -> None:
         logging.warning(msg="Shutting down database")
-        global_deps.crud_database.close_all_sessions()
+        close_all_sessions()
         await super().close()
 
 

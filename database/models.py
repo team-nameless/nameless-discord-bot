@@ -1,6 +1,14 @@
 import datetime
 
-from sqlalchemy import Column, BigInteger, SmallInteger, Text, Boolean, UnicodeText, DateTime
+from sqlalchemy import (
+    Column,
+    BigInteger,
+    SmallInteger,
+    Text,
+    Boolean,
+    UnicodeText,
+    DateTime,
+)
 from sqlalchemy.orm import declarative_base
 
 __all__ = ["Base", "DbUser", "DbGuild"]
@@ -9,7 +17,13 @@ Base = declarative_base()
 
 
 class DbUser(Base):
-    def __init__(self, _id: int, _warn_count: int = 0, _osu_username: str = "", _osu_mode: str = ""):
+    def __init__(
+        self,
+        _id: int,
+        _warn_count: int = 0,
+        _osu_username: str = "",
+        _osu_mode: str = "",
+    ):
         super().__init__()
         self.discord_id = _id
         self.warn_count = _warn_count
@@ -24,9 +38,17 @@ class DbUser(Base):
 
 
 class DbGuild(Base):
-    def __init__(self, _id: int, _is_welcome_enabled: bool = False, _is_goodbye_enabled: bool = False
-                 , _welcome_channel_id: int = 0, _goodbye_channel_id: int = 0, _welcome_message: str = "",
-                 _goodbye_message: str = "", _radio_start_time: datetime.datetime = datetime.datetime.min):
+    def __init__(
+        self,
+        _id: int,
+        _is_welcome_enabled: bool = False,
+        _is_goodbye_enabled: bool = False,
+        _welcome_channel_id: int = 0,
+        _goodbye_channel_id: int = 0,
+        _welcome_message: str = "",
+        _goodbye_message: str = "",
+        _radio_start_time: datetime.datetime = datetime.datetime.min,
+    ):
         super().__init__()
         self.discord_id = _id
         self.is_welcome_enabled = _is_welcome_enabled

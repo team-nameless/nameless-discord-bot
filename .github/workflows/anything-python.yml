@@ -46,6 +46,6 @@ jobs:
         run: |
           black . --check --diff
 
-      - name: Run unit tests
+      - name: Run tests and return coverages
         run: |
-          pytest
+          pytest --cov-report term-missing --cov=database tests/

@@ -4,6 +4,7 @@ from urllib.parse import quote_plus as qp
 import discord
 from discord.ext import commands
 
+import config
 from config import Config
 
 __all__ = ["Utility"]
@@ -15,13 +16,13 @@ class Utility:
     """
 
     @staticmethod
-    def get_db_url() -> str:
+    def get_db_url(config_cls=config.Config) -> str:
         """
-        Get the database connection URL based on the config.py content.
-
+        Get the database connection URL based on the config.
+        :param config_cls: The class used to retrieve config. Defaults to config.Config.
         :return: Database connection URL
         """
-        db = Config.DATABASE
+        db = config_cls.DATABASE
 
         if db:
             dialect = db["dialect"]
@@ -32,9 +33,10 @@ class Utility:
             host = db["host"]
             port = qp(f":{db['port']}", safe=":") if db["port"] else ""
             db_name = db["db_name"]
+
             return f"{dialect}{driver}://{username}{password}{at}{host}{port}/{db_name}"
         else:
-            raise ValueError("Config.DATABASE is not set!")
+            raise ValueError("config_cls.DATABASE is not set!")
 
     @staticmethod
     def message_waiter(ctx: commands.Context) -> Callable[[discord.Message], bool]:

@@ -1,9 +1,6 @@
 from typing import Optional, Tuple
 
 import discord
-from pymongo.mongo_client import MongoClient
-from pymongo.collection import Collection
-from pymongo.database import Database
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.orm.session import close_all_sessions
@@ -21,178 +18,113 @@ class CRUD:
     Basic database CRUD operations.
     """
 
-    def __init__(self):
-        self.is_mongo: bool = Config.DATABASE["dialect"] == "mongodb"
+    def __init__(self, config_cls=None):
+        if not config_cls:
+            config_cls = Config
 
-        if self.is_mongo:
-            self.mongo_client = MongoClient(Utility.get_db_url())
-            self.mongo_engine: Database = self.mongo_client[Config.DATABASE["db_name"]]
-
-            self.mongo_guilds: Collection = self.mongo_engine.get_collection(
-                DbGuild.__tablename__
-            )
-            self.mongo_users: Collection = self.mongo_engine.get_collection(
-                DbUser.__tablename__
-            )
-        else:
-            self.engine = create_engine(
-                Utility.get_db_url(), logging_name=Config.DATABASE["db_name"]
-            )
-            _session = sessionmaker(bind=self.engine)
-            self.session = _session()
-            Base.metadata.create_all(self.engine)
+        self.db_url: str = Utility.get_db_url(config_cls)
+        self.engine = create_engine(self.db_url, logging_name=config_cls.DATABASE["db_name"])
+        _session = sessionmaker(bind=self.engine)
+        self.session = _session()
+        Base.metadata.create_all(self.engine)
 
     @property
     def current_session(self) -> Session:
-        """
-        Current session, None in MongoDB.
-        """
+        """Current session."""
         return self.session
 
     @property
     def dirty(self) -> IdentitySet:
-        """
-        The data that is modified, but not updated to database, None in MongoDB.
-        """
+        """The data that is modified, but not updated to database."""
         return self.session.dirty
 
     @property
     def new(self) -> IdentitySet:
-        """
-        The PENDING new data, None in MongoDB.
-        """
+        """The PENDING new data."""
         return self.session.new
 
-    def get_or_create_user_record(self, user: discord.User) -> Tuple[DbUser, bool]:
+    def get_or_create_user_record(self, discord_user: discord.User) -> Tuple[DbUser, bool]:
         """
-        Get an existing user record, create a new record if one doesn't exist.
-        :param user: User entity of discord.
+        Get an existing discord_user record, create a new record if one doesn't exist.
+        :param discord_user: User entity of discord.
         :return: User record in database, True if the record is new.
         """
-        u = self.get_user_record(user)
+        u = self.get_user_record(discord_user)
         if not u:
-            return self.create_user_record(user), True
+            return self.create_user_record(discord_user), True
 
         return u, False
 
-    def get_or_create_guild_record(self, guild: discord.Guild) -> Tuple[DbGuild, bool]:
+    def get_or_create_guild_record(self, discord_guild: discord.Guild) -> Tuple[DbGuild, bool]:
         """
         Get an existing guild record, create a new record if one doesn't exist.
-        :param guild: Guild entity of discord.
-        :return: Guild record in database, True if therecord is new.
+        :param discord_guild: Guild entity of discord.
+        :return: Guild record in database, True if the record is new.
         """
-        g = self.get_guild_record(guild)
+        g = self.get_guild_record(discord_guild)
 
         if not g:
-            return self.create_guild_record(guild), True
+            return self.create_guild_record(discord_guild), True
 
         return g, False
 
-    def get_user_record(self, user: discord.User) -> Optional[DbUser]:
-        if self.is_mongo:
-            record = self.mongo_users.find_one({"id": user.id})
-            if record:
-                return DbUser.from_dict(dict(record))
+    def get_user_record(self, discord_user: discord.User) -> Optional[DbUser]:
+        """Get user record in database, None if nothing."""
+        return self.session.query(DbUser).filter_by(discord_id=discord_user.id).one_or_none()
 
-            return None
+    def get_guild_record(self, discord_guild: discord.Guild) -> Optional[DbGuild]:
+        """Get guild record in database, None if nothing."""
+        return self.session.query(DbGuild).filter_by(discord_id=discord_guild.id).one_or_none()
 
-        return self.session.query(DbUser).filter_by(id=user.id).one_or_none()
+    def create_user_record(self, discord_user: discord.User) -> DbUser:
+        """Create a database row for the Discord user and return one."""
+        decoy_user = DbUser(discord_user.id)
 
-    def get_guild_record(self, guild: discord.Guild) -> Optional[DbGuild]:
-        if self.is_mongo:
-            record = self.mongo_guilds.find_one({"id": guild.id})
-            if record:
-                return DbGuild.from_dict(dict(record))
-
-            return None
-
-        return self.session.query(DbGuild).filter_by(id=guild.id).one_or_none()
-
-    def create_user_record(self, user: discord.User) -> DbUser:
-        decoy_user = DbUser(id=user.id)
-
-        if self.is_mongo:  # noqa
-            self.mongo_users.insert_one(decoy_user.to_dict())
-            return decoy_user
-
-        if not self.session.query(DbUser).filter_by(id=user.id).one_or_none():
+        if not self.session.query(DbUser).filter_by(discord_id=discord_user.id).one_or_none():
             self.session.add(decoy_user)
             self.save_changes()
             return decoy_user
 
-        return self.session.query(DbUser).filter_by(id=user.id).one()
+        return self.session.query(DbUser).filter_by(discord_id=discord_user.id).one()
 
-    def create_guild_record(self, guild: discord.Guild) -> DbGuild:
-        decoy_guild = DbGuild(id=guild.id)
+    def create_guild_record(self, discord_guild: discord.Guild) -> DbGuild:
+        """Create a database row for the Discord guild and return one."""
+        decoy_guild = DbGuild(discord_guild.id)
 
-        if self.is_mongo:
-            self.mongo_guilds.insert_one(decoy_guild.to_dict())
-            return decoy_guild
-
-        if not self.session.query(DbGuild).filter_by(id=guild.id).one_or_none():
+        if not self.session.query(DbGuild).filter_by(discord_id=discord_guild.id).one_or_none():
             self.session.add(decoy_guild)
             self.save_changes()
             return decoy_guild
 
-        return self.session.query(DbGuild).filter_by(id=guild.id).one()
+        return self.session.query(DbGuild).filter_by(discord_id=discord_guild.id).one()
 
     def delete_guild_record(self, guild_record: DbGuild) -> None:
         """
         Delete a guild record from the database.
         :param guild_record: Guild record to delete.
         """
-        if self.is_mongo:
-            self.mongo_guilds.delete_many({"id": guild_record.id})
-        else:
-            self.session.delete(guild_record)
+        self.session.delete(guild_record)
 
     def delete_user_record(self, user_record: DbUser) -> None:
         """
-        Delete a user record from the database.
+        Delete a discord_user record from the database.
         :param user_record: User record to delete.
         """
-        if self.is_mongo:
-            self.mongo_users.delete_many({"id": user_record.id})
-        else:
-            self.session.delete(user_record)
+        self.session.delete(user_record)
 
     def rollback(self) -> None:
         """
         Revert ALL changes made on current session.
-        Non-Mongo only.
         """
-        if self.is_mongo:
-            pass
-        else:
-            self.session.rollback()
+        self.session.rollback()
 
-    def save_changes(
-        self,
-        user_record: Optional[DbUser] = None,
-        guild_record: Optional[DbGuild] = None,
-    ) -> None:
+    def save_changes(self) -> None:
         """
-        Save changes made on current session. Clears rollback() queue.
-        Non-Mongo only.
-
-        "Mom, but it works in my codes!"
-                    - Swyrin
+        Save changes made on current session. Clears rollback() queue if any.
         """
-        if self.is_mongo:
-            if user_record:
-                self.mongo_users.update_one(
-                    {"id": user_record.id}, {"$set": user_record.to_dict()}
-                )
+        self.session.commit()
 
-            if guild_record:
-                self.mongo_guilds.update_one(
-                    {"id": guild_record.id}, {"$set": guild_record.to_dict()}
-                )
-        else:
-            self.session.commit()
-
-    def close_all_sessions(self) -> None:
-        if self.is_mongo:
-            self.mongo_client.close()
-        else:
-            close_all_sessions()
+    @staticmethod
+    def close_all_sessions() -> None:
+        """Close all database sessions"""
+        close_all_sessions()

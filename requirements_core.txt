@@ -1,8 +1,6 @@
 sqlalchemy
 ossapi
 discord-together
-pymongo
-pymongo[srv]
 git+https://github.com/Rapptz/discord.py
 DiscordUtils
 wavelink

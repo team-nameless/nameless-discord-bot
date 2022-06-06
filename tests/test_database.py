@@ -72,7 +72,7 @@ class TestSQLAlchemyDatabase:
         self.crud.create_guild_record(self.mock_guild)
         assert (g := self.crud.get_guild_record(self.mock_guild)) is not None
         self.crud.delete_guild_record(g)
-        assert self.crud.get_guild_record(self.mock_user) is None
+        assert self.crud.get_guild_record(self.mock_guild) is None
 
     @pytest.mark.order(9)
     def test_guild_write_once(self):

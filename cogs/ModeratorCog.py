@@ -84,7 +84,7 @@ class ModeratorCog(commands.Cog):
             return
 
         u.warn_count += val
-        crud_database.save_changes(user_record=u)
+        crud_database.save_changes()
 
         if u.warn_count == 0:
             await zero_fn(ctx, member, reason)

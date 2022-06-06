@@ -103,7 +103,7 @@ class OsuCog(commands.Cog):
         await ctx.defer()
         dbu, _ = global_deps.crud_database.get_or_create_user_record(ctx.author)
         dbu.osu_username, dbu.osu_mode = username, mode.title()
-        global_deps.crud_database.save_changes(user_record=dbu)
+        global_deps.crud_database.save_changes()
         await ctx.send("Updated")
 
     @osu.command()
@@ -125,7 +125,7 @@ class OsuCog(commands.Cog):
         await ctx.defer()
         dbu, _ = global_deps.crud_database.get_or_create_user_record(member)
         dbu.osu_username, dbu.osu_mode = username, mode.title()
-        global_deps.crud_database.save_changes(user_record=dbu)
+        global_deps.crud_database.save_changes()
         await ctx.send("Updated")
 
     async def __generic_check(

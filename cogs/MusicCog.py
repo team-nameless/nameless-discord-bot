@@ -260,7 +260,7 @@ class MusicCog(commands.Cog):
         if is_radio:
             dbg, _ = global_deps.crud_database.get_or_create_guild_record(ctx.guild)
             dbg.radio_start_time = datetime.datetime.now()
-            global_deps.crud_database.save_changes(guild_record=dbg)
+            global_deps.crud_database.save_changes()
 
         await ctx.send("Initiating playback")
         await self.__internal_play2(vc, url)

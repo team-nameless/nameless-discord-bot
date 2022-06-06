@@ -73,7 +73,7 @@ class ConfigCog(commands.Cog):
         await ctx.defer()
         dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.welcome_message = message
-        crud_database.save_changes(guild_record=dbg)
+        crud_database.save_changes()
         await ctx.send("Done updating welcome message")
 
     @config.command()
@@ -90,7 +90,7 @@ class ConfigCog(commands.Cog):
         await ctx.defer()
         dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.goodbye_message = message
-        crud_database.save_changes(guild_record=dbg)
+        crud_database.save_changes()
         await ctx.send("Done updating goodbye message")
 
     @config.command()
@@ -107,7 +107,7 @@ class ConfigCog(commands.Cog):
         await ctx.defer()
         dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.goodbye_channel_id = dest_channel.id
-        crud_database.save_changes(guild_record=dbg)
+        crud_database.save_changes()
         await ctx.send(f"Done updating goodbye channel to {dest_channel.mention}")
 
     @config.command()
@@ -124,7 +124,7 @@ class ConfigCog(commands.Cog):
         await ctx.defer()
         dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.welcome_channel_id = dest_channel.id
-        crud_database.save_changes(guild_record=dbg)
+        crud_database.save_changes()
         await ctx.send(f"Done updating welcome channel to {dest_channel.mention}")
 
     @config.command()
@@ -136,7 +136,7 @@ class ConfigCog(commands.Cog):
         await ctx.defer()
         dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.is_welcome_enabled = not dbg.is_welcome_enabled
-        crud_database.save_changes(guild_record=dbg)
+        crud_database.save_changes()
         await ctx.send(
             f"Welcome message delivery: {'on' if dbg.is_welcome_enabled else 'off'}"
         )
@@ -150,7 +150,7 @@ class ConfigCog(commands.Cog):
         await ctx.defer()
         dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.is_goodbye_enabled = not dbg.is_goodbye_enabled
-        crud_database.save_changes(guild_record=dbg)
+        crud_database.save_changes()
         await ctx.send(
             f"Goodbye message delivery: {'on' if dbg.is_welcome_enabled else 'off'}"
         )

@@ -117,8 +117,9 @@ class Nameless(commands.AutoShardedBot):
                     db_guild.welcome_channel_id
                 ):
                     await the_channel.send(
-                        content=db_guild.welcome_message
-                        .replace("{guild}", member.guild)
+                        content=db_guild.welcome_message.replace(
+                            "{guild}", member.guild
+                        )
                         .replace("{name}", member.display_name)
                         .replace("{tag}", member.discriminator)
                         .replace("{@user}", member.mention)
@@ -133,8 +134,9 @@ class Nameless(commands.AutoShardedBot):
                     db_guild.goodbye_channel_id
                 ):
                     await the_channel.send(
-                        content=db_guild.goodbye_message
-                        .replace("{guild}", member.guild)
+                        content=db_guild.goodbye_message.replace(
+                            "{guild}", member.guild
+                        )
                         .replace("{name}", member.display_name)
                         .replace("{tag}", member.discriminator)
                     )

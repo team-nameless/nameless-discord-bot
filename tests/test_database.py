@@ -1,6 +1,7 @@
-import pytest
-import database
 import discord
+import pytest
+
+import database
 
 # By default, SQLite is used.
 crud = database.CRUD()

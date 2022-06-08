@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, Type
 
 import discord
 from sqlalchemy import create_engine
@@ -17,7 +17,7 @@ class CRUD:
     Basic database CRUD operations.
     """
 
-    def __init__(self, config_cls=config.Config):
+    def __init__(self, config_cls: Type[config.Config] = config.Config):
         self.db_url: str = Utility.get_db_url(config_cls)
         self.engine = create_engine(
             self.db_url, logging_name=config_cls.DATABASE["db_name"]
@@ -70,7 +70,9 @@ class CRUD:
 
         return g, False
 
-    def get_user_record(self, discord_user: Union[discord.User, discord.Object]) -> Optional[DbUser]:
+    def get_user_record(
+        self, discord_user: Union[discord.User, discord.Object]
+    ) -> Optional[DbUser]:
         """Get user record in database, None if nothing."""
         return (
             self.session.query(DbUser)
@@ -78,7 +80,9 @@ class CRUD:
             .one_or_none()
         )
 
-    def get_guild_record(self, discord_guild: Union[discord.Guild, discord.Object]) -> Optional[DbGuild]:
+    def get_guild_record(
+        self, discord_guild: Union[discord.Guild, discord.Object]
+    ) -> Optional[DbGuild]:
         """Get guild record in database, None if nothing."""
         return (
             self.session.query(DbGuild)
@@ -86,7 +90,9 @@ class CRUD:
             .one_or_none()
         )
 
-    def create_user_record(self, discord_user: Union[discord.User, discord.Object]) -> DbUser:
+    def create_user_record(
+        self, discord_user: Union[discord.User, discord.Object]
+    ) -> DbUser:
         """Create a database row for the Discord user and return one."""
         decoy_user = DbUser(discord_user.id)
 
@@ -101,7 +107,9 @@ class CRUD:
 
         return self.session.query(DbUser).filter_by(discord_id=discord_user.id).one()
 
-    def create_guild_record(self, discord_guild: Union[discord.Guild, discord.Object]) -> DbGuild:
+    def create_guild_record(
+        self, discord_guild: Union[discord.Guild, discord.Object]
+    ) -> DbGuild:
         """Create a database row for the Discord guild and return one."""
         decoy_guild = DbGuild(discord_guild.id)
 

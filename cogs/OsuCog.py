@@ -7,7 +7,7 @@ from DiscordUtils import Pagination
 from discord import Color, app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
-from ossapi import User, UserLookupKey, Score, ScoreType, GameMode, OssapiV2
+from ossapi import User, UserLookupKey, Score, ScoreType, GameMode
 
 import global_deps
 from config import Config
@@ -62,13 +62,7 @@ class FailInclusionConfirmationView(discord.ui.View):
 class OsuCog(commands.Cog):
     def __init__(self, bot: commands.AutoShardedBot):
         self.bot = bot
-        self.api = OssapiV2(Config.OSU["client_id"], Config.OSU["client_secret"])
-
-        # Workaround for logging dupe
-        self.api.log.propagate = False
-        self.api.log.parent.propagate = False  # pyright: ignore
-        self.api.log.handlers[:] = [global_deps.handler]
-        self.api.log.parent.handlers[:] = [global_deps.handler]  # pyright: ignore
+        self.api = global_deps.osu_api_client
 
     @commands.hybrid_group(fallback="get")
     @app_commands.guilds(*Config.GUILD_IDs)
@@ -282,12 +276,12 @@ class OsuCog(commands.Cog):
                         timestamp=datetime.datetime.now(),
                     )
                     .set_author(
-                        name=f"{beatmap_set.artist} - {beatmap_set.title} [{beatmap.version}] "  # pyright: ignore
+                        name=f"{beatmap_set.artist} - {beatmap_set.title} [{beatmap.version}] "
                         f"+{score.mods.long_name().replace(' ', '')}",
-                        url=beatmap.url,  # pyright: ignore
+                        url=beatmap.url,
                         icon_url=sender.avatar_url,
                     )
-                    .set_thumbnail(url=beatmap_set.covers.cover_2x)  # pyright: ignore
+                    .set_thumbnail(url=beatmap_set.covers.cover_2x)
                     .add_field(
                         name="Score",
                         value=f"{sender.country_code} #{score.rank_country} - GLB #{score.rank_global}",
@@ -299,7 +293,7 @@ class OsuCog(commands.Cog):
                     )
                     .add_field(
                         name="Max combo",
-                        value=f"{score.max_combo}x/{beatmap.max_combo}",  # pyright: ignore
+                        value=f"{score.max_combo}x/{beatmap.max_combo}",
                     )
                     .add_field(
                         name="Hit count",

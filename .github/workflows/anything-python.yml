@@ -34,13 +34,9 @@ jobs:
         run: |
           cp config.example.py config.py
 
-      - name: Setup node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '16'
-
       - name: Run Pyright
-        uses: jakebailey/pyright-action@v1
+        run: |
+          pyright
 
       - name: Run black
         run: |

@@ -4,9 +4,9 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from sqlalchemy.orm import close_all_sessions
 import discord
 from discord.ext import commands
+from sqlalchemy.orm import close_all_sessions
 
 import global_deps
 from config import Config

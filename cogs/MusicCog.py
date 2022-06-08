@@ -7,11 +7,11 @@ from typing import List, Any, Type, Union
 
 import DiscordUtils
 import discord
-from discord.utils import escape_markdown
 import wavelink
 from discord import ClientException, app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
+from discord.utils import escape_markdown
 from wavelink.ext import spotify
 
 import global_deps
@@ -285,7 +285,7 @@ class MusicCog(commands.Cog):
         await ctx.defer()
 
         try:
-            await ctx.author.voice.channel.connect(
+            await ctx.author.voice.channel.connect(  # pyright: ignore
                 cls=wavelink.Player, self_deaf=True  # noqa
             )
             await ctx.send("Connected to your current voice channel")
@@ -620,7 +620,7 @@ class MusicCog(commands.Cog):
         elif source == "soundcloud":
             search_cls = wavelink.SoundCloudTrack
 
-        tracks = await search_cls.search(query=search)
+        tracks = await vc.node.get_tracks(search_cls, search)
 
         if not tracks:
             await ctx.send(
@@ -628,8 +628,7 @@ class MusicCog(commands.Cog):
             )
             return
 
-        view = discord.ui.View()
-        view.add_item(TrackPickDropdown(tracks))
+        view = discord.ui.View().add_item(TrackPickDropdown(tracks))
 
         m = await ctx.send("Tracks found", view=view)
 

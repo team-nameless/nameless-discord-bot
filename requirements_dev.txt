@@ -7,3 +7,4 @@ wheel
 pytest
 pytest-order
 pytest-cov
+pyright

@@ -1,6 +1,4 @@
 import os
-
-# Self-import
 import sys
 from logging.config import fileConfig
 

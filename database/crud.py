@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import discord
 from sqlalchemy import create_engine
@@ -42,7 +42,7 @@ class CRUD:
         return self.session.new
 
     def get_or_create_user_record(
-        self, discord_user: discord.User
+        self, discord_user: Union[discord.User, discord.Object]
     ) -> Tuple[DbUser, bool]:
         """
         Get an existing discord_user record, create a new record if one doesn't exist.
@@ -56,7 +56,7 @@ class CRUD:
         return u, False
 
     def get_or_create_guild_record(
-        self, discord_guild: discord.Guild
+        self, discord_guild: Union[discord.Guild, discord.Object]
     ) -> Tuple[DbGuild, bool]:
         """
         Get an existing guild record, create a new record if one doesn't exist.
@@ -70,7 +70,7 @@ class CRUD:
 
         return g, False
 
-    def get_user_record(self, discord_user: discord.User) -> Optional[DbUser]:
+    def get_user_record(self, discord_user: Union[discord.User, discord.Object]) -> Optional[DbUser]:
         """Get user record in database, None if nothing."""
         return (
             self.session.query(DbUser)
@@ -78,7 +78,7 @@ class CRUD:
             .one_or_none()
         )
 
-    def get_guild_record(self, discord_guild: discord.Guild) -> Optional[DbGuild]:
+    def get_guild_record(self, discord_guild: Union[discord.Guild, discord.Object]) -> Optional[DbGuild]:
         """Get guild record in database, None if nothing."""
         return (
             self.session.query(DbGuild)
@@ -86,7 +86,7 @@ class CRUD:
             .one_or_none()
         )
 
-    def create_user_record(self, discord_user: discord.User) -> DbUser:
+    def create_user_record(self, discord_user: Union[discord.User, discord.Object]) -> DbUser:
         """Create a database row for the Discord user and return one."""
         decoy_user = DbUser(discord_user.id)
 
@@ -101,7 +101,7 @@ class CRUD:
 
         return self.session.query(DbUser).filter_by(discord_id=discord_user.id).one()
 
-    def create_guild_record(self, discord_guild: discord.Guild) -> DbGuild:
+    def create_guild_record(self, discord_guild: Union[discord.Guild, discord.Object]) -> DbGuild:
         """Create a database row for the Discord guild and return one."""
         decoy_guild = DbGuild(discord_guild.id)
 

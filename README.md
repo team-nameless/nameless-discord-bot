@@ -1,13 +1,13 @@
 # nameless
 
-A rewrite of [FoxeiZ's nameless*](https://github.com/FoxeiZ/nameless), now with collaborations.
+A rewrite of [original nameless*](https://github.com/FoxeiZ/nameless), now with collaborations.
 
 [![CodeFactor](https://www.codefactor.io/repository/github/nameless-on-discord/nameless/badge/main)](https://www.codefactor.io/repository/github/lilia-workshop/nameless/overview/main)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Python](https://badgen.net/badge/Python/3.8/)](https://python.org/)
-[![pypy](https://badgen.net/badge/pypy/3.8/)](https://pypy.org/)
+[![Python](https://badgen.net/badge/Python/3.8/)]()
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/Lilia-Workshop/nameless.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Lilia-Workshop/nameless/alerts/)
 [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/Lilia-Workshop/nameless.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Lilia-Workshop/nameless/context:python)
+[![anything-python](https://badgen.net/github/checks/nameless-on-discord/nameless/main?label=CI)](https://github.com/nameless-on-discord/nameless/actions/workflows/anything-python.yml)
 
 ----------------------------------------
 
@@ -18,7 +18,8 @@ A rewrite of [FoxeiZ's nameless*](https://github.com/FoxeiZ/nameless), now with 
   automatically activate it for you)
 
 ```shell
-python3/pypy -m venv venv
+# Replace python3 with pypy if you are going to use pypy
+python3 -m venv venv
 source venv/bin/activate
 ```
 
@@ -34,6 +35,12 @@ pip install -r requirements_core.txt
 
 ```shell
 python main.py
+```
+
+- In case you encounter the `Target database is not up to date` problem:
+
+```shell
+alembic stamp head
 ```
 
 ## Noice, your code is so cool, and I wanna contribute my parts on them
@@ -53,7 +60,7 @@ See [CONTRIBUTING.md](https://github.com/Lilia-Workshop/nameless/blob/main/CONTR
 
 ----------------------------------------
 
-## Credits (click on them to get to their GitHub profile)
+## The team
 
-![Me](https://img.shields.io/badge/%E2%9D%A4%EF%B8%8FMade%20with%20love%20by-Swyrin%237193-red?style=for-the-badge&logo=discord)
-[![Python God](https://img.shields.io/badge/Python%20God-C%C3%A1o%20trong%20s%C3%A1ng%238029-blue?style=for-the-badge&logo=python)](https://github.com/FoxeiZ)
+- Me, of course, lol.
+- [FoxeiZ](https://github.com/FoxeiZ)

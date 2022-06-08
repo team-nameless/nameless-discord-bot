@@ -20,11 +20,8 @@ pip install -U -r requirements_dev.txt
     - When making commands:
         - We expect that the function's name should be the command's name.
             - Exceptions:
-                - You have a better name for it.
                 - Context menu commands: We use `{message/user}_context_menu_{command_name}` for that
         - We expect that the function parameter's name should be the command parameter's name.
-            - Exceptions:
-                - You have a better name for it.
 
 - Committing conventions:
     - Use present tense.
@@ -33,28 +30,24 @@ pip install -U -r requirements_dev.txt
     - No-code changes should be prefixed with `[ci skip]` and pushed to `main`
     - Branch naming:
         - Use `feat/{name}` for a feature.
-        - Use `fix/{name}` or `fix/{#issue/#pr}` for bug fixtures.
+        - Use `fix/{name}` or `fix/{#}` for bug fixtures.
 
 - Database contribution guides:
-    - We follow PascalCase SQLAlchemy name override convention.
+    - We use PascalCase for column naming.
     - Every column edits
         - Must add a property in class body (remember to type it):
 
           ```python
-          class ACoolClass(Base, Mongo):
+          class ACoolClass(Base):
             ...
-            your_new_field = Column(...)
+            your_new_field = Column(..., name="YourNewField")
           ```
-
-        - Must include the change in both `from_dict` and `to_dict`:
-          ```python
-          def from_dict(self, d: dict):
-            self.your_new_field = d["your_new_field"]
           
-          def to_dict(self):
-            return {
-               "your_new_field": self.your_new_field
-            }
+        - Must be included in `__init__()` with the field name prefixed with `_` and a default value.
+          ```python
+          def __init__(..., _your_new_field: str = "wah"):
+            ...
+            self.your_new_field = _your_new_field
           ```
 
         - Must be committed to `alembic` by using:
@@ -63,5 +56,3 @@ pip install -U -r requirements_dev.txt
           alembic revision --autogenerate -m "Message here"
           alembic upgrade head
           ```
-
-            - If you are experiencing `Target database is not up to date`, run `alembic stamp head` first. 

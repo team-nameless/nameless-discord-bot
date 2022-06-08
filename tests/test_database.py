@@ -100,7 +100,7 @@ class TestSQLAlchemyDatabase:
     def test_props(self):
         assert self.crud.current_session is not None
         assert self.crud.dirty is not None
-        assert self.crud.db_url is not None
+        assert self.crud.db_url == "sqlite:///lilia.db"
         assert self.crud.new is not None
 
     @pytest.mark.order(14)
@@ -117,14 +117,30 @@ class TestSQLAlchemyDatabase:
 
     @pytest.mark.order(16)
     def test_get_or_create_user_none_before(self):
-        self.crud.create_user_record(self.mock_user)
-        assert self.crud.get_user_record(self.mock_user) is not None
-        self.crud.get_or_create_user_record(self.mock_user)
+        assert self.crud.get_user_record(self.mock_user) is None
+        _, is_new = self.crud.get_or_create_user_record(self.mock_user)
+        assert is_new == True
         assert self.crud.get_user_record(self.mock_user) is not None
 
     @pytest.mark.order(17)
     def test_get_or_create_guild_none_before(self):
+        assert self.crud.get_guild_record(self.mock_guild) is None
+        _, is_new = self.crud.get_or_create_guild_record(self.mock_guild)
+        assert is_new == True
+        assert self.crud.get_guild_record(self.mock_guild) is not None
+
+    @pytest.mark.order(18)
+    def test_get_or_create_user_existed_before(self):
+        self.crud.create_user_record(self.mock_user)
+        assert self.crud.get_user_record(self.mock_user) is not None
+        _, is_new = self.crud.get_or_create_user_record(self.mock_user)
+        assert is_new == False
+        assert self.crud.get_user_record(self.mock_user) is not None
+
+    @pytest.mark.order(19)
+    def test_get_or_create_guild_existed_before(self):
         self.crud.create_guild_record(self.mock_guild)
         assert self.crud.get_guild_record(self.mock_guild) is not None
-        self.crud.get_or_create_guild_record(self.mock_guild)
+        _, is_new = self.crud.get_or_create_guild_record(self.mock_guild)
+        assert is_new == False
         assert self.crud.get_guild_record(self.mock_guild) is not None

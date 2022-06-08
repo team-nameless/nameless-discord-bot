@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.util import IdentitySet
 
-from config import Config
+import config
 from customs import Utility
 from .models import Base, DbUser, DbGuild
 
@@ -17,10 +17,7 @@ class CRUD:
     Basic database CRUD operations.
     """
 
-    def __init__(self, config_cls=None):
-        if not config_cls:
-            config_cls = Config
-
+    def __init__(self, config_cls=config.Config):
         self.db_url: str = Utility.get_db_url(config_cls)
         self.engine = create_engine(
             self.db_url, logging_name=config_cls.DATABASE["db_name"]
@@ -93,7 +90,7 @@ class CRUD:
         """Create a database row for the Discord user and return one."""
         decoy_user = DbUser(discord_user.id)
 
-        if (
+        if (  # noqa
             not self.session.query(DbUser)
             .filter_by(discord_id=discord_user.id)
             .one_or_none()
@@ -108,7 +105,7 @@ class CRUD:
         """Create a database row for the Discord guild and return one."""
         decoy_guild = DbGuild(discord_guild.id)
 
-        if (
+        if (  # noqa
             not self.session.query(DbGuild)
             .filter_by(discord_id=discord_guild.id)
             .one_or_none()

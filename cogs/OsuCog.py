@@ -20,7 +20,7 @@ request_types = ["profile", "firsts", "recents", "bests"]
 
 
 def convert_to_game_mode(mode: str) -> GameMode:
-    """Get gamemode matching with the provided string.
+    """Get game mode matching with the provided string.
 
     Args:
         mode (str): Game mode in osu_mode. Look above this `def` code.

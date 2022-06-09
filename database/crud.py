@@ -130,7 +130,9 @@ class CRUD:
                 self.save_changes()
                 return decoy_guild
 
-            return self.session.query(DbGuild).filter_by(discord_id=discord_guild.id).one()
+            return (
+                self.session.query(DbGuild).filter_by(discord_id=discord_guild.id).one()
+            )
 
         return None
 

@@ -23,29 +23,29 @@ class CRUD:
             self.db_url, logging_name=config_cls.DATABASE["db_name"]
         )
         _session = sessionmaker(bind=self.engine)
-        self.session = _session()
+        self.__session = _session()
         Base.metadata.create_all(self.engine)
 
     @property
-    def current_session(self) -> Session:
+    def session(self) -> Session:
         """Current session."""
-        return self.session
+        return self.__session
 
     @property
     def dirty(self) -> IdentitySet:
-        """The data that is modified, but not updated to database."""
-        return self.session.dirty
+        """The data that is modified, but not updated to database"""
+        return self.__session.dirty
 
     @property
     def new(self) -> IdentitySet:
-        """The PENDING new data."""
-        return self.session.new
+        """The pending new data"""
+        return self.__session.new
 
     def get_or_create_user_record(
         self, discord_user: Union[discord.Member, discord.User, discord.Object]
     ) -> Tuple[Optional[DbUser], bool]:
         """
-        Get an existing discord_user record, create a new record if one doesn't exist.
+        Get an existing discord_user record, create a new record if one doesn't exist
         :param discord_user: User entity of discord.
         :return: User record in database, True if the record is new.
         """
@@ -59,9 +59,9 @@ class CRUD:
         self, discord_guild: Optional[Union[discord.Guild, discord.Object]]
     ) -> Tuple[Optional[DbGuild], bool]:
         """
-        Get an existing guild record, create a new record if one doesn't exist.
-        :param discord_guild: Guild entity of discord.
-        :return: Guild record in database, True if the record is new.
+        Get an existing guild record, create a new record if one doesn't exist
+        :param discord_guild: Guild entity of discord
+        :return: Guild record in database, True if the record is new
         """
         if discord_guild:
             g = self.get_guild_record(discord_guild)
@@ -70,13 +70,13 @@ class CRUD:
                 return self.create_guild_record(discord_guild), True
 
             return g, False
-        else:
-            return None, True
+
+        return None, True
 
     def get_user_record(
         self, discord_user: Union[discord.Member, discord.User, discord.Object]
     ) -> Optional[DbUser]:
-        """Get user record in database, None if nothing."""
+        """Get user record in database"""
         return (
             self.session.query(DbUser)
             .filter_by(discord_id=discord_user.id)
@@ -84,19 +84,22 @@ class CRUD:
         )
 
     def get_guild_record(
-        self, discord_guild: Union[discord.Guild, discord.Object]
+        self, discord_guild: Optional[Union[discord.Guild, discord.Object]]
     ) -> Optional[DbGuild]:
-        """Get guild record in database, None if nothing."""
-        return (
-            self.session.query(DbGuild)
-            .filter_by(discord_id=discord_guild.id)
-            .one_or_none()
-        )
+        """Get guild record in database"""
+        if discord_guild:
+            return (
+                self.session.query(DbGuild)
+                .filter_by(discord_id=discord_guild.id)
+                .one_or_none()
+            )
+
+        return None
 
     def create_user_record(
         self, discord_user: Union[discord.Member, discord.User, discord.Object]
     ) -> DbUser:
-        """Create a database row for the Discord user and return one."""
+        """Create a database entry for the Discord user and return one"""
         decoy_user = DbUser(discord_user.id)
 
         if (  # noqa
@@ -111,44 +114,50 @@ class CRUD:
         return self.session.query(DbUser).filter_by(discord_id=discord_user.id).one()
 
     def create_guild_record(
-        self, discord_guild: Union[discord.Guild, discord.Object]
-    ) -> DbGuild:
-        """Create a database row for the Discord guild and return one."""
-        decoy_guild = DbGuild(discord_guild.id)
+        self, discord_guild: Optional[Union[discord.Guild, discord.Object]]
+    ) -> Optional[DbGuild]:
+        """Create a database entry for the Discord guild and return one"""
 
-        if (  # noqa
-            not self.session.query(DbGuild)
-            .filter_by(discord_id=discord_guild.id)
-            .one_or_none()
-        ):
-            self.session.add(decoy_guild)
-            self.save_changes()
-            return decoy_guild
+        if discord_guild:
+            decoy_guild = DbGuild(discord_guild.id)
 
-        return self.session.query(DbGuild).filter_by(discord_id=discord_guild.id).one()
+            if (  # noqa
+                not self.session.query(DbGuild)
+                .filter_by(discord_id=discord_guild.id)
+                .one_or_none()
+            ):
+                self.session.add(decoy_guild)
+                self.save_changes()
+                return decoy_guild
 
-    def delete_guild_record(self, guild_record: DbGuild) -> None:
-        """
-        Delete a guild record from the database.
-        :param guild_record: Guild record to delete.
-        """
-        self.session.delete(guild_record)
+            return self.session.query(DbGuild).filter_by(discord_id=discord_guild.id).one()
 
-    def delete_user_record(self, user_record: DbUser) -> None:
+        return None
+
+    def delete_guild_record(self, guild_record: Optional[DbGuild]) -> None:
         """
-        Delete a discord_user record from the database.
-        :param user_record: User record to delete.
+        Delete a guild record from the database
+        :param guild_record: Guild record to delete
         """
-        self.session.delete(user_record)
+        if guild_record:
+            self.session.delete(guild_record)
+        else:
+            raise ValueError("Unable to delete a null entity")
+
+    def delete_user_record(self, user_record: Optional[DbUser]) -> None:
+        """
+        Delete a discord_user record from the database
+        :param user_record: User record to delete
+        """
+        if user_record:
+            self.session.delete(user_record)
+        else:
+            raise ValueError("Unable to delete a null entity")
 
     def rollback(self) -> None:
-        """
-        Revert ALL changes made on current session.
-        """
+        """Revert changes made on current session"""
         self.session.rollback()
 
     def save_changes(self) -> None:
-        """
-        Save changes made on current session. Clears rollback() queue if any.
-        """
+        """Save changes made on current session"""
         self.session.commit()

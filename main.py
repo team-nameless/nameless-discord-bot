@@ -96,9 +96,7 @@ class Nameless(commands.AutoShardedBot):
             ),
         )
 
-        logging.info(
-            msg=f"Logged in as {self.user} (ID: {self.user.id})"
-        )
+        logging.info(msg=f"Logged in as {self.user} (ID: {self.user.id})")
 
     async def on_error(self, event_method: str, /, *args, **kwargs) -> None:
         logging.error(

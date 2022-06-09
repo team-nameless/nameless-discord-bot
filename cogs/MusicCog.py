@@ -620,9 +620,7 @@ class MusicCog(commands.Cog):
         tracks = await search_cls.search(search)
 
         if not tracks:
-            await ctx.send(
-                f"No tracks found for '{search}' on '{source}'."
-            )
+            await ctx.send(f"No tracks found for '{search}' on '{source}'.")
             return
 
         view = discord.ui.View().add_item(TrackPickDropdown(tracks))
@@ -633,7 +631,9 @@ class MusicCog(commands.Cog):
             await m.edit(content="Timed out!", view=None, delete_after=30)
             return
 
-        drop: Union[discord.ui.Item[discord.ui.View], TrackPickDropdown] = view.children[0]
+        drop: Union[
+            discord.ui.Item[discord.ui.View], TrackPickDropdown
+        ] = view.children[0]
         vals = drop.values  # pyright: ignore
 
         if not vals:
@@ -905,7 +905,7 @@ class MusicCog(commands.Cog):
     @seek_segment.before_invoke
     async def no_stream_before_invoke(self, ctx: commands.Context):
         vc: wavelink.Player = ctx.voice_client  # noqa
-        track: wavelink.Track = vc.track if vc else None # noqa
+        track: wavelink.Track = vc.track if vc else None  # noqa
 
         if vc and track and track.is_stream():
             raise commands.CommandError("Stream is not allowed")

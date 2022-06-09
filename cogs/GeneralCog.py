@@ -59,9 +59,7 @@ class GeneralCog(commands.Cog):
         join_date = member.joined_at  # pyright: ignore
 
         flags = [
-            flag.replace("_", " ").title()
-            for flag, has in member.public_flags
-            if has
+            flag.replace("_", " ").title() for flag, has in member.public_flags if has
         ]
 
         # should add to cache if possible

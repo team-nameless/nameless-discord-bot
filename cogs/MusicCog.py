@@ -3,7 +3,7 @@ import datetime
 import logging
 import math
 import random
-from typing import List, Any, Type, Union
+from typing import List, Any, Union, Optional
 
 import DiscordUtils
 import discord
@@ -67,7 +67,7 @@ class VoteMenu:
     def __init__(
         self,
         action: str,
-        content: Union[wavelink.Track, str],
+        content: str,
         ctx: commands.Context,
         voice_client: wavelink.Player,
     ):
@@ -100,9 +100,9 @@ class VoteMenu:
             self.total_vote += 1
 
             if menu.value:
-                self.approve_member.append(menu.user)
+                self.approve_member.append(menu.user)  # pyright: ignore
             else:
-                self.disapprove_member.append(menu.user)
+                self.disapprove_member.append(menu.user)  # pyright: ignore
 
         pred = len(self.disapprove_member) > len(self.approve_member)
         if pred:
@@ -165,8 +165,9 @@ class TrackPickDropdown(discord.ui.Select):
         )
 
     async def callback(self, _: discord.Interaction) -> Any:
-        v: discord.ui.View = self.view
-        v.stop()
+        v: Optional[discord.ui.View] = self.view
+        if v:
+            v.stop()
 
 
 class MusicCog(commands.Cog):
@@ -406,7 +407,7 @@ class MusicCog(commands.Cog):
             await ctx.send("Invalid position to seek")
             return
 
-        if await VoteMenu("seek", track, ctx, vc).start():
+        if await VoteMenu("seek", track.title, ctx, vc).start():
             await vc.seek(pos)
             delta_pos = datetime.timedelta(milliseconds=pos)
             await ctx.send(f"Seek to position {delta_pos}")
@@ -429,7 +430,7 @@ class MusicCog(commands.Cog):
             await ctx.send("Invalid segment")
             return
 
-        if await VoteMenu("seek_segment", track, ctx, vc).start():
+        if await VoteMenu("seek_segment", track.title, ctx, vc).start():
             pos = int(float(track.length * (segment * 10) / 100) * 1000)
             await vc.seek(pos)
             delta_pos = datetime.timedelta(milliseconds=pos)
@@ -458,10 +459,6 @@ class MusicCog(commands.Cog):
 
         vc: wavelink.Player = ctx.voice_client  # noqa
         track: wavelink.Track = vc.track  # noqa
-
-        if not track:
-            await ctx.send("No track is played")
-            return
 
         is_stream = track.is_stream()
         dbg, _ = global_deps.crud_database.get_or_create_guild_record(ctx.guild)
@@ -611,7 +608,7 @@ class MusicCog(commands.Cog):
         await ctx.defer()
 
         vc: wavelink.Player = ctx.voice_client  # noqa
-        search_cls: Type[wavelink.SearchableTrack] = wavelink.YouTubeTrack
+        search_cls = wavelink.YouTubeTrack
 
         if source == "ytmusic":
             search_cls = wavelink.YouTubeMusicTrack
@@ -620,11 +617,11 @@ class MusicCog(commands.Cog):
         elif source == "soundcloud":
             search_cls = wavelink.SoundCloudTrack
 
-        tracks = await vc.node.get_tracks(search_cls, search)
+        tracks = await search_cls.search(search)
 
         if not tracks:
             await ctx.send(
-                f"No tracks found for {search} on {source}, have you tried passing search query instead?"
+                f"No tracks found for '{search}' on '{source}'."
             )
             return
 
@@ -636,8 +633,8 @@ class MusicCog(commands.Cog):
             await m.edit(content="Timed out!", view=None, delete_after=30)
             return
 
-        drop: TrackPickDropdown = view.children[0]  # noqa
-        vals = drop.values
+        drop: Union[discord.ui.Item[discord.ui.View], TrackPickDropdown] = view.children[0]
+        vals = drop.values  # pyright: ignore
 
         if not vals:
             await m.delete()
@@ -838,7 +835,7 @@ class MusicCog(commands.Cog):
     @move_relative.before_invoke
     @swap.before_invoke
     async def user_in_voice_before_invoke(self, ctx: commands.Context):
-        if not ctx.author.voice:
+        if not ctx.author.voice:  # pyright: ignore
             raise commands.CommandError("User did not join voice")
 
     @music.before_invoke
@@ -884,9 +881,8 @@ class MusicCog(commands.Cog):
     @now_playing.before_invoke
     async def have_track_before_invoke(self, ctx: commands.Context):
         vc: wavelink.Player = ctx.voice_client  # noqa
-        track: wavelink.Track = vc.track  # noqa
 
-        if not track:
+        if vc and not vc.track:
             raise commands.CommandError("No track is being played")
 
     @queue.before_invoke
@@ -903,20 +899,21 @@ class MusicCog(commands.Cog):
         if vc and vc.queue.is_empty:
             raise commands.CommandError("Queue is empty")
 
-        raise commands.CommandError("Wait what?")
-
     @skip.before_invoke
     @loop.before_invoke
     @seek.before_invoke
     @seek_segment.before_invoke
     async def no_stream_before_invoke(self, ctx: commands.Context):
         vc: wavelink.Player = ctx.voice_client  # noqa
-        track: wavelink.Track = vc.track  # noqa
+        track: wavelink.Track = vc.track if vc else None # noqa
 
         if vc and track and track.is_stream():
             raise commands.CommandError("Stream is not allowed")
 
-        raise commands.CommandError("Wait what?")
+    async def cog_command_error(self, ctx: commands.Context, error: Exception) -> None:
+        await ctx.defer()
+        await ctx.send("Something went wrong while executing the command.")
+        raise error
 
 
 async def setup(bot: commands.AutoShardedBot):
@@ -924,7 +921,7 @@ async def setup(bot: commands.AutoShardedBot):
         await bot.add_cog(MusicCog(bot))
         logging.info(f"Cog of {__name__} added!")
     else:
-        raise commands.ExtensionFailed
+        raise commands.ExtensionNotLoaded(__name__)
 
 
 async def teardown(bot: commands.AutoShardedBot):

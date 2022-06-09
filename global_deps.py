@@ -13,6 +13,7 @@ from database import CRUD
 crud_database = CRUD()
 
 # Stuffs
+__nameless_version__ = "0.0.1-beta"
 start_time: datetime = datetime.min
 osu_api_client = OssapiV2(Config.OSU["client_id"], Config.OSU["client_secret"])
 osu_api_client.log = logging.getLogger()

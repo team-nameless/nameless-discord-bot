@@ -1,8 +1,10 @@
 import logging
 import os
 import re
+from urllib.request import urlopen
 from datetime import datetime
 from pathlib import Path
+from packaging import version
 
 import discord
 from discord.ext import commands
@@ -11,8 +13,26 @@ from sqlalchemy.orm import close_all_sessions
 import global_deps
 from config import Config
 
+upstream_version_txt_url = "https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt"
 
 class Nameless(commands.AutoShardedBot):
+    def __init__(self, command_prefix, **kwargs):
+        super().__init__(command_prefix, **kwargs)
+
+        # Update checker
+        nameless_version = version.parse(global_deps.__nameless_version__)
+        upstream_version = version.parse(urlopen(upstream_version_txt_url).read().decode())
+
+        logging.info(f"Current version: {nameless_version} - Upstream version: {upstream_version}")
+
+        if nameless_version < upstream_version:
+            logging.warning(f"You need to update your nameless*!")
+        elif nameless_version == upstream_version:
+            logging.info("You are using latest version!")
+        else:
+            logging.info("You are using a version NEWER than original nameless*!")
+
+
     async def __register_all_cogs(self):
         r = re.compile(r"^(?!_.).*Cog.py")
         os.chdir(Path(__file__).resolve().parent)

@@ -16,7 +16,7 @@ reportOptionalMemberAccess = "warning"
 reportOptionalSubscript = "warning"
 reportUnusedImport = "error"
 pythonVersion = "3.8"
-typeCheckingMode = "off"
+typeCheckingMode = "basic"
 
 [tool.isort]
 profile = "black"

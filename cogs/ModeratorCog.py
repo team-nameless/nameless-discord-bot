@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Awaitable, Any
+from typing import Callable, Awaitable
 
 import discord
 from discord import Forbidden, HTTPException, app_commands
@@ -27,7 +27,7 @@ class ModeratorCog(commands.Cog):
         ctx: commands.Context,
         reason: str,
         action: str,
-        caller: Callable[[discord.Member], Awaitable[Any]],
+        caller: Callable,
         d=-1,
     ):
         client = ctx.bot
@@ -105,7 +105,7 @@ class ModeratorCog(commands.Cog):
         ctx: commands.Context,
         member: discord.Member,
         reason: str,
-        mute: bool = 1,
+        mute: bool = True,
     ):
         await ctx.defer()
 

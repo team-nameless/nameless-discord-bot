@@ -42,8 +42,8 @@ class CRUD:
         return self.session.new
 
     def get_or_create_user_record(
-        self, discord_user: Union[discord.User, discord.Object]
-    ) -> Tuple[DbUser, bool]:
+        self, discord_user: Union[discord.Member, discord.User, discord.Object]
+    ) -> Tuple[Optional[DbUser], bool]:
         """
         Get an existing discord_user record, create a new record if one doesn't exist.
         :param discord_user: User entity of discord.
@@ -56,22 +56,25 @@ class CRUD:
         return u, False
 
     def get_or_create_guild_record(
-        self, discord_guild: Union[discord.Guild, discord.Object]
-    ) -> Tuple[DbGuild, bool]:
+        self, discord_guild: Optional[Union[discord.Guild, discord.Object]]
+    ) -> Tuple[Optional[DbGuild], bool]:
         """
         Get an existing guild record, create a new record if one doesn't exist.
         :param discord_guild: Guild entity of discord.
         :return: Guild record in database, True if the record is new.
         """
-        g = self.get_guild_record(discord_guild)
+        if discord_guild:
+            g = self.get_guild_record(discord_guild)
 
-        if not g:
-            return self.create_guild_record(discord_guild), True
+            if not g:
+                return self.create_guild_record(discord_guild), True
 
-        return g, False
+            return g, False
+        else:
+            return None, True
 
     def get_user_record(
-        self, discord_user: Union[discord.User, discord.Object]
+        self, discord_user: Union[discord.Member, discord.User, discord.Object]
     ) -> Optional[DbUser]:
         """Get user record in database, None if nothing."""
         return (
@@ -91,7 +94,7 @@ class CRUD:
         )
 
     def create_user_record(
-        self, discord_user: Union[discord.User, discord.Object]
+        self, discord_user: Union[discord.Member, discord.User, discord.Object]
     ) -> DbUser:
         """Create a database row for the Discord user and return one."""
         decoy_user = DbUser(discord_user.id)

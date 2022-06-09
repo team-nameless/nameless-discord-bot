@@ -97,7 +97,7 @@ class Nameless(commands.AutoShardedBot):
         )
 
         logging.info(
-            msg=f"Logged in as {self.user} (ID: {self.user.id})"  # pyright: ignore
+            msg=f"Logged in as {self.user} (ID: {self.user.id})"
         )
 
     async def on_error(self, event_method: str, /, *args, **kwargs) -> None:
@@ -116,7 +116,7 @@ class Nameless(commands.AutoShardedBot):
                 if the_channel := member.guild.get_channel_or_thread(
                     db_guild.welcome_channel_id
                 ):
-                    await the_channel.send(
+                    await the_channel.send(  # pyright: ignore
                         content=db_guild.welcome_message.replace(
                             "{guild}", member.guild.name
                         )
@@ -133,7 +133,7 @@ class Nameless(commands.AutoShardedBot):
                 if the_channel := member.guild.get_channel_or_thread(
                     db_guild.goodbye_channel_id
                 ):
-                    await the_channel.send(
+                    await the_channel.send(  # pyright: ignore
                         content=db_guild.goodbye_message.replace(
                             "{guild}", member.guild.name
                         )

@@ -43,14 +43,14 @@ class FailInclusionConfirmationView(discord.ui.View):
         super().__init__()
         self.is_confirmed = False
 
-    @discord.ui.button(label="Yep!", style=discord.ButtonStyle.green)
+    @discord.ui.button(label="Yep!", style=discord.ButtonStyle.green)  # pyright: ignore
     async def confirm(
         self, button: discord.ui.Button, interaction: discord.Interaction
     ):
         self.is_confirmed = True
         self.stop()
 
-    @discord.ui.button(label="Nope!", style=discord.ButtonStyle.red)
+    @discord.ui.button(label="Nope!", style=discord.ButtonStyle.red)  # pyright: ignore
     async def cancel(self, button: discord.ui.Button, interaction: discord.Interaction):
         self.stop()
 

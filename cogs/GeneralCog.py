@@ -1,6 +1,6 @@
 import datetime
 import logging
-from typing import Optional, List
+from typing import Optional, List, Union
 
 import discord
 import discord_together
@@ -48,30 +48,30 @@ class GeneralCog(commands.Cog):
     async def user(
         self,
         ctx: commands.Context,
-        member: Optional[discord.Member],
+        member: Optional[Union[discord.Member, discord.User]],
     ):
         """View someone's information"""
         await ctx.defer()
 
         member = member if member else ctx.author
 
-        account_create_date = member.created_at  # pyright: ignore
+        account_create_date = member.created_at
         join_date = member.joined_at  # pyright: ignore
 
         flags = [
             flag.replace("_", " ").title()
-            for flag, has in member.public_flags  # pyright: ignore
+            for flag, has in member.public_flags
             if has
         ]
 
         # should add to cache if possible
         mutual_guilds: List[str] = [
-            g.name for g in ctx.bot.guilds if g.get_member(member.id)  # pyright: ignore
+            g.name for g in ctx.bot.guilds if g.get_member(member.id)
         ]
 
         embed = (
             discord.Embed(
-                description=f"User ID: {member.id}",  # pyright: ignore
+                description=f"User ID: {member.id}",
                 timestamp=datetime.datetime.now(),
                 title=f"Something about {member}",
                 color=discord.Color.orange(),
@@ -89,7 +89,7 @@ class GeneralCog(commands.Cog):
                 name="Guild owner?",
                 value=member.guild.owner == member,  # pyright: ignore
             )
-            .add_field(name="Bot?", value=member.bot)  # pyright: ignore
+            .add_field(name="Bot?", value=member.bot)
             .add_field(name="Badges", value=", ".join(flags) if flags else "None")
             .add_field(
                 name="Mutual guilds with me",

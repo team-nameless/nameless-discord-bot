@@ -54,7 +54,7 @@ class Config:
     }
 
     # Configurations for Lavalink servers for music commands
-    LAVALINK = {
+    LAVALINK: Dict[str, Any] = {
         "nodes": [],
         "spotify": {
             "client_id": "",

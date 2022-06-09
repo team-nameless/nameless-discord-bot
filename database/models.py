@@ -31,10 +31,10 @@ class DbUser(Base):
         self.osu_mode = _osu_mode
 
     __tablename__ = "Users"
-    discord_id: int = Column(BigInteger, name="Id", primary_key=True)
-    warn_count: int = Column(SmallInteger, name="WarnCount", default=0)
-    osu_username: str = Column(Text, name="OsuUsername", default="")
-    osu_mode: str = Column(Text, name="OsuMode", default="")
+    discord_id: int = Column(BigInteger, name="Id", primary_key=True)  # type: ignore
+    warn_count: int = Column(SmallInteger, name="WarnCount", default=0)  # type: ignore
+    osu_username: str = Column(Text, name="OsuUsername", default="")  # type: ignore
+    osu_mode: str = Column(Text, name="OsuMode", default="")  # type: ignore
 
 
 class DbGuild(Base):
@@ -60,15 +60,15 @@ class DbGuild(Base):
         self.radio_start_time = _radio_start_time
 
     __tablename__ = "Guilds"
-    discord_id: int = Column(BigInteger, name="Id", primary_key=True)
-    is_welcome_enabled: bool = Column(Boolean, name="IsWelcomeEnabled", default=False)
-    is_goodbye_enabled: bool = Column(Boolean, name="IsGoodbyeEnabled", default=False)
-    welcome_channel_id: int = Column(BigInteger, name="WelcomeChannelId", default=0)
-    goodbye_channel_id: int = Column(BigInteger, name="GoodbyeChannelId", default=0)
-    welcome_message: str = Column(UnicodeText, name="WelcomeMessage", default="")
-    goodbye_message: str = Column(UnicodeText, name="GoodbyeMessage", default="")
+    discord_id: int = Column(BigInteger, name="Id", primary_key=True)  # pyright: ignore
+    is_welcome_enabled: bool = Column(Boolean, name="IsWelcomeEnabled", default=False)  # pyright: ignore
+    is_goodbye_enabled: bool = Column(Boolean, name="IsGoodbyeEnabled", default=False)  # pyright: ignore
+    welcome_channel_id: int = Column(BigInteger, name="WelcomeChannelId", default=0)  # pyright: ignore
+    goodbye_channel_id: int = Column(BigInteger, name="GoodbyeChannelId", default=0)  # pyright: ignore
+    welcome_message: str = Column(UnicodeText, name="WelcomeMessage", default="")  # pyright: ignore
+    goodbye_message: str = Column(UnicodeText, name="GoodbyeMessage", default="")  # pyright: ignore
     radio_start_time: datetime.datetime = Column(
         DateTime,
         name="RadioStartTime",
         default=datetime.datetime.min,
-    )
+    )  # pyright: ignore

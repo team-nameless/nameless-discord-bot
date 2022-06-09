@@ -43,7 +43,7 @@ class Nameless(commands.AutoShardedBot):
             logging.warning("You are using a version NEWER than original code!")
 
         # Write current version
-        with open('version.txt', 'w') as f:
+        with open("version.txt", "w") as f:
             f.write(global_deps.__nameless_version__)
 
     async def __register_all_cogs(self):

@@ -214,7 +214,10 @@ class GeneralCog(commands.Cog):
             .add_field(
                 name="Invite link",
                 value=f"[Click this]({bot_inv}) or click me then 'Add to Server'",
-            ).add_field(name="Support guild", value=f"{support_inv if support_inv else 'N/A'}")
+            )
+            .add_field(
+                name="Support guild", value=f"{support_inv if support_inv else 'N/A'}"
+            )
         )
 
         await ctx.send(embed=embed)

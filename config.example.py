@@ -12,6 +12,9 @@ class Config:
     # Get it here: https://discord.com/developers/applications/{your-bot-id}/bot
     TOKEN: str = ""
 
+    # Support server invite
+    SUPPORT_SERVER_INVITE: str = "https://rick-roll.ed"
+
     # Guild IDs to register commands
     # Leave empty array for global (slash commands takes one hour to mitigate, text takes immediately)
     GUILD_IDs = []

@@ -4,11 +4,12 @@ from typing import Optional, List, Union
 
 import discord
 import discord_together
-from discord import app_commands
+from discord import NotFound, app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
 from discord_together.discordTogetherMain import defaultApplications
 
+import global_deps
 from config import Config
 
 __all__ = ["GeneralCog"]
@@ -37,7 +38,9 @@ class GeneralCog(commands.Cog):
         msg = await ctx.send("Generating link")
 
         inv = await (
-            await discord_together.DiscordTogether(Config.TOKEN, debug=Config.LAB)
+            await discord_together.DiscordTogether(
+                Config.TOKEN, debug=Config.LAB
+            )  # noqa
         ).create_link(voice_channel.id, target)
 
         await msg.edit(content=f"Here is your link: {inv}")
@@ -162,6 +165,56 @@ class GeneralCog(commands.Cog):
                 if is_boosted
                 else "Not boosted",
             )
+        )
+
+        await ctx.send(embed=embed)
+
+    @commands.hybrid_command()
+    @commands.guild_only()
+    @app_commands.guilds(*Config.GUILD_IDs)
+    async def the_bot(self, ctx: commands.Context):
+        """View my information"""
+        await ctx.defer()
+
+        servers_count = len(ctx.bot.guilds)
+        total_members_count = sum([len(guild.members) for guild in ctx.bot.guilds])
+        uptime = int(global_deps.start_time.timestamp())
+        bot_inv = (
+            f"https://discord.com/api/oauth2/authorize"
+            f"?client_id={ctx.bot.user.id}"
+            f"&permissions={global_deps.needed_permissions.flag}"
+            f"&scope=bot%20applications.commands"
+        )
+
+        github_link = "https://github.com/nameless-on-discord/nameless"
+
+        try:
+            await self.bot.fetch_invite(Config.SUPPORT_SERVER_INVITE)
+            support_inv = Config.SUPPORT_SERVER_INVITE
+        except NotFound:
+            support_inv = ""
+
+        embed = (
+            discord.Embed(
+                title="Something about me!",
+                color=discord.Color.orange(),
+                timestamp=datetime.datetime.now(),
+                description=f"I am a bot created from [nameless*]({github_link}) code made by Swyrin#7193 "
+                "and [FoxeiZ](https://github.com/FoxeiZ)",
+            )
+            .set_thumbnail(url=ctx.bot.user.avatar.url)
+            .add_field(name="Servers count", value=f"{servers_count}")
+            .add_field(name="Members count", value=f"{total_members_count}")
+            .add_field(name="Last launch/Uptime", value=f"<t:{uptime}:R>")
+            .add_field(name="Bot version", value=global_deps.__nameless_version__)
+            .add_field(
+                name="Library version", value=f"discord.py v{discord.__version__}"
+            )
+            .add_field(name="Commands count", value=f"{len(self.bot.all_commands)}")
+            .add_field(
+                name="Invite link",
+                value=f"[Click this]({bot_inv}) or click me then 'Add to Server'",
+            ).add_field(name="Support guild", value=f"{support_inv if support_inv else 'N/A'}")
         )
 
         await ctx.send(embed=embed)

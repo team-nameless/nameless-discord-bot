@@ -2,12 +2,14 @@
 
 A rewrite of [original nameless*](https://github.com/FoxeiZ/nameless), now with collaborations.
 
-[![CodeFactor](https://www.codefactor.io/repository/github/nameless-on-discord/nameless/badge/main)](https://www.codefactor.io/repository/github/lilia-workshop/nameless/overview/main)
+[![Last Commit](https://badgen.net/github/last-commit/nameless-on-discord/nameless/main)]()
+[![Python](https://badgen.net/badge/Python/3.8%2B/)]()
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Python](https://badgen.net/badge/Python/3.8/)]()
-[![Total alerts](https://img.shields.io/lgtm/alerts/g/Lilia-Workshop/nameless.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Lilia-Workshop/nameless/alerts/)
-[![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/Lilia-Workshop/nameless.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Lilia-Workshop/nameless/context:python)
-[![anything-python](https://badgen.net/github/checks/nameless-on-discord/nameless/main?label=CI)](https://github.com/nameless-on-discord/nameless/actions/workflows/anything-python.yml)
+
+[![CodeFactor](https://www.codefactor.io/repository/github/nameless-on-discord/nameless/badge/main)](https://www.codefactor.io/repository/github/nameless-on-discord/nameless/overview/main)
+[![Total alerts](https://img.shields.io/lgtm/alerts/g/Lilia-Workshop/nameless.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/nameless-on-discord/nameless/alerts/)
+[![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/Lilia-Workshop/nameless.svg?logo=lgtm&logoWidth=18)]()
+[![anything-python](https://badgen.net/github/checks/nameless-on-discord/nameless/main?label=Continuous%20Ingerations&icon=github)]()
 
 ----------------------------------------
 
@@ -53,7 +55,7 @@ See [CONTRIBUTING.md](https://github.com/Lilia-Workshop/nameless/blob/main/CONTR
 - `feat/{name}`: New features that will be pushed to `main`
 - `fix/{#}` or `fix/{name}`: Bug fixes that will be pushed after passing checks.
 
-## Hey! I wanna throw money at you
+## Hey! I want to throw money at you
 
 - Oh, thank you for your generosity! You can look for the sponsor button or some link at the sidebar, any value is
   appreciated.

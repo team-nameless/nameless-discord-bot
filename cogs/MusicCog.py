@@ -104,14 +104,14 @@ class VoteMenu:
             else:
                 self.disapprove_member.append(menu.user)  # pyright: ignore
 
-        pred = len(self.disapprove_member) > len(self.approve_member)
+        pred = len(self.disapprove_member) < len(self.approve_member)
         if pred:
             await message.edit(
-                content=f"Not enough votes to {self.action}!", embed=None, view=None
+                content=f"{self.action.title()} {self.content}!", embed=None, view=None
             )
         else:
             await message.edit(
-                content=f"{self.action.title()} {self.content}!", embed=None, view=None
+                content=f"Not enough votes to {self.action}!", embed=None, view=None
             )
 
         return pred

@@ -4,6 +4,7 @@ import logging
 import math
 import random
 from typing import List, Any, Union, Optional
+from urllib import parse
 
 import DiscordUtils
 import discord
@@ -30,7 +31,7 @@ class VoteMenuView(discord.ui.View):
         self.user = None
         self.value = None
 
-    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green)
+    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green, emoji="✅")
     async def approve(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
@@ -39,7 +40,7 @@ class VoteMenuView(discord.ui.View):
 
         self.stop()
 
-    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.grey)
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.grey, emoji="❌")
     async def disapprove(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
@@ -192,6 +193,13 @@ class MusicCog(commands.Cog):
             music_default_sources += ["spotify"]
 
         bot.loop.create_task(self.connect_nodes())
+
+    @staticmethod
+    def maybe_direct_url(search: str):
+        if parse.urlparse(search).netloc:
+            return True
+        else:
+            return False
 
     async def connect_nodes(self):
         await self.bot.wait_until_ready()
@@ -616,6 +624,13 @@ class MusicCog(commands.Cog):
             search_cls = spotify.SpotifyTrack
         elif source == "soundcloud":
             search_cls = wavelink.SoundCloudTrack
+
+        if self.maybe_direct_url(search):
+            track = await search_cls.search(search, return_first=True)
+            vc.queue.put(track)
+
+            await ctx.send(content=f"Added `{track.title}` into the queue")
+            return
 
         tracks = await search_cls.search(search)
 

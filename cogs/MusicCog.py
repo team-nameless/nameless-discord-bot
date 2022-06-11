@@ -197,7 +197,6 @@ class MusicCog(commands.Cog):
     @staticmethod
     def maybe_direct_url(search: str):
         if domain := parse.urlparse(search).netloc:
-            print(domain)
             if domain == "soundcloud.com":
                 return wavelink.SoundCloudTrack
             elif domain == "open.spotify.com":

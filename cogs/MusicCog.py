@@ -196,10 +196,15 @@ class MusicCog(commands.Cog):
 
     @staticmethod
     def maybe_direct_url(search: str):
-        if parse.urlparse(search).netloc:
-            return True
-        else:
-            return False
+        if domain := parse.urlparse(search).netloc:
+            if domain == "soundcloud.com":
+                return wavelink.SoundCloudTrack
+            elif domain == "open.spotify.com":
+                return spotify.SpotifyTrack
+            elif domain == "music.youtube.com":
+                return wavelink.YouTubeMusicTrack
+            else:
+                return wavelink.YouTubeTrack
 
     async def connect_nodes(self):
         await self.bot.wait_until_ready()
@@ -616,21 +621,20 @@ class MusicCog(commands.Cog):
         await ctx.defer()
 
         vc: wavelink.Player = ctx.voice_client  # noqa
-        search_cls = wavelink.YouTubeTrack
 
-        if source == "ytmusic":
-            search_cls = wavelink.YouTubeMusicTrack
-        elif source == "spotify":
-            search_cls = spotify.SpotifyTrack
-        elif source == "soundcloud":
-            search_cls = wavelink.SoundCloudTrack
-
-        if self.maybe_direct_url(search):
+        if search_cls := self.maybe_direct_url(search):  # search_cls is default to wavelink.YoutubeTrack
             track = await search_cls.search(search, return_first=True)
             vc.queue.put(track)
 
             await ctx.send(content=f"Added `{track.title}` into the queue")
             return
+        else:
+            if source == "ytmusic":
+                search_cls = wavelink.YouTubeMusicTrack
+            elif source == "spotify":
+                search_cls = spotify.SpotifyTrack
+            elif source == "soundcloud":
+                search_cls = wavelink.SoundCloudTrack
 
         tracks = await search_cls.search(search)
 
@@ -926,7 +930,10 @@ class MusicCog(commands.Cog):
             raise commands.CommandError("Stream is not allowed")
 
     async def cog_command_error(self, ctx: commands.Context, error: Exception) -> None:
-        await ctx.defer()
+        try:
+            await ctx.defer()
+        except discord.InteractionResponded:
+            pass
         await ctx.send("Something went wrong while executing the command.")
         raise error
 

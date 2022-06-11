@@ -622,7 +622,9 @@ class MusicCog(commands.Cog):
 
         vc: wavelink.Player = ctx.voice_client  # noqa
 
-        if search_cls := self.maybe_direct_url(search):  # search_cls is default to wavelink.YoutubeTrack
+        if search_cls := self.maybe_direct_url(
+            search
+        ):  # search_cls is default to wavelink.YoutubeTrack
             track = await search_cls.search(search, return_first=True)
             vc.queue.put(track)
 

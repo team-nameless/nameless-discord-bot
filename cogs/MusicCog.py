@@ -197,14 +197,15 @@ class MusicCog(commands.Cog):
     @staticmethod
     def maybe_direct_url(search: str):
         if domain := parse.urlparse(search).netloc:
+            print(domain)
             if domain == "soundcloud.com":
                 return wavelink.SoundCloudTrack
             elif domain == "open.spotify.com":
                 return spotify.SpotifyTrack
             elif domain == "music.youtube.com":
                 return wavelink.YouTubeMusicTrack
-            else:
-                return wavelink.YouTubeTrack
+
+        return wavelink.YouTubeTrack
 
     async def connect_nodes(self):
         await self.bot.wait_until_ready()
@@ -930,6 +931,15 @@ class MusicCog(commands.Cog):
 
         if vc and track and track.is_stream():
             raise commands.CommandError("Stream is not allowed")
+
+    @add.after_invoke
+    @add_playlist.after_invoke
+    async def add_track_after_invoke(self, ctx: commands.Context):
+        vc: wavelink.Player = ctx.voice_client  # noqa
+
+        if not vc.track and not vc.queue.is_empty:
+            track = vc.queue.get()
+            await self.__internal_play(ctx, track.uri)
 
     async def cog_command_error(self, ctx: commands.Context, error: Exception) -> None:
         try:

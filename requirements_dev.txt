@@ -1,6 +1,7 @@
 pip-autoremove
 black
-pycodestyle
+flake8
+pylint
 pip
 setuptools
 wheel

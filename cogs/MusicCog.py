@@ -198,7 +198,7 @@ class MusicCog(commands.Cog):
             "soundcloud.com": wavelink.SoundCloudTrack,
             "open.spotify.com": spotify.SpotifyTrack,
             "music.youtube.com": wavelink.YouTubeMusicTrack,
-            "youtube.com": wavelink.YouTubeTrack
+            "youtube.com": wavelink.YouTubeTrack,
         }
 
         if domain := parse.urlparse(search).netloc:
@@ -646,7 +646,9 @@ class MusicCog(commands.Cog):
             await ctx.send(f"No tracks found for '{search}' on '{source}'.")
             return
 
-        view = discord.ui.View().add_item(TrackPickDropdown([track for track in tracks if not track.is_stream()]))
+        view = discord.ui.View().add_item(
+            TrackPickDropdown([track for track in tracks if not track.is_stream()])
+        )
 
         m = await ctx.send("Tracks found", view=view)
 

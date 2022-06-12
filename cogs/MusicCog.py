@@ -5,7 +5,6 @@ import math
 import random
 from typing import List, Any, Union, Optional, Dict, Type
 from urllib import parse
-import wave
 
 import DiscordUtils
 import discord
@@ -514,7 +513,7 @@ class MusicCog(commands.Cog):
                 .add_field(name="Paused", value=vc.is_paused())
                 .add_field(
                     name="Next track",
-                    value=f"[{escape_markdown(next_tr.title)} by {escape_markdown(next_tr.author)}]({next_tr.uri})"  # pyright: ignore
+                    value=f"[{escape_markdown(next_tr.title)} by {escape_markdown(next_tr.author)}]({next_tr.uri})"
                     if next_tr
                     else None,
                 )
@@ -624,8 +623,12 @@ class MusicCog(commands.Cog):
             track = await search_cls.search(  # pyright: ignore
                 search, return_first=True
             )
-            vc.queue.put(track)  # pyright: ignore
 
+            if track.is_stream():
+                await ctx.send("This is a stream, cannot add to queue")
+                return
+
+            vc.queue.put(track)  # pyright: ignore
             await ctx.send(content=f"Added `{track.title}` into the queue")
             return
 
@@ -643,7 +646,7 @@ class MusicCog(commands.Cog):
             await ctx.send(f"No tracks found for '{search}' on '{source}'.")
             return
 
-        view = discord.ui.View().add_item(TrackPickDropdown(tracks))
+        view = discord.ui.View().add_item(TrackPickDropdown([track for track in tracks if not track.is_stream()]))
 
         m = await ctx.send("Tracks found", view=view)
 
@@ -709,7 +712,7 @@ class MusicCog(commands.Cog):
             return
 
         player: wavelink.Player = ctx.voice_client  # pyright: ignore
-        player.queue.extend(tracks)
+        player.queue.extend([track for track in tracks if not track.is_stream()])
 
         await ctx.send(f"Added {len(tracks)} track(s) from {url} to the queue")
 

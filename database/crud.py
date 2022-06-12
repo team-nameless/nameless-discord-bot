@@ -17,11 +17,18 @@ class CRUD:
     Basic database CRUD operations.
     """
 
-    def __init__(self, config_cls: Type[config.Config] = config.Config):
-        self.db_url: str = Utility.get_db_url(config_cls)
-        self.engine = create_engine(
-            self.db_url, logging_name=config_cls.DATABASE["db_name"]
-        )
+    def __init__(self, config_cls: Optional[Type[config.Config]] = config.Config):
+        (
+            self.db_url,
+            self.dialect,
+            self.driver,
+            self.host,
+            self.port,
+            self.username,
+            self.password,
+            self.db_name,
+        ) = Utility.get_db_url(config_cls)
+        self.engine = create_engine(self.db_url, logging_name=self.db_name)
         _session = sessionmaker(bind=self.engine)
         self.__session = _session()
         Base.metadata.create_all(self.engine)

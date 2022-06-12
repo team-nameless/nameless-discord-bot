@@ -1,4 +1,5 @@
-from typing import Callable
+import logging
+from typing import Callable, Tuple, Type, Optional
 from urllib.parse import quote_plus as qp
 
 import discord
@@ -15,15 +16,15 @@ class Utility:
     """
 
     @staticmethod
-    def get_db_url(config_cls=config.Config) -> str:
+    def get_db_url(
+        config_cls: Optional[Type[config.Config]] = None,
+    ) -> Tuple[str, str, str, str, str, str, str, str]:
         """
-        Get the database connection URL based on the config.
+        Get the database connection URL based on the config and its components.
         :param config_cls: The class used to retrieve config. Defaults to config.Config.
         :return: Database connection URL
         """
-        db = config_cls.DATABASE
-
-        if db:
+        if hasattr(config_cls, "DATABASE") and (db := config_cls.DATABASE):
             dialect = db["dialect"]
             driver = qp(f"+{db['driver']}", safe="+") if db["driver"] else ""
             username = db["username"] if db["username"] else ""
@@ -33,9 +34,28 @@ class Utility:
             port = qp(f":{db['port']}", safe=":") if db["port"] else ""
             db_name = db["db_name"]
 
-            return f"{dialect}{driver}://{username}{password}{at}{host}{port}/{db_name}"
-        else:
-            raise ValueError("config_cls.DATABASE is not set!")
+            return (
+                f"{dialect}{driver}://{username}{password}{at}{host}{port}/{db_name}",
+                dialect,
+                driver,
+                username,
+                password,
+                host,
+                port,
+                db_name,
+            )
+
+        logging.warning("Using SQLite database as fallback method")
+        return (
+            "sqlite:///nameless.db",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "nameless.db",
+        )
 
     @staticmethod
     def message_waiter(ctx: commands.Context) -> Callable[[discord.Message], bool]:

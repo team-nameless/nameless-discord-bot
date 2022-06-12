@@ -618,10 +618,10 @@ class MusicCog(commands.Cog):
 
         vc: wavelink.Player = ctx.voice_client  # pyright: ignore
 
-        if search_cls := self.maybe_direct_url(
-            search
-        ):
-            track = await search_cls.search(search, return_first=True)  # pyright: ignore
+        if search_cls := self.maybe_direct_url(search):
+            track = await search_cls.search(  # pyright: ignore
+                search, return_first=True
+            )
             vc.queue.put(track)  # pyright: ignore
 
             await ctx.send(content=f"Added `{track.title}` into the queue")

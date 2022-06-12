@@ -3,7 +3,6 @@ import sys
 from datetime import datetime
 
 from discord import Permissions
-from ossapi import OssapiV2
 
 import customs
 from config import Config
@@ -39,11 +38,11 @@ needed_permissions = (
 )
 
 start_time: datetime = datetime.min
-osu_api_client = OssapiV2(Config.OSU["client_id"], Config.OSU["client_secret"])
-osu_api_client.log = logging.getLogger()
 
 # Logging setup
-log_level: int = logging.DEBUG if Config.LAB else logging.INFO
+log_level: int = (
+    logging.DEBUG if hasattr(Config, "LAB") and Config.LAB else logging.INFO
+)
 logging.getLogger().handlers.clear()
 logging.basicConfig(level=log_level)
 handler = logging.StreamHandler(sys.stdout)

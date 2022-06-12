@@ -44,7 +44,7 @@ jobs:
 
       - name: Run pylint
         run: |
-          pylint **/*.py
+          pylint **/*.py --disable=W,R,C
 
       - name: Run black
         run: |

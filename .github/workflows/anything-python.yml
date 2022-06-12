@@ -38,6 +38,14 @@ jobs:
         run: |
           pyright
 
+      - name: Run flake8
+        run: |
+          flake8
+
+      - name: Run pylint
+        run: |
+          pylint **/*.py
+
       - name: Run black
         run: |
           black . --check --diff

@@ -38,9 +38,9 @@ class GeneralCog(commands.Cog):
         msg = await ctx.send("Generating link")
 
         inv = await (
-            await discord_together.DiscordTogether(
+            await discord_together.DiscordTogether(  # pyright: ignore
                 Config.TOKEN, debug=Config.LAB
-            )  # noqa
+            )
         ).create_link(voice_channel.id, target)
 
         await msg.edit(content=f"Here is your link: {inv}")
@@ -177,7 +177,7 @@ class GeneralCog(commands.Cog):
         await ctx.defer()
 
         servers_count = len(ctx.bot.guilds)
-        total_members_count = sum([len(guild.members) for guild in ctx.bot.guilds])
+        total_members_count = sum(len(guild.members) for guild in ctx.bot.guilds)
         uptime = int(global_deps.start_time.timestamp())
         bot_inv = (
             f"https://discord.com/api/oauth2/authorize"
@@ -225,9 +225,9 @@ class GeneralCog(commands.Cog):
 
 async def setup(bot: commands.AutoShardedBot):
     await bot.add_cog(GeneralCog(bot))
-    logging.info(f"Cog of {__name__} added!")
+    logging.info("Cog of %s added!", __name__)
 
 
 async def teardown(bot: commands.AutoShardedBot):
     await bot.remove_cog("GeneralCog")
-    logging.info(f"Cog of {__name__} removed!")
+    logging.warning("Cog of %s removed!", __name__)

@@ -71,9 +71,9 @@ class OwnerCog(commands.Cog):
 
 async def setup(bot: commands.AutoShardedBot):
     await bot.add_cog(OwnerCog(bot))
-    logging.info(f"Cog of {__name__} added!")
+    logging.info("Cog of %s added!", __name__)
 
 
 async def teardown(bot: commands.AutoShardedBot):
     await bot.remove_cog("OwnerCog")
-    logging.info(f"Cog of {__name__} removed!")
+    logging.warning("Cog of %s removed!", __name__)

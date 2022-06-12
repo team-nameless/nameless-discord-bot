@@ -258,9 +258,9 @@ class ModeratorCog(commands.Cog):
 
 async def setup(bot: commands.AutoShardedBot):
     await bot.add_cog(ModeratorCog(bot))
-    logging.info(f"Cog of {__name__} added!")
+    logging.info("Cog of %s added!", __name__)
 
 
 async def teardown(bot: commands.AutoShardedBot):
     await bot.remove_cog("ModeratorCog")
-    logging.info(f"Cog of {__name__} removed!")
+    logging.warning("Cog of %s removed!", __name__)

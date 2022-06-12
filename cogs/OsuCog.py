@@ -7,7 +7,7 @@ from DiscordUtils import Pagination
 from discord import Color, app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
-from ossapi import User, UserLookupKey, Score, ScoreType, GameMode
+from ossapi import User, UserLookupKey, Score, ScoreType, GameMode, OssapiV2
 
 import global_deps
 from config import Config
@@ -62,7 +62,8 @@ class FailInclusionConfirmationView(discord.ui.View):
 class OsuCog(commands.Cog):
     def __init__(self, bot: commands.AutoShardedBot):
         self.bot = bot
-        self.api = global_deps.osu_api_client
+        self.api = OssapiV2(Config.OSU["client_id"], Config.OSU["client_secret"])
+        self.api.log = logging.getLogger()
 
     @commands.hybrid_group(fallback="get")
     @app_commands.guilds(*Config.GUILD_IDs)
@@ -377,13 +378,20 @@ class OsuCog(commands.Cog):
 
 
 async def setup(bot: commands.AutoShardedBot):
-    if Config.OSU and Config.OSU["client_id"] and Config.OSU["client_secret"]:
+    if (
+        hasattr(Config, "OSU")
+        and Config.OSU
+        and Config.OSU["client_id"]
+        and Config.OSU["client_secret"]
+    ):
         await bot.add_cog(OsuCog(bot))
-        logging.info(f"Cog of {__name__} added!")
+        logging.info("Cog of %s added!", __name__)
     else:
-        raise ValueError("You did not provide enough config values!")
+        raise commands.ExtensionFailed(
+            __name__, ValueError("osu! configuration values are not enough!")
+        )
 
 
 async def teardown(bot: commands.AutoShardedBot):
     await bot.remove_cog("OsuCog")
-    logging.info(f"Cog of {__name__} removed!")
+    logging.warning("Cog of %s removed!", __name__)

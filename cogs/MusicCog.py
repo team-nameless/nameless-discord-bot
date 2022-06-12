@@ -5,6 +5,7 @@ import math
 import random
 from typing import List, Any, Union, Optional, Dict, Type
 from urllib import parse
+import wave
 
 import DiscordUtils
 import discord
@@ -193,17 +194,18 @@ class MusicCog(commands.Cog):
         bot.loop.create_task(self.connect_nodes())
 
     @staticmethod
-    def maybe_direct_url(search: str) -> Type[wavelink.SearchableTrack]:
+    def maybe_direct_url(search: str) -> Optional[Type[wavelink.SearchableTrack]]:
         locations: Dict[str, Type[wavelink.SearchableTrack]] = {
             "soundcloud.com": wavelink.SoundCloudTrack,
             "open.spotify.com": spotify.SpotifyTrack,
             "music.youtube.com": wavelink.YouTubeMusicTrack,
+            "youtube.com": wavelink.YouTubeTrack
         }
 
         if domain := parse.urlparse(search).netloc:
             return locations[domain]
 
-        return wavelink.YouTubeTrack
+        return None
 
     async def connect_nodes(self):
         await self.bot.wait_until_ready()
@@ -628,6 +630,7 @@ class MusicCog(commands.Cog):
             return
 
         sources: Dict[str, Any] = {
+            "youtube": wavelink.YouTubeTrack,
             "ytmusic": wavelink.YouTubeMusicTrack,
             "spotify": spotify.SpotifyTrack,
             "soundcloud": wavelink.SoundCloudTrack,

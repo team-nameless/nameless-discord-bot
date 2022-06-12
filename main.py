@@ -1,13 +1,14 @@
 import logging
 import os
 import re
-from urllib.request import urlopen
 from datetime import datetime
 from pathlib import Path
-from packaging import version
+from urllib.request import urlopen
 
 import discord
 from discord.ext import commands
+from discord.ext.commands import errors, ExtensionFailed
+from packaging import version
 from sqlalchemy.orm import close_all_sessions
 
 import global_deps
@@ -22,28 +23,30 @@ class Nameless(commands.AutoShardedBot):
     def __init__(self, command_prefix, **kwargs):
         super().__init__(command_prefix, **kwargs)
 
-        # Stuffs
         global_deps.start_time = datetime.now()
+        self.__check_for_updates()
 
-        # Update checker
+    def __check_for_updates(self):
         nameless_version = version.parse(global_deps.__nameless_version__)
-        upstream_version = version.parse(
-            urlopen(upstream_version_txt_url).read().decode()
-        )
+
+        with urlopen(upstream_version_txt_url) as data:
+            upstream_version = version.parse(data.read().decode())
 
         logging.info(
-            f"Current version: {nameless_version} - Upstream version: {upstream_version}"
+            "Current version: %s - Upstream version: %s",
+            nameless_version,
+            upstream_version,
         )
 
         if nameless_version < upstream_version:
-            logging.warning(f"You need to update your code!")
+            logging.warning("You need to update your code!")
         elif nameless_version == upstream_version:
             logging.info("You are using latest version!")
         else:
             logging.warning("You are using a version NEWER than original code!")
 
-        # Write current version
-        with open("version.txt", "w") as f:
+        # Write current version in case I forgot
+        with open("version.txt", "w", encoding="utf-8") as f:
             f.write(global_deps.__nameless_version__)
 
     async def __register_all_cogs(self):
@@ -52,53 +55,25 @@ class Nameless(commands.AutoShardedBot):
         allowed_cogs = list(filter(r.match, os.listdir("cogs")))
 
         for cog_name in Config.COGS:
-            can_load = False
+            can_load = True
             fail_reason = ""
 
             if cog_name + "Cog.py" in allowed_cogs:
+                try:
+                    await self.load_extension(f"cogs.{cog_name}Cog")
+                except ExtensionFailed as ex:
+                    fail_reason = str(ex.original)
 
-                if cog_name == "Experimental":
-                    if Config.LAB:
-                        can_load = True
-                    else:
-                        fail_reason = "'Experimental' needs 'Config.LAB' set to True."
-
-                elif cog_name == "Osu":
-                    if (
-                        Config.OSU
-                        and Config.OSU["client_id"]
-                        and Config.OSU["client_secret"]
-                    ):
-                        can_load = True
-                    else:
-                        fail_reason = (
-                            "'Osu' needs 'Config.OSU' itself to be not 'None' "
-                            "and its 'client_id' and 'client_secret' properties "
-                            "set to a valid value."
-                        )
-
-                elif cog_name == "Music":
-                    if Config.LAVALINK and Config.LAVALINK["nodes"]:
-                        can_load = True
-                    else:
-                        fail_reason = (
-                            "'Music' needs 'Config.Music' itself to be not 'None' "
-                            "and its 'node' properties set to a valid value "
-                            "'spotify' is optional."
-                        )
-
-                else:
-                    can_load = True
+                can_load = not fail_reason
             else:
+                can_load = False
                 fail_reason = "It does not exist in 'allowed_cogs' list."
 
-            if can_load:
-                await self.load_extension(f"cogs.{cog_name}Cog")
-            else:
-                logging.error(f"Unable to load {cog_name}! Reason: {fail_reason}")
+            if not can_load:
+                logging.error("Unable to load %s! %s", cog_name, fail_reason)
 
     async def on_shard_ready(self, shard_id: int):
-        logging.info("Shard #{0} is ready".format(shard_id))
+        logging.info("Shard #%s is ready", shard_id)
 
     async def on_ready(self):
         logging.info("Registering commands")
@@ -106,14 +81,14 @@ class Nameless(commands.AutoShardedBot):
 
         if Config.GUILD_IDs:
             for _id in Config.GUILD_IDs:
-                logging.info(f"Syncing commands with guild ID {_id}")
+                logging.info("Syncing commands with guild ID %d", _id)
                 sf = discord.Object(_id)
                 await self.tree.sync(guild=sf)
         else:
-            logging.info(f"Syncing commands globally")
+            logging.info("Syncing commands globally")
             await self.tree.sync()
 
-        logging.info(msg="Setting presence")
+        logging.info("Setting presence")
         await self.change_presence(
             status=Config.STATUS["user_status"],
             activity=discord.Activity(
@@ -129,11 +104,12 @@ class Nameless(commands.AutoShardedBot):
             ),
         )
 
-        logging.info(msg=f"Logged in as {self.user} (ID: {self.user.id})")
+        logging.info("Logged in as %s (ID: %s)", str(self.user), self.user.id)
 
-    async def on_error(self, event_method: str, /, *args, **kwargs) -> None:
+    async def on_error(self, event_method: str, *args, **kwargs) -> None:
         logging.error(
-            msg=f"[{event_method}] We have gone under a crisis!!!",
+            "[%s] We have gone under a crisis!!!",
+            event_method,
             stack_info=True,
             exc_info=True,
             extra={**kwargs},
@@ -172,8 +148,14 @@ class Nameless(commands.AutoShardedBot):
                         .replace("{tag}", member.discriminator)
                     )
 
+    async def on_command_error(
+        self, ctx: commands.Context, err: errors.CommandError, /
+    ) -> None:
+        await ctx.defer()
+        await ctx.send(f"Something went wrong when executing the command: {err}")
+
     async def close(self) -> None:
-        logging.warning(msg="Shutting down database")
+        logging.warning(msg="Shutting down...")
         close_all_sessions()
         await super().close()
 
@@ -181,11 +163,12 @@ class Nameless(commands.AutoShardedBot):
 def main():
     global_deps.start_time = datetime.now()
 
-    intents = discord.Intents.none()
-    intents.guild_messages = True
-    intents.members = True
-
-    client = Nameless(intents=discord.Intents.all(), command_prefix=Config.PREFIXES)
+    intents = (
+        discord.Intents.default()
+        or discord.Intents.members
+        or discord.Intents.message_content
+    )
+    client = Nameless(intents=intents, command_prefix=Config.PREFIXES)
     client.run(Config.TOKEN)
 
 

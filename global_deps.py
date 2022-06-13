@@ -12,7 +12,7 @@ from database import CRUD
 crud_database = CRUD()
 
 # Stuffs
-__nameless_version__ = "0.0.1-beta1"
+__nameless_version__ = "0.0.2-beta"
 needed_permissions = Permissions.none()
 needed_permissions.manage_roles = True
 needed_permissions.manage_channels = True

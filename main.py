@@ -20,13 +20,7 @@ upstream_version_txt_url = (
 
 
 class Nameless(commands.AutoShardedBot):
-    def __init__(self, command_prefix, **kwargs):
-        super().__init__(command_prefix, **kwargs)
-
-        global_deps.start_time = datetime.now()
-        self.__check_for_updates()
-
-    def __check_for_updates(self):
+    def check_for_updates(self):
         nameless_version = version.parse(global_deps.__nameless_version__)
 
         with urlopen(upstream_version_txt_url) as data:
@@ -151,8 +145,9 @@ class Nameless(commands.AutoShardedBot):
     async def on_command_error(
         self, ctx: commands.Context, err: errors.CommandError, /
     ) -> None:
-        await ctx.defer()
-        await ctx.send(f"Something went wrong when executing the command: {err}")
+        if not isinstance(err, errors.CommandNotFound):
+            await ctx.defer()
+            await ctx.send(f"Something went wrong when executing the command: {err}")
 
     async def close(self) -> None:
         logging.warning(msg="Shutting down...")
@@ -163,12 +158,12 @@ class Nameless(commands.AutoShardedBot):
 def main():
     global_deps.start_time = datetime.now()
 
-    intents = (
-        discord.Intents.default()
-        or discord.Intents.members
-        or discord.Intents.message_content
-    )
+    intents = discord.Intents.default()
+    intents.members = True
+    intents.message_content = True
+
     client = Nameless(intents=intents, command_prefix=Config.PREFIXES)
+    client.check_for_updates()
     client.run(Config.TOKEN)
 
 

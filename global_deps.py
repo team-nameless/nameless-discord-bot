@@ -13,29 +13,28 @@ crud_database = CRUD()
 
 # Stuffs
 __nameless_version__ = "0.0.1-beta1"
-needed_permissions = (
-    Permissions.manage_roles
-    or Permissions.manage_channels
-    or Permissions.kick_members
-    or Permissions.ban_members
-    or Permissions.read_messages
-    or Permissions.view_channel
-    or Permissions.moderate_members
-    or Permissions.send_messages
-    or Permissions.send_messages_in_threads
-    or Permissions.manage_messages
-    or Permissions.embed_links
-    or Permissions.attach_files
-    or Permissions.read_message_history
-    or Permissions.read_message_history
-    or Permissions.use_external_stickers
-    or Permissions.use_external_emojis
-    or Permissions.add_reactions
-    or Permissions.use_application_commands
-    or Permissions.connect
-    or Permissions.speak
-    or Permissions.use_voice_activation
-)
+needed_permissions = Permissions.none()
+needed_permissions.manage_roles = True
+needed_permissions.manage_channels = True
+needed_permissions.kick_members = True
+needed_permissions.ban_members = True
+needed_permissions.read_messages = True
+needed_permissions.view_channel = True
+needed_permissions.moderate_members = True
+needed_permissions.send_messages = True
+needed_permissions.send_messages_in_threads = True
+needed_permissions.manage_messages = True
+needed_permissions.embed_links = True
+needed_permissions.attach_files = True
+needed_permissions.read_message_history = True
+needed_permissions.read_message_history = True
+needed_permissions.use_external_stickers = True
+needed_permissions.use_external_emojis = True
+needed_permissions.add_reactions = True
+needed_permissions.use_application_commands = True
+needed_permissions.connect = True
+needed_permissions.speak = True
+needed_permissions.use_voice_activation = True
 
 start_time: datetime = datetime.min
 

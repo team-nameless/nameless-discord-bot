@@ -182,7 +182,7 @@ class GeneralCog(commands.Cog):
         bot_inv = (
             f"https://discord.com/api/oauth2/authorize"
             f"?client_id={ctx.bot.user.id}"
-            f"&permissions={global_deps.needed_permissions.flag}"
+            f"&permissions={global_deps.needed_permissions.value}"
             f"&scope=bot%20applications.commands"
         )
 

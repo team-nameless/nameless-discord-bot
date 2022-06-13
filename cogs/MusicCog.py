@@ -193,7 +193,7 @@ class MusicCog(commands.Cog):
         bot.loop.create_task(self.connect_nodes())
 
     @staticmethod
-    def maybe_direct_url(search: str) -> Optional[Type[wavelink.SearchableTrack]]:
+    def maybe_direct_url(search: str) -> Optional[Type[wavelink.Track]]:
         locations: Dict[str, Type[wavelink.SearchableTrack]] = {
             "soundcloud.com": wavelink.SoundCloudTrack,
             "open.spotify.com": spotify.SpotifyTrack,
@@ -202,7 +202,7 @@ class MusicCog(commands.Cog):
         }
 
         if domain := parse.urlparse(search).netloc:
-            return locations[domain]
+            return locations.get(domain, wavelink.Track)
 
         return None
 
@@ -281,8 +281,11 @@ class MusicCog(commands.Cog):
         await self.__internal_play2(vc, url)
 
     async def __internal_play2(self, vc: wavelink.Player, url: str):
-        track = await vc.node.get_tracks(cls=wavelink.Track, query=url)
-        await vc.play(track[0])
+        tracks = await vc.node.get_tracks(wavelink.SearchableTrack, url)
+        if tracks:
+            await vc.play(tracks[0])
+        else:
+            raise commands.CommandError(f"No tracks found for {url}")
 
     @commands.hybrid_group(fallback="radio")
     @commands.guild_only()
@@ -291,6 +294,11 @@ class MusicCog(commands.Cog):
     async def music(self, ctx: commands.Context, url: str):
         """Play a radio"""
         await ctx.defer()
+        
+        if not self.maybe_direct_url(url):
+            await ctx.send("You need to provide a direct URL")
+            return
+
         await self.__internal_play(ctx, url, True)
 
     @music.command()

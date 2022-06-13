@@ -193,7 +193,7 @@ class MusicCog(commands.Cog):
         bot.loop.create_task(self.connect_nodes())
 
     @staticmethod
-    def maybe_direct_url(search: str) -> Optional[Type[wavelink.Track]]:
+    def maybe_direct_url(search: str) -> Optional[Type[wavelink.SearchableTrack]]:
         locations: Dict[str, Type[wavelink.SearchableTrack]] = {
             "soundcloud.com": wavelink.SoundCloudTrack,
             "open.spotify.com": spotify.SpotifyTrack,
@@ -202,7 +202,7 @@ class MusicCog(commands.Cog):
         }
 
         if domain := parse.urlparse(search).netloc:
-            return locations.get(domain, wavelink.Track)
+            return locations.get(domain, wavelink.SearchableTrack)
 
         return None
 
@@ -274,16 +274,20 @@ class MusicCog(commands.Cog):
 
         if is_radio:
             dbg, _ = global_deps.crud_database.get_or_create_guild_record(ctx.guild)
-            dbg.radio_start_time = datetime.datetime.now()
+            dbg.radio_start_time = discord.utils.utcnow()
             global_deps.crud_database.save_changes()
 
         await ctx.send("Initiating playback")
-        await self.__internal_play2(vc, url)
+        await self.__internal_play2(vc, url, is_radio)
 
-    async def __internal_play2(self, vc: wavelink.Player, url: str):
+    async def __internal_play2(self, vc: wavelink.Player, url: str, is_radio: bool = False):
         tracks = await vc.node.get_tracks(wavelink.SearchableTrack, url)
         if tracks:
-            await vc.play(tracks[0])
+            track = tracks[0]
+            if is_radio:
+                if not track.is_stream():
+                    raise Exception("Radio track must be a stream")
+            await vc.play(track)
         else:
             raise commands.CommandError(f"No tracks found for {url}")
 
@@ -507,7 +511,7 @@ class MusicCog(commands.Cog):
                 .add_field(
                     name="Playtime" if is_stream else "Position",
                     value=str(
-                        datetime.datetime.now().astimezone() - dbg.radio_start_time
+                        datetime.datetime.now() - dbg.radio_start_time
                         if is_stream
                         else f"{datetime.timedelta(seconds=vc.position)}/{datetime.timedelta(seconds=track.length)}"
                     ),
@@ -628,9 +632,7 @@ class MusicCog(commands.Cog):
         vc: wavelink.Player = ctx.voice_client  # pyright: ignore
 
         if search_cls := self.maybe_direct_url(search):
-            track = await search_cls.search(  # pyright: ignore
-                search, return_first=True
-            )
+            track = (await vc.node.get_tracks(search_cls, search))[0]
 
             if track.is_stream():
                 await ctx.send("This is a stream, cannot add to queue")
@@ -921,7 +923,7 @@ class MusicCog(commands.Cog):
         if not vc:
             raise commands.CommandError("I am not in a voice channel")
 
-        if not vc.track:
+        if not vc.is_playing():
             raise commands.CommandError("No track is being played")
 
     @queue.before_invoke

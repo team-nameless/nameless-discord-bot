@@ -233,8 +233,10 @@ class MusicCog(commands.Cog):
     ):
         chn = player.guild.get_channel(getattr(player, "trigger_channel_id"))
 
-        if chn and not (
-            getattr(player, "loop_sent") and getattr(player, "play_now_allowed")
+        if (
+            chn
+            and not getattr(player, "loop_sent")
+            and getattr(player, "play_now_allowed")
         ):
             await chn.send(  # type: ignore
                 f"Playing: **{track.title}** from **{track.author}** ({track.uri})"

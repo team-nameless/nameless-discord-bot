@@ -294,7 +294,7 @@ class MusicCog(commands.Cog):
     async def music(self, ctx: commands.Context, url: str):
         """Play a radio"""
         await ctx.defer()
-        
+
         if not self.maybe_direct_url(url):
             await ctx.send("You need to provide a direct URL")
             return

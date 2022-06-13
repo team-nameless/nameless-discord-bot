@@ -103,9 +103,9 @@ class Nameless(commands.AutoShardedBot):
     async def on_error(self, event_method: str, *args, **kwargs) -> None:
         logging.error(
             "[%s] We have gone under a crisis!!!",
+            str(args),
             event_method,
             stack_info=True,
-            exc_info=True,
             extra={**kwargs},
         )
 
@@ -148,6 +148,12 @@ class Nameless(commands.AutoShardedBot):
         if not isinstance(err, errors.CommandNotFound):
             await ctx.defer()
             await ctx.send(f"Something went wrong when executing the command: {err}")
+
+        logging.exception(
+            "[on_command_error] We have gone under a crisis!!!",
+            stack_info=True,
+            exc_info=err,
+        )
 
     async def close(self) -> None:
         logging.warning(msg="Shutting down...")

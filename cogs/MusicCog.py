@@ -280,7 +280,9 @@ class MusicCog(commands.Cog):
         await ctx.send("Initiating playback")
         await self.__internal_play2(vc, url, is_radio)
 
-    async def __internal_play2(self, vc: wavelink.Player, url: str, is_radio: bool = False):
+    async def __internal_play2(
+        self, vc: wavelink.Player, url: str, is_radio: bool = False
+    ):
         tracks = await vc.node.get_tracks(wavelink.SearchableTrack, url)
         if tracks:
             track = tracks[0]

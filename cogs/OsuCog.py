@@ -63,7 +63,10 @@ class OsuCog(commands.Cog):
     def __init__(self, bot: commands.AutoShardedBot):
         self.bot = bot
         self.api = OssapiV2(Config.OSU["client_id"], Config.OSU["client_secret"])
-        self.api.log = logging.getLogger()
+        self.api.log.propagate = False
+        self.api.log.parent.propagate = False
+        self.api.log.handlers[:] = global_deps.default_handlers
+        self.api.log.parent.handlers[:] = []
 
     @commands.hybrid_group(fallback="get")
     @app_commands.guilds(*Config.GUILD_IDs)

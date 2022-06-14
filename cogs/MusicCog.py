@@ -14,6 +14,7 @@ from discord.app_commands import Choice
 from discord.ext import commands
 from discord.utils import escape_markdown
 from wavelink.ext import spotify
+from customs.Utility import Utility
 
 import global_deps
 from config import Config
@@ -193,7 +194,7 @@ class MusicCog(commands.Cog):
         bot.loop.create_task(self.connect_nodes())
 
     @staticmethod
-    def maybe_direct_url(search: str) -> Optional[Type[wavelink.SearchableTrack]]:
+    def resolve_direct_url(search: str) -> Optional[Type[wavelink.SearchableTrack]]:
         locations: Dict[str, Type[wavelink.SearchableTrack]] = {
             "soundcloud.com": wavelink.SoundCloudTrack,
             "open.spotify.com": spotify.SpotifyTrack,
@@ -286,11 +287,11 @@ class MusicCog(commands.Cog):
         self, vc: wavelink.Player, url: str, is_radio: bool = False
     ):
         tracks = await vc.node.get_tracks(wavelink.SearchableTrack, url)
+
         if tracks:
             track = tracks[0]
-            if is_radio:
-                if not track.is_stream():
-                    raise Exception("Radio track must be a stream")
+            if is_radio and not track.is_stream():
+                raise commands.CommandError("Radio track must be a stream")
             await vc.play(track)
         else:
             raise commands.CommandError(f"No tracks found for {url}")
@@ -303,7 +304,7 @@ class MusicCog(commands.Cog):
         """Play a radio"""
         await ctx.defer()
 
-        if not self.maybe_direct_url(url):
+        if not Utility.is_an_url(url):
             await ctx.send("You need to provide a direct URL")
             return
 
@@ -635,7 +636,7 @@ class MusicCog(commands.Cog):
 
         vc: wavelink.Player = ctx.voice_client  # pyright: ignore
 
-        if search_cls := self.maybe_direct_url(search):
+        if search_cls := self.resolve_direct_url(search):
             track = (await vc.node.get_tracks(search_cls, search))[0]
 
             if track.is_stream():

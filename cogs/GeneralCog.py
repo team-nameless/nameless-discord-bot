@@ -213,10 +213,13 @@ class GeneralCog(commands.Cog):
             .add_field(name="Commands count", value=f"{len(self.bot.all_commands)}")
             .add_field(
                 name="Invite link",
-                value=f"[Click this]({bot_inv}) or click me then 'Add to Server'",
+                value=f"[Click this]({bot_inv}) or click me then 'Add to Server'"
+                if ctx.bot.application.bot_public
+                else "N/A",
             )
             .add_field(
-                name="Support guild", value=f"{support_inv if support_inv else 'N/A'}"
+                name="Support server",
+                value=f"[Click this]({support_inv})" if support_inv else "N/A",
             )
         )
 

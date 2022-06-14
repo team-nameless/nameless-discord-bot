@@ -3,6 +3,7 @@ import os
 import re
 from datetime import datetime
 from pathlib import Path
+import sys
 from urllib.request import urlopen
 
 import discord
@@ -170,7 +171,7 @@ def main():
 
     client = Nameless(intents=intents, command_prefix=Config.PREFIXES)
     client.check_for_updates()
-    client.run(Config.TOKEN)
+    client.run(Config.TOKEN, log_handler=None)
 
 
 if __name__ == "__main__":

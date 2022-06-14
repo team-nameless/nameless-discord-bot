@@ -1,6 +1,6 @@
 import logging
 from typing import Callable, Tuple, Type, Optional
-from urllib.parse import quote_plus as qp
+from urllib.parse import quote_plus as qp, urlparse
 
 import discord
 from discord.ext import commands
@@ -56,6 +56,10 @@ class Utility:
             "",
             "nameless.db",
         )
+
+    @staticmethod
+    def is_an_url(url: str) -> bool:
+        return urlparse(url).netloc != ""
 
     @staticmethod
     def message_waiter(ctx: commands.Context) -> Callable[[discord.Message], bool]:

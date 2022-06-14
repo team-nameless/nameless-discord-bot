@@ -3,7 +3,6 @@ import os
 import re
 from datetime import datetime
 from pathlib import Path
-import sys
 from urllib.request import urlopen
 
 import discord

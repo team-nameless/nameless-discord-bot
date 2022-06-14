@@ -60,7 +60,6 @@ class Config:
         # Your lavalink nodes
         # Each node is a dictionary with the following keys: host (str), port (int), password (str), is_secure (bool)
         "nodes": [],
-
         # Spotify configuration
         # You can get these from here: https://developer.spotify.com/dashboard/applications
         # Safe to ignore?

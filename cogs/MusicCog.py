@@ -200,6 +200,7 @@ class MusicCog(commands.Cog):
             "open.spotify.com": spotify.SpotifyTrack,
             "music.youtube.com": wavelink.YouTubeMusicTrack,
             "youtube.com": wavelink.YouTubeTrack,
+            "youtu.be": wavelink.YouTubeTrack,
         }
 
         if domain := parse.urlparse(search).netloc:

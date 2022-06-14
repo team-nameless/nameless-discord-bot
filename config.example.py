@@ -41,9 +41,8 @@ class Config:
     }
 
     # Database configuration
-    # It is recommended that you set a simple database such as SQLite or MongoDB/MongoDB Atlas
-    # Use "mongodb" dialect for Mongo ("srv" as "driver" if using Atlas), "sqlite" for SQLite of Python, "" as "driver)
-    # Please note: Install driver BY YOURSELF if NOT using SQLite or MongoDB/MongoDB Atlas.
+    # It is recommended that you set a simple database such as SQLite
+    # Please note: Install driver BY YOURSELF if NOT using SQLite.
     # For example with PostgreSQL: pip install psycopg2-binary, then use "psycopg2" as "driver" below.
     # If you are too lazy to set this, leave this as default.
     DATABASE: Optional[Dict[str, Any]] = {
@@ -58,7 +57,13 @@ class Config:
 
     # Configurations for Lavalink servers for music commands
     LAVALINK: Dict[str, Any] = {
+        # Your lavalink nodes
+        # Each node is a dictionary with the following keys: host (str), port (int), password (str), is_secure (bool)
         "nodes": [],
+
+        # Spotify configuration
+        # You can get these from here: https://developer.spotify.com/dashboard/applications
+        # Safe to ignore?
         "spotify": {
             "client_id": "",
             "client_secret": "",

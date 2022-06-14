@@ -36,7 +36,7 @@ pip install -r requirements_core.txt
 - Lastly, run the `main.py` file:
 
 ```shell
-python main.py
+python main.py -OO
 ```
 
 - In case you encounter the `Target database is not up to date` problem:

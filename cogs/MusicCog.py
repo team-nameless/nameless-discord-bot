@@ -18,6 +18,7 @@ from customs.Utility import Utility
 
 import global_deps
 from config import Config
+from cogs.checks import MusicCogChecks
 
 __all__ = ["MusicCog"]
 
@@ -194,6 +195,89 @@ class MusicCog(commands.Cog):
         bot.loop.create_task(self.connect_nodes())
 
     @staticmethod
+    def generate_embeds_from_tracks(
+        tracks: List[wavelink.SearchableTrack],
+    ) -> List[discord.Embed]:
+        embeds: List[discord.Embed] = []
+        txt = ""
+
+        for idx, track in enumerate(tracks):
+            upcoming = (
+                f"{idx} - "
+                f"[{escape_markdown(track.title)} by {escape_markdown(track.author)}]"  # pyright: ignore
+                f"({track.uri})\n"
+            )
+
+            if len(txt) + len(upcoming) > 2048:
+                eb = discord.Embed(
+                    title="Tracks currently in list",
+                    color=discord.Color.orange(),
+                    description=txt,
+                )
+                embeds.append(eb)
+                txt = upcoming
+            else:
+                txt += upcoming
+
+        embeds.append(
+            discord.Embed(
+                title="Tracks currently in list",
+                color=discord.Color.orange(),
+                description=txt,
+            )
+        )
+
+        return embeds
+
+    @staticmethod
+    def generate_embeds_from_queue(q: wavelink.Queue) -> List[discord.Embed]:
+        # Just in case the user passes the original queue
+        copycat = q.copy()
+        idx = 0
+        txt = ""
+        embeds: List[discord.Embed] = []
+
+        try:
+            while track := copycat.get():
+                upcoming = (
+                    f"{idx} - "
+                    f"[{escape_markdown(track.title)} by {escape_markdown(track.author)}]"  # pyright: ignore
+                    f"({track.uri})\n"  # pyright: ignore
+                )
+
+                if len(txt) + len(upcoming) > 2048:
+                    eb = discord.Embed(
+                        title="Tracks currently in queue",
+                        color=discord.Color.orange(),
+                        description=txt,
+                    )
+                    embeds.append(eb)
+                    txt = upcoming
+                else:
+                    txt += upcoming
+
+                idx += 1
+        except wavelink.QueueEmpty:
+            # Nothing else in queue
+            pass
+        finally:
+            # Add the last bit
+            embeds.append(
+                discord.Embed(
+                    title="Tracks currently in queue",
+                    color=discord.Color.orange(),
+                    description=txt,
+                )
+            )
+
+        return embeds
+
+    @staticmethod
+    async def show_paginated_tracks(ctx: commands.Context, embeds: List[discord.Embed]):
+        p = DiscordUtils.Pagination.AutoEmbedPaginator(ctx)
+        await p.run(embeds)
+
+    @staticmethod
     def resolve_direct_url(search: str) -> Optional[Type[wavelink.SearchableTrack]]:
         locations: Dict[str, Type[wavelink.SearchableTrack]] = {
             "soundcloud.com": wavelink.SoundCloudTrack,
@@ -281,7 +365,6 @@ class MusicCog(commands.Cog):
             dbg.radio_start_time = discord.utils.utcnow()
             global_deps.crud_database.save_changes()
 
-        await ctx.send("Initiating playback")
         await self.__internal_play2(vc, url, is_radio)
 
     async def __internal_play2(
@@ -301,6 +384,9 @@ class MusicCog(commands.Cog):
     @commands.guild_only()
     @app_commands.describe(url="Radio url")
     @app_commands.guilds(*Config.GUILD_IDs)
+    @MusicCogChecks.bot_in_voice()
+    @MusicCogChecks.user_in_voice()
+    @MusicCogChecks.bot_must_silent()
     async def music(self, ctx: commands.Context, url: str):
         """Play a radio"""
         await ctx.defer()
@@ -313,6 +399,7 @@ class MusicCog(commands.Cog):
 
     @music.command()
     @commands.guild_only()
+    @MusicCogChecks.user_in_voice()
     async def connect(self, ctx: commands.Context):
         """Connect to your current voice channel"""
         await ctx.defer()
@@ -327,6 +414,7 @@ class MusicCog(commands.Cog):
 
     @music.command()
     @commands.guild_only()
+    @MusicCogChecks.bot_in_voice()
     async def disconnect(self, ctx: commands.Context):
         """Disconnect from my current voice channel"""
         await ctx.defer()
@@ -339,6 +427,10 @@ class MusicCog(commands.Cog):
 
     @music.command()
     @commands.guild_only()
+    @MusicCogChecks.bot_in_voice()
+    @MusicCogChecks.user_in_voice()
+    @MusicCogChecks.bot_must_play_something()
+    @MusicCogChecks.must_not_be_a_stream()
     async def loop(self, ctx: commands.Context):
         """Toggle loop playback of current track"""
         await ctx.defer()
@@ -349,6 +441,9 @@ class MusicCog(commands.Cog):
 
     @music.command()
     @commands.guild_only()
+    @MusicCogChecks.bot_in_voice()
+    @MusicCogChecks.user_in_voice()
+    @MusicCogChecks.bot_must_play_something()
     async def pause(self, ctx: commands.Context):
         """Pause current playback"""
         await ctx.defer()
@@ -364,6 +459,9 @@ class MusicCog(commands.Cog):
 
     @music.command()
     @commands.guild_only()
+    @MusicCogChecks.bot_in_voice()
+    @MusicCogChecks.user_in_voice()
+    @MusicCogChecks.bot_must_silent()
     async def resume(self, ctx: commands.Context):
         """Resume current playback, if paused"""
         await ctx.defer()
@@ -379,6 +477,9 @@ class MusicCog(commands.Cog):
 
     @music.command()
     @commands.guild_only()
+    @MusicCogChecks.bot_in_voice()
+    @MusicCogChecks.user_in_voice()
+    @MusicCogChecks.bot_must_play_something()
     async def stop(self, ctx: commands.Context):
         """Stop current playback."""
         await ctx.defer()
@@ -391,6 +492,10 @@ class MusicCog(commands.Cog):
 
     @music.command()
     @commands.guild_only()
+    @MusicCogChecks.bot_in_voice()
+    @MusicCogChecks.user_in_voice()
+    @MusicCogChecks.bot_must_silent()
+    @MusicCogChecks.queue_has_element()
     async def play_queue(self, ctx: commands.Context):
         """Play entire queue"""
         await ctx.defer()
@@ -406,6 +511,11 @@ class MusicCog(commands.Cog):
 
     @music.command()
     @commands.guild_only()
+    @MusicCogChecks.bot_in_voice()
+    @MusicCogChecks.user_in_voice()
+    @MusicCogChecks.bot_must_play_something()
+    @MusicCogChecks.queue_has_element()
+    @MusicCogChecks.must_not_be_a_stream()
     async def skip(self, ctx: commands.Context):
         """Skip a song. Remind you that the loop effect DOES NOT apply"""
         await ctx.defer()
@@ -424,6 +534,10 @@ class MusicCog(commands.Cog):
     )
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
+    @MusicCogChecks.bot_in_voice()
+    @MusicCogChecks.user_in_voice()
+    @MusicCogChecks.bot_must_play_something()
+    @MusicCogChecks.must_not_be_a_stream()
     async def seek(self, ctx: commands.Context, pos: int = 0):
         """Seek to a position in a track"""
         await ctx.defer()
@@ -449,6 +563,10 @@ class MusicCog(commands.Cog):
     )
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
+    @MusicCogChecks.bot_in_voice()
+    @MusicCogChecks.user_in_voice()
+    @MusicCogChecks.bot_must_play_something()
+    @MusicCogChecks.must_not_be_a_stream()
     async def seek_segment(self, ctx: commands.Context, segment: int = 0):
         """Seek to a segment in a track"""
         await ctx.defer()
@@ -470,6 +588,10 @@ class MusicCog(commands.Cog):
     @commands.guild_only()
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
+    @MusicCogChecks.bot_in_voice()
+    @MusicCogChecks.user_in_voice()
+    @MusicCogChecks.bot_must_play_something()
+    @MusicCogChecks.must_not_be_a_stream()
     async def toggle_play_now(self, ctx: commands.Context):
         """Toggle 'Now playing' message delivery"""
         await ctx.defer()
@@ -483,6 +605,9 @@ class MusicCog(commands.Cog):
 
     @music.command()
     @commands.guild_only()
+    @MusicCogChecks.bot_in_voice()
+    @MusicCogChecks.user_in_voice()
+    @MusicCogChecks.bot_must_play_something()
     async def now_playing(self, ctx: commands.Context):
         """Check now playing song"""
         await ctx.defer()
@@ -540,52 +665,17 @@ class MusicCog(commands.Cog):
 
     @music.group(fallback="view")
     @commands.guild_only()
+    @MusicCogChecks.bot_in_voice()
+    @MusicCogChecks.user_in_voice()
+    @MusicCogChecks.queue_has_element()
     async def queue(self, ctx: commands.Context):
         """View current queue"""
         await ctx.defer()
 
         vc: wavelink.Player = ctx.voice_client  # pyright: ignore
 
-        txt = ""
-        copycat = vc.queue.copy()
-        idx = 1
-        embeds = []
-
-        try:
-            while track := copycat.get():
-                upcoming = (
-                    f"{idx} - "
-                    f"[{escape_markdown(track.title)} by {escape_markdown(track.author)}]"  # pyright: ignore
-                    f"({track.uri})\n"  # pyright: ignore
-                )
-
-                if len(txt) + len(upcoming) > 2048:
-                    eb = discord.Embed(
-                        title="Tracks currently in queue",
-                        color=discord.Color.orange(),
-                        description=txt,
-                    )
-                    embeds.append(eb)
-                    txt = upcoming
-                else:
-                    txt += upcoming
-
-                idx += 1
-        except wavelink.QueueEmpty:
-            # Nothing else in queue
-            pass
-        finally:
-            # Add the last bit
-            embeds.append(
-                discord.Embed(
-                    title="Tracks currently in queue",
-                    color=discord.Color.orange(),
-                    description=txt,
-                )
-            )
-
-        p = DiscordUtils.Pagination.AutoEmbedPaginator(ctx)
-        await p.run(embeds)
+        embeds = self.generate_embeds_from_queue(vc.queue)
+        await self.show_paginated_tracks(ctx, embeds)
 
     @queue.command()
     @commands.guild_only()
@@ -594,6 +684,9 @@ class MusicCog(commands.Cog):
     )
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
+    @MusicCogChecks.bot_in_voice()
+    @MusicCogChecks.user_in_voice()
+    @MusicCogChecks.queue_has_element()
     async def delete(self, ctx: commands.Context, indexes: str):
         """Remove tracks from queue atomically"""
         await ctx.defer()
@@ -631,6 +724,8 @@ class MusicCog(commands.Cog):
     @app_commands.choices(
         source=[Choice(name=k, value=k) for k in music_default_sources]
     )
+    @MusicCogChecks.bot_in_voice()
+    @MusicCogChecks.user_in_voice()
     async def add(self, ctx: commands.Context, search: str, source: str = "youtube"):
         """Add selected track(s) to queue"""
         await ctx.defer()
@@ -694,8 +789,13 @@ class MusicCog(commands.Cog):
         vc.queue.extend(soon_to_add_queue)
         await m.edit(content=f"Added {len(vals)} tracks into the queue", view=None)
 
+        embeds = self.generate_embeds_from_tracks(soon_to_add_queue)
+        await self.show_paginated_tracks(ctx, embeds)
+
     @queue.command()
     @commands.guild_only()
+    @MusicCogChecks.bot_in_voice()
+    @MusicCogChecks.user_in_voice()
     @app_commands.describe(url="Playlist URL", source="Source to get playlist")
     @app_commands.choices(
         source=[Choice(name=k, value=k) for k in music_default_sources]
@@ -739,6 +839,9 @@ class MusicCog(commands.Cog):
     @app_commands.describe(before="Old position", after="New position")
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
+    @MusicCogChecks.bot_in_voice()
+    @MusicCogChecks.user_in_voice()
+    @MusicCogChecks.queue_has_element()
     async def move(self, ctx: commands.Context, before: int, after: int):
         """Move track to new position"""
         await ctx.defer()
@@ -767,12 +870,18 @@ class MusicCog(commands.Cog):
     @app_commands.describe(pos="Current position", diff="Relative difference")
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
+    @MusicCogChecks.bot_in_voice()
+    @MusicCogChecks.user_in_voice()
+    @MusicCogChecks.queue_has_element()
     async def move_relative(self, ctx: commands.Context, pos: int, diff: int):
         """Move track to new position using relative difference"""
         await self.move(ctx, pos, pos + diff)
 
     @queue.command()
     @commands.guild_only()
+    @MusicCogChecks.bot_in_voice()
+    @MusicCogChecks.user_in_voice()
+    @MusicCogChecks.queue_has_element()
     @app_commands.describe(
         pos1='First track positions, separated by comma, covered by pair of "',
         pos2='Second track positions, separated by comma, covered by pair of "',
@@ -817,6 +926,9 @@ class MusicCog(commands.Cog):
 
     @queue.command()
     @commands.guild_only()
+    @MusicCogChecks.bot_in_voice()
+    @MusicCogChecks.user_in_voice()
+    @MusicCogChecks.queue_has_element()
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
     async def shuffle(self, ctx: commands.Context):
@@ -830,6 +942,9 @@ class MusicCog(commands.Cog):
 
     @queue.command()
     @commands.guild_only()
+    @MusicCogChecks.bot_in_voice()
+    @MusicCogChecks.user_in_voice()
+    @MusicCogChecks.queue_has_element()
     async def clear(self, ctx: commands.Context):
         """Clear the queue"""
         await ctx.defer()
@@ -842,6 +957,9 @@ class MusicCog(commands.Cog):
 
     @queue.command()
     @commands.guild_only()
+    @MusicCogChecks.bot_in_voice()
+    @MusicCogChecks.user_in_voice()
+    @MusicCogChecks.queue_has_element()
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
     async def force_clear(self, ctx: commands.Context):
@@ -852,117 +970,6 @@ class MusicCog(commands.Cog):
 
         vc.queue.clear()
         await ctx.send("Cleared the queue")
-
-    @music.before_invoke
-    @connect.before_invoke
-    @loop.before_invoke
-    @pause.before_invoke
-    @resume.before_invoke
-    @stop.before_invoke
-    @play_queue.before_invoke
-    @skip.before_invoke
-    @seek.before_invoke
-    @seek_segment.before_invoke
-    @toggle_play_now.before_invoke
-    @now_playing.before_invoke
-    @queue.before_invoke
-    @delete.before_invoke
-    @add.before_invoke
-    @add_playlist.before_invoke
-    @shuffle.before_invoke
-    @clear.before_invoke
-    @force_clear.before_invoke
-    @move.before_invoke
-    @move_relative.before_invoke
-    @swap.before_invoke
-    async def user_in_voice_before_invoke(self, ctx: commands.Context):
-        if not ctx.author.voice:  # pyright: ignore
-            raise commands.CommandError("User did not join voice")
-
-    @music.before_invoke
-    @loop.before_invoke
-    @pause.before_invoke
-    @resume.before_invoke
-    @stop.before_invoke
-    @play_queue.before_invoke
-    @skip.before_invoke
-    @seek.before_invoke
-    @seek_segment.before_invoke
-    @toggle_play_now.before_invoke
-    @now_playing.before_invoke
-    @queue.before_invoke
-    @delete.before_invoke
-    @add.before_invoke
-    @add_playlist.before_invoke
-    @shuffle.before_invoke
-    @clear.before_invoke
-    @force_clear.before_invoke
-    @move.before_invoke
-    @move_relative.before_invoke
-    @swap.before_invoke
-    async def bot_in_voice_before_invoke(self, ctx: commands.Context):
-        if not ctx.voice_client:
-            raise commands.CommandError("Bot did not join voice")
-
-    @music.before_invoke
-    @play_queue.before_invoke
-    async def no_play_anything_before_invoke(self, ctx: commands.Context):
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-
-        if not vc:
-            raise commands.CommandError("I am not in a voice channel")
-
-        if vc.is_playing():
-            raise commands.CommandError("Something else is being played")
-
-    @loop.before_invoke
-    @pause.before_invoke
-    @resume.before_invoke
-    @stop.before_invoke
-    @skip.before_invoke
-    @seek.before_invoke
-    @seek_segment.before_invoke
-    @now_playing.before_invoke
-    async def have_track_before_invoke(self, ctx: commands.Context):
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-
-        if not vc:
-            raise commands.CommandError("I am not in a voice channel")
-
-        if not vc.is_playing():
-            raise commands.CommandError("No track is being played")
-
-    @queue.before_invoke
-    @delete.before_invoke
-    @shuffle.before_invoke
-    @clear.before_invoke
-    @force_clear.before_invoke
-    @move.before_invoke
-    @move_relative.before_invoke
-    @swap.before_invoke
-    async def queue_exists_before_invoke(self, ctx: commands.Context):
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-        queue: wavelink.Queue = vc.queue if vc else None  # pyright: ignore
-
-        if not vc:
-            raise commands.CommandError("I am not in a voice channel")
-
-        if queue and queue.is_empty:
-            raise commands.CommandError("Queue is empty")
-
-    @skip.before_invoke
-    @loop.before_invoke
-    @seek.before_invoke
-    @seek_segment.before_invoke
-    async def no_stream_before_invoke(self, ctx: commands.Context):
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-        track: wavelink.Track = vc.track if vc else None  # pyright: ignore
-
-        if not vc:
-            raise commands.CommandError("I am not in a voice channel")
-
-        if track and track.is_stream():
-            raise commands.CommandError("Stream is not allowed")
 
     @add.after_invoke
     @add_playlist.after_invoke

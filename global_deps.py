@@ -1,6 +1,8 @@
 import logging
+import logging.handlers
 import sys
 from datetime import datetime
+from typing import List
 
 from discord import Permissions
 
@@ -44,8 +46,18 @@ log_level: int = (
 )
 logging.getLogger().handlers.clear()
 logging.basicConfig(level=log_level)
-handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(
-    customs.ColoredFormatter("[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s")
-)
-logging.getLogger().handlers[:] = [handler]
+stdout_handler = logging.StreamHandler(sys.stdout)
+stdout_handler.setFormatter(customs.ColoredFormatter(""))
+
+default_handlers: List[logging.Handler] = [stdout_handler]
+
+if hasattr(Config, "LAB") and Config.LAB:
+    file_handler = logging.handlers.RotatingFileHandler(
+        filename="nameless.log", mode="w", backupCount=90, encoding="utf-8", delay=False
+    )
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s - [%(levelname)s] [%(name)s] %(message)s")
+    )
+    default_handlers.append(file_handler)
+
+logging.getLogger().handlers[:] = default_handlers

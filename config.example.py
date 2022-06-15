@@ -12,6 +12,10 @@ class Config:
     # Get it here: https://discord.com/developers/applications/{your-bot-id}/bot
     TOKEN: str = ""
 
+    # Choose when to receive message commands
+    # This will *potentially* slow down the bot if your bot is in many (large) guilds
+    RECEIVE_MESSAGE_COMMANDS: bool = True
+
     # Support server invite
     SUPPORT_SERVER_INVITE: str = "https://rick-roll.ed"
 

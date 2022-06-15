@@ -166,7 +166,10 @@ def main():
 
     intents = discord.Intents.default()
     intents.members = True
-    intents.message_content = True
+    intents.message_content = (
+        hasattr(Config, "RECEIVE_MESSAGE_COMMANDS")
+        and Config.RECEIVE_MESSAGE_COMMANDS
+    )
 
     client = Nameless(intents=intents, command_prefix=Config.PREFIXES)
     client.check_for_updates()

@@ -656,7 +656,8 @@ class MusicCog(commands.Cog):
                     name="Looping",
                     value="This is a stream"
                     if is_stream
-                    else f"{vc.loop_sent}, looped ||{getattr(vc, 'loop_play_count')}|| time(s)",  # pyright: ignore
+                    else f"Looped {getattr(vc, 'loop_play_count')} time(s)"
+                    if getattr(vc, "loop_sent") is True else False,
                 )
                 .add_field(name="Paused", value=vc.is_paused())
                 .add_field(
@@ -744,7 +745,7 @@ class MusicCog(commands.Cog):
                 await ctx.send("This is a stream, cannot add to queue")
                 return
 
-            vc.queue.put(track)  # pyright: ignore
+            vc.queue.put(track)
             await ctx.send(content=f"Added `{track.title}` into the queue")
             return
 
@@ -978,15 +979,6 @@ class MusicCog(commands.Cog):
 
         vc.queue.clear()
         await ctx.send("Cleared the queue")
-
-    @add.after_invoke
-    @add_playlist.after_invoke
-    async def add_track_after_invoke(self, ctx: commands.Context):
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-
-        if not vc.track and not vc.queue.is_empty:
-            track = vc.queue.get()
-            await self.__internal_play(ctx, track.uri)  # pyright: ignore
 
 
 async def setup(bot: commands.AutoShardedBot):

@@ -1,4 +1,6 @@
 import logging
+import os
+import sys
 
 from discord import app_commands
 from discord.ext import commands
@@ -67,6 +69,16 @@ class OwnerCog(commands.Cog):
             await ctx.send(f"{module_name} was not found in the code")
         except commands.ExtensionNotLoaded:
             await ctx.send(f"{module_name} was not loaded before")
+
+    @commands.is_owner()
+    @commands.hybrid_command()
+    @app_commands.guilds(*Config.GUILD_IDs)
+    async def restart(self, ctx: commands.Context):
+        """Restart the bot"""
+        await ctx.defer()
+        await ctx.send("See you soon!")
+        logging.warning("Restarting using [python %s]", " ".join(sys.argv))
+        os.execv(sys.executable, ["python"] + sys.argv)
 
 
 async def setup(bot: commands.AutoShardedBot):

@@ -339,8 +339,10 @@ class MusicCog(commands.Cog):
 
         try:
             if getattr(player, "loop_sent") and not getattr(player, "skip_sent"):
-                pass
+                setattr(player, "loop_play_count", getattr(player, "loop_play_count") + 1)
             else:
+                setattr(player, "loop_play_count", 0)
+                setattr(player, "loop_sent", False)
                 setattr(player, "skip_sent", False)
                 track = await player.queue.get_wait()  # pyright: ignore
 
@@ -359,6 +361,7 @@ class MusicCog(commands.Cog):
         setattr(vc, "loop_sent", False)
         setattr(vc, "play_now_allowed", True)
         setattr(vc, "trigger_channel_id", ctx.channel.id)
+        setattr(vc, "loop_play_count", 0)
 
         if is_radio:
             dbg, _ = global_deps.crud_database.get_or_create_guild_record(ctx.guild)
@@ -651,7 +654,7 @@ class MusicCog(commands.Cog):
                     name="Looping",
                     value="This is a stream"
                     if is_stream
-                    else vc.loop_sent,  # pyright: ignore
+                    else f"{vc.loop_sent}, looped ||{getattr(vc, 'loop_play_count')}|| time(s)",  # pyright: ignore
                 )
                 .add_field(name="Paused", value=vc.is_paused())
                 .add_field(

@@ -24,9 +24,13 @@ class Config:
     GUILD_IDs = []
 
     # Choose which cog(s) to load
-    # Available options: Config, Experimental (requires `LAB` set as True), General, Moderator,
-    #                    Music (requires `LAVALINK` to be properly provided),
-    #                    Osu (requires `OSU` to be properly provided), Owner
+    # Available options:    Config,
+    #                       Experimental (requires `LAB` set as True),
+    #                       General,
+    #                       Moderator,
+    #                       Music (requires `LAVALINK` to be properly provided),
+    #                       Osu (requires `OSU` to be properly provided),
+    #                       Owner
     COGS: List[str] = ["Music", "Osu", "General"]
 
     # Guild prefixes for text commands

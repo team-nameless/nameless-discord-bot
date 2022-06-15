@@ -77,8 +77,8 @@ class OwnerCog(commands.Cog):
         """Restart the bot"""
         await ctx.defer()
         await ctx.send("See you soon!")
-        logging.warning("Restarting using [python %s]", " ".join(sys.argv))
-        os.execv(sys.executable, ["python"] + sys.argv)
+        logging.warning("Restarting using [%s %s]", sys.executable, " ".join(sys.argv))
+        os.execv(sys.executable, [sys.executable] + sys.argv)
 
 
 async def setup(bot: commands.AutoShardedBot):

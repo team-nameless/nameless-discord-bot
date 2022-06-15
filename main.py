@@ -44,27 +44,28 @@ class Nameless(commands.AutoShardedBot):
             f.write(global_deps.__nameless_version__)
 
     async def __register_all_cogs(self):
-        r = re.compile(r"^(?!_.).*Cog.py")
-        os.chdir(Path(__file__).resolve().parent)
-        allowed_cogs = list(filter(r.match, os.listdir("cogs")))
+        if hasattr(Config, "COGS"):
+            r = re.compile(r"^(?!_.).*Cog.py")
+            os.chdir(Path(__file__).resolve().parent)
+            allowed_cogs = list(filter(r.match, os.listdir("cogs")))
 
-        for cog_name in Config.COGS:
-            can_load = True
-            fail_reason = ""
+            for cog_name in Config.COGS:
+                can_load = True
+                fail_reason = ""
 
-            if cog_name + "Cog.py" in allowed_cogs:
-                try:
-                    await self.load_extension(f"cogs.{cog_name}Cog")
-                except ExtensionFailed as ex:
-                    fail_reason = str(ex.original)
+                if cog_name + "Cog.py" in allowed_cogs:
+                    try:
+                        await self.load_extension(f"cogs.{cog_name}Cog")
+                    except ExtensionFailed as ex:
+                        fail_reason = str(ex.original)
 
-                can_load = not fail_reason
-            else:
-                can_load = False
-                fail_reason = "It does not exist in 'allowed_cogs' list."
+                    can_load = not fail_reason
+                else:
+                    can_load = False
+                    fail_reason = "It does not exist in 'allowed_cogs' list."
 
-            if not can_load:
-                logging.error("Unable to load %s! %s", cog_name, fail_reason)
+                if not can_load:
+                    logging.error("Unable to load %s! %s", cog_name, fail_reason)
 
     async def on_shard_ready(self, shard_id: int):
         logging.info("Shard #%s is ready", shard_id)

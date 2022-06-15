@@ -339,7 +339,9 @@ class MusicCog(commands.Cog):
 
         try:
             if getattr(player, "loop_sent") and not getattr(player, "skip_sent"):
-                setattr(player, "loop_play_count", getattr(player, "loop_play_count") + 1)
+                setattr(
+                    player, "loop_play_count", getattr(player, "loop_play_count") + 1
+                )
             else:
                 setattr(player, "loop_play_count", 0)
                 setattr(player, "loop_sent", False)
@@ -833,9 +835,12 @@ class MusicCog(commands.Cog):
             return
 
         player: wavelink.Player = ctx.voice_client  # pyright: ignore
-        player.queue.extend([track for track in tracks if not track.is_stream()])
-
+        accepted_tracks = [track for track in tracks if not track.is_stream()]
+        player.queue.extend(accepted_tracks)
         await ctx.send(f"Added {len(tracks)} track(s) from {url} to the queue")
+
+        embeds = self.generate_embeds_from_tracks(accepted_tracks)
+        await self.show_paginated_tracks(ctx, embeds)
 
     @queue.command()
     @commands.guild_only()

@@ -657,7 +657,8 @@ class MusicCog(commands.Cog):
                     value="This is a stream"
                     if is_stream
                     else f"Looped {getattr(vc, 'loop_play_count')} time(s)"
-                    if getattr(vc, "loop_sent") is True else False,
+                    if getattr(vc, "loop_sent") is True
+                    else False,
                 )
                 .add_field(name="Paused", value=vc.is_paused())
                 .add_field(

@@ -14,7 +14,7 @@ from database import CRUD
 crud_database = CRUD()
 
 # Stuffs
-__nameless_version__ = "0.3.2-beta"
+__nameless_version__ = "0.4.1-beta"
 needed_permissions = Permissions.none()
 needed_permissions.manage_roles = True
 needed_permissions.manage_channels = True

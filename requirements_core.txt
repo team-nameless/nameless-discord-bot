@@ -6,3 +6,4 @@ DiscordUtils
 wavelink
 alembic
 packaging
+requests

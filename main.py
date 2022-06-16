@@ -3,9 +3,9 @@ import os
 import re
 from datetime import datetime
 from pathlib import Path
-from urllib.request import urlopen
 
 import discord
+import requests
 from discord.ext import commands
 from discord.ext.commands import errors, ExtensionFailed
 from packaging import version
@@ -22,9 +22,7 @@ upstream_version_txt_url = (
 class Nameless(commands.AutoShardedBot):
     def check_for_updates(self):
         nameless_version = version.parse(global_deps.__nameless_version__)
-
-        with urlopen(upstream_version_txt_url) as data:
-            upstream_version = version.parse(data.read().decode())
+        upstream_version = version.parse(requests.get(upstream_version_txt_url).text)
 
         logging.info(
             "Current version: %s - Upstream version: %s",
@@ -50,7 +48,6 @@ class Nameless(commands.AutoShardedBot):
             allowed_cogs = list(filter(r.match, os.listdir("cogs")))
 
             for cog_name in Config.COGS:
-                can_load = True
                 fail_reason = ""
 
                 if cog_name + "Cog.py" in allowed_cogs:
@@ -59,13 +56,15 @@ class Nameless(commands.AutoShardedBot):
                     except ExtensionFailed as ex:
                         fail_reason = str(ex.original)
 
-                    can_load = not fail_reason
+                    can_load = fail_reason == ""
                 else:
                     can_load = False
                     fail_reason = "It does not exist in 'allowed_cogs' list."
 
                 if not can_load:
                     logging.error("Unable to load %s! %s", cog_name, fail_reason)
+        else:
+            logging.warning("Config.COGS is None, nothing will be loaded")
 
     async def on_shard_ready(self, shard_id: int):
         logging.info("Shard #%s is ready", shard_id)

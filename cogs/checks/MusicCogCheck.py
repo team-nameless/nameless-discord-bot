@@ -5,6 +5,7 @@ from .BaseCheck import *
 
 __all__ = ["MusicCogCheck"]
 
+
 class MusicCogCheck(BaseCheck):
     @staticmethod
     def user_and_bot_in_voice(ctx: commands.Context):
@@ -18,7 +19,9 @@ class MusicCogCheck(BaseCheck):
         if BaseCheck.is_from_help(ctx):
             return True
 
-        return MusicCogCheck.bot_must_play_something(ctx) and MusicCogCheck.must_not_be_a_stream(ctx)
+        return MusicCogCheck.bot_must_play_something(
+            ctx
+        ) and MusicCogCheck.must_not_be_a_stream(ctx)
 
     @staticmethod
     def bot_in_voice(ctx: commands.Context):
@@ -78,7 +81,7 @@ class MusicCogCheck(BaseCheck):
         if BaseCheck.is_from_help(ctx):
             return True
 
-        vc: wavelink.Player= ctx.voice_client  # pyright: ignore
+        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
 
         if vc and vc.queue.is_empty:
             raise commands.CheckFailure("I need to have something in the queue.")

@@ -171,7 +171,9 @@ def main():
         hasattr(Config, "RECEIVE_MESSAGE_COMMANDS") and Config.RECEIVE_MESSAGE_COMMANDS
     )
 
-    client = Nameless(intents=intents, command_prefix=Config.PREFIXES, description="Just a bot")
+    client = Nameless(
+        intents=intents, command_prefix=Config.PREFIXES, description="Just a bot"
+    )
     client.check_for_updates()
     client.run(Config.TOKEN, log_handler=None)
 

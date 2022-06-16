@@ -1,12 +1,15 @@
 import wavelink
 from discord.ext import commands
 
-from . import BaseCheck
+from .BaseCheck import BaseCheck
 
 __all__ = ["MusicCogCheck"]
 
 
 class MusicCogCheck(BaseCheck):
+    def __init__(self):
+        super().__init__()
+
     @staticmethod
     def user_and_bot_in_voice(ctx: commands.Context):
         if BaseCheck.is_from_help(ctx):

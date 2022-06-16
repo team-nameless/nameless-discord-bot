@@ -106,6 +106,7 @@ class Nameless(commands.AutoShardedBot):
             event_method,
             ", ".join(args),
             stack_info=True,
+            exc_info=True,
             extra={**kwargs},
         )
 

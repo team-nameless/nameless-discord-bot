@@ -1,6 +1,6 @@
 import logging
-import os
 import sys
+import subprocess
 
 from discord import app_commands
 from discord.ext import commands
@@ -78,7 +78,7 @@ class OwnerCog(commands.Cog):
         await ctx.defer()
         await ctx.send("See you soon!")
         logging.warning("Restarting using [%s %s]", sys.executable, " ".join(sys.argv))
-        os.execv(sys.executable, [sys.executable] + sys.argv)
+        subprocess.run([sys.executable, *sys.argv])
 
 
 async def setup(bot: commands.AutoShardedBot):

@@ -16,8 +16,8 @@ class Config:
     # This will *potentially* slow down the bot if your bot is in many (large) guilds
     RECEIVE_MESSAGE_COMMANDS: bool = True
 
-    # Support server invite
-    SUPPORT_SERVER_INVITE: str = "https://rick-roll.ed"
+    # Support server url
+    SUPPORT_SERVER_URL: str = "https://rick-roll.ed"
 
     # Guild IDs to register commands
     # Leave empty array for global (slash commands takes one hour to mitigate, text takes immediately)

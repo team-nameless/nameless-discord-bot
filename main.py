@@ -103,9 +103,9 @@ class Nameless(commands.AutoShardedBot):
 
     async def on_error(self, event_method: str, *args, **kwargs) -> None:
         logging.error(
-            "[%s] We have gone under a crisis!!!",
-            str(args),
+            "[%s] We have gone under a crisis!!! (args: [ %s ])",
             event_method,
+            ", ".join(args),
             stack_info=True,
             extra={**kwargs},
         )
@@ -171,7 +171,7 @@ def main():
         hasattr(Config, "RECEIVE_MESSAGE_COMMANDS") and Config.RECEIVE_MESSAGE_COMMANDS
     )
 
-    client = Nameless(intents=intents, command_prefix=Config.PREFIXES)
+    client = Nameless(intents=intents, command_prefix=Config.PREFIXES, description="Just a bot")
     client.check_for_updates()
     client.run(Config.TOKEN, log_handler=None)
 

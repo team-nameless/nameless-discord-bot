@@ -510,9 +510,8 @@ class MusicCog(commands.Cog):
     @music.command()
     @commands.guild_only()
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.bot_must_play_something)
+    @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
     @commands.check(MusicCogCheck.queue_has_element)
-    @commands.check(MusicCogCheck.must_not_be_a_stream)
     async def skip(self, ctx: commands.Context):
         """Skip a song. Remind you that the loop effect DOES NOT apply"""
         await ctx.defer()

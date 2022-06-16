@@ -1,7 +1,7 @@
 import wavelink
 from discord.ext import commands
 
-from .BaseCheck import *
+from . import BaseCheck
 
 __all__ = ["MusicCogCheck"]
 

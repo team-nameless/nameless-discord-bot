@@ -1,6 +1,6 @@
-__all__ = ["BaseCheck"]
-
 from discord.ext import commands
+
+__all__ = ["BaseCheck"]
 
 
 class BaseCheck:

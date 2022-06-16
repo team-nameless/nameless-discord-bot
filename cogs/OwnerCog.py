@@ -78,7 +78,7 @@ class OwnerCog(commands.Cog):
         await ctx.defer()
         await ctx.send("See you soon!")
         logging.warning("Restarting using [%s %s]", sys.executable, " ".join(sys.argv))
-        subprocess.run([sys.executable, *sys.argv])
+        subprocess.run([sys.executable, *sys.argv], check=False)
 
 
 async def setup(bot: commands.AutoShardedBot):

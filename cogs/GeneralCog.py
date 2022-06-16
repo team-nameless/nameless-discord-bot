@@ -187,12 +187,14 @@ class GeneralCog(commands.Cog):
         )
 
         github_link = "https://github.com/nameless-on-discord/nameless"
+        support_inv = ""
 
         try:
-            await self.bot.fetch_invite(Config.SUPPORT_SERVER_INVITE)
-            support_inv = Config.SUPPORT_SERVER_INVITE
+            if hasattr(Config, "SUPPORT_SERVER_URL") and Config.SUPPORT_SERVER_URL:
+                inv = await self.bot.fetch_invite(Config.SUPPORT_SERVER_URL)
+                support_inv = inv.url
         except NotFound:
-            support_inv = ""
+            pass
 
         embed = (
             discord.Embed(

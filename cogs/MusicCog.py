@@ -386,9 +386,9 @@ class MusicCog(commands.Cog):
             raise commands.CommandError(f"No tracks found for {url}")
 
     @commands.hybrid_group(fallback="radio")
+    @app_commands.guilds(*Config.GUILD_IDs)
     @commands.guild_only()
     @app_commands.describe(url="Radio url")
-    @app_commands.guilds(*Config.GUILD_IDs)
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
     @commands.check(MusicCogCheck.bot_must_silent)
     async def music(self, ctx: commands.Context, url: str):

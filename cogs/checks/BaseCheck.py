@@ -11,16 +11,15 @@ class BaseCheck:
         pass
 
     @staticmethod
-    def allow_help_message(fn: Callable[[commands.Context], bool]):
+    def allow_help_message(check_fn: Callable[[commands.Context], bool]):
         """
-        Allow this command to be viewed in the help command.
-        Commonly used for bypassing command-specific checks.
+        Bypasses command-specific checks.
         Note: this is a decorator.
         """
 
         def pred(ctx: commands.Context) -> bool:
-            return fn(ctx) or (
+            return (
                 ctx.invoked_with is not None and ctx.invoked_with == "help"
-            )
+            ) or check_fn(ctx)
 
         return pred

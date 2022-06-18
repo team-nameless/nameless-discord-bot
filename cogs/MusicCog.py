@@ -324,9 +324,12 @@ class MusicCog(commands.Cog):
             and not getattr(player, "loop_sent")
             and getattr(player, "play_now_allowed")
         ):
-            await chn.send(  # type: ignore
-                f"Playing: **{track.title}** from **{track.author}** ({track.uri})"
-            )
+            if track.is_stream():
+                await chn.send(f"Streaming music from {track.uri}")
+            else:
+                await chn.send(  # type: ignore
+                    f"Playing: **{track.title}** from **{track.author}** ({track.uri})"
+                )
 
     @commands.Cog.listener()
     async def on_wavelink_track_end(

@@ -57,8 +57,6 @@ jobs:
       - name: Deploy to server
         if: ${{ matrix.python-version == '3.8' }}
         run: |
-          echo {secrets.SSH_PASSWORD} > pwd.txt
-          echo pm2 restart {secrets.INSTANCE_NAME} > script.sh
-          cat pwd.txt
-          cat script.sh
-          sshpass -f pwd.txt ssh {secrets.SSH_USER}@{secrets.SSH_HOST} "bash -s" < script.sh
+          echo ${{ secrets.SSH_PASSWORD }} > pwd.txt
+          echo pm2 restart ${{ secrets.INSTANCE_NAME }} > script.sh
+          sshpass -f pwd.txt ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" < script.sh

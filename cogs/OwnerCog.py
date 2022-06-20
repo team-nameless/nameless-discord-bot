@@ -1,13 +1,17 @@
 import logging
+import os
 import sys
 import subprocess
 
 from discord import app_commands
+from discord.app_commands import Choice
 from discord.ext import commands
 
+import global_deps
 from config import Config
 
 __all__ = ["OwnerCog"]
+cogs_list = list("cogs." + z.replace(".py", "") for z in filter(global_deps.cogs_regex.match, os.listdir("cogs")))
 
 
 class OwnerCog(commands.Cog):
@@ -25,6 +29,7 @@ class OwnerCog(commands.Cog):
     @commands.is_owner()
     @commands.hybrid_command()
     @app_commands.guilds(*Config.GUILD_IDs)
+    @app_commands.choices(module_name=[Choice(name=c, value=c) for c in cogs_list])
     @app_commands.describe(module_name="The Python-qualified module name")
     async def reload(self, ctx: commands.Context, module_name: str):
         """Reload a module"""
@@ -41,6 +46,7 @@ class OwnerCog(commands.Cog):
     @commands.is_owner()
     @commands.hybrid_command()
     @app_commands.guilds(*Config.GUILD_IDs)
+    @app_commands.choices(module_name=[Choice(name=c, value=c) for c in cogs_list])
     @app_commands.describe(module_name="The Python-qualified module name")
     async def load(self, ctx: commands.Context, module_name: str):
         """Load a module"""
@@ -57,6 +63,7 @@ class OwnerCog(commands.Cog):
     @commands.is_owner()
     @commands.hybrid_command()
     @app_commands.guilds(*Config.GUILD_IDs)
+    @app_commands.choices(module_name=[Choice(name=c, value=c) for c in cogs_list])
     @app_commands.describe(module_name="The Python-qualified module name")
     async def unload(self, ctx: commands.Context, module_name: str):
         """Unload a module"""

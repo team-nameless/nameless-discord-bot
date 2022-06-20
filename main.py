@@ -1,11 +1,9 @@
 import logging
 import os
-import re
 from datetime import datetime
 from pathlib import Path
 
 import discord
-import requests
 from discord.ext import commands
 from discord.ext.commands import errors, ExtensionFailed
 from packaging import version
@@ -14,16 +12,13 @@ from sqlalchemy.orm import close_all_sessions
 import global_deps
 from config import Config
 
-upstream_version_txt_url = (
-    "https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt"
-)
 os.chdir(Path(__file__).resolve().parent)
 
 
 class Nameless(commands.AutoShardedBot):
     def check_for_updates(self):
-        nameless_version = version.parse(global_deps.__nameless_version__)
-        upstream_version = version.parse(requests.get(upstream_version_txt_url).text)
+        nameless_version = version.parse(global_deps.__nameless_current_version__)
+        upstream_version = version.parse(global_deps.__nameless_upstream_version__)
 
         logging.info(
             "Current version: %s - Upstream version: %s",
@@ -40,7 +35,7 @@ class Nameless(commands.AutoShardedBot):
 
         # Write current version in case I forgot
         with open("version.txt", "w", encoding="utf-8") as f:
-            f.write(global_deps.__nameless_version__)
+            f.write(global_deps.__nameless_current_version__)
 
     async def __register_all_cogs(self):
         if hasattr(Config, "COGS"):

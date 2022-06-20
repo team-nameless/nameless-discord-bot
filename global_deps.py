@@ -4,6 +4,7 @@ import sys
 from datetime import datetime
 from typing import List
 
+import requests
 from discord import Permissions
 
 import customs
@@ -15,7 +16,9 @@ crud_database = CRUD()
 
 # Stuffs
 cogs_regex = re.compile(r"^(?!_.).*Cog.py")
-__nameless_version__ = "0.5.0-beta"
+upstream_version_txt_url = "https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt"
+__nameless_current_version__ = "0.5.2-beta"
+__nameless_upstream_version__ = requests.get(upstream_version_txt_url).text
 needed_permissions = Permissions.none()
 needed_permissions.manage_roles = True
 needed_permissions.manage_channels = True

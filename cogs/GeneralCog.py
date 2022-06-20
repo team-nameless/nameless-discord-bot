@@ -208,7 +208,8 @@ class GeneralCog(commands.Cog):
             .add_field(name="Servers count", value=f"{servers_count}")
             .add_field(name="Members count", value=f"{total_members_count}")
             .add_field(name="Last launch/Uptime", value=f"<t:{uptime}:R>")
-            .add_field(name="Bot version", value=global_deps.__nameless_version__)
+            .add_field(name="Bot version",value=f"Current: {global_deps.__nameless_current_version__}\n"
+                                                f"Latest: {global_deps.__nameless_upstream_version__}")
             .add_field(
                 name="Library version", value=f"discord.py v{discord.__version__}"
             )

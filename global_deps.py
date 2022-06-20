@@ -16,7 +16,9 @@ crud_database = CRUD()
 
 # Stuffs
 cogs_regex = re.compile(r"^(?!_.).*Cog.py")
-upstream_version_txt_url = "https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt"
+upstream_version_txt_url = (
+    "https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt"
+)
 __nameless_current_version__ = "0.5.2-beta"
 __nameless_upstream_version__ = requests.get(upstream_version_txt_url).text
 needed_permissions = Permissions.none()

@@ -19,6 +19,7 @@ upstream_version_txt_url = (
 )
 os.chdir(Path(__file__).resolve().parent)
 
+
 class Nameless(commands.AutoShardedBot):
     def check_for_updates(self):
         nameless_version = version.parse(global_deps.__nameless_version__)
@@ -43,7 +44,9 @@ class Nameless(commands.AutoShardedBot):
 
     async def __register_all_cogs(self):
         if hasattr(Config, "COGS"):
-            allowed_cogs = list(filter(global_deps.cogs_regex.match, os.listdir("cogs")))
+            allowed_cogs = list(
+                filter(global_deps.cogs_regex.match, os.listdir("cogs"))
+            )
 
             for cog_name in Config.COGS:
                 fail_reason = ""

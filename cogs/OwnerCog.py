@@ -11,7 +11,10 @@ import global_deps
 from config import Config
 
 __all__ = ["OwnerCog"]
-cogs_list = list("cogs." + z.replace(".py", "") for z in filter(global_deps.cogs_regex.match, os.listdir("cogs")))
+cogs_list = list(
+    "cogs." + z.replace(".py", "")
+    for z in filter(global_deps.cogs_regex.match, os.listdir("cogs"))
+)
 
 
 class OwnerCog(commands.Cog):

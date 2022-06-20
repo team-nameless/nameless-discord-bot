@@ -52,7 +52,7 @@ jobs:
 
       - name: Run tests and return coverages
         run: |
-          pytest --cov-report term-missing --cov=database tests/
+          pytest --cov-report term-missing --cov=database --cov=customs.Utility tests/
 
       - name: Deploy to server
         if: ${{ matrix.python-version == '3.8' }}

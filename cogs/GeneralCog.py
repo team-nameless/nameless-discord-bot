@@ -213,7 +213,7 @@ class GeneralCog(commands.Cog):
             .add_field(
                 name="Library version", value=f"discord.py v{discord.__version__}"
             )
-            .add_field(name="Commands count", value=f"{len(self.bot.all_commands)}")
+            .add_field(name="Commands count", value=f"{len(list(self.bot.walk_commands()))}")
             .add_field(
                 name="Invite link",
                 value=f"[Click this]({bot_inv}) or click me then 'Add to Server'"

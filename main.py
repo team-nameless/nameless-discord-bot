@@ -35,6 +35,7 @@ class Nameless(commands.AutoShardedBot):
 
         # Write current version in case I forgot
         with open("version.txt", "w", encoding="utf-8") as f:
+            logging.info("Writing current version into version.txt")
             f.write(global_deps.__nameless_current_version__)
 
     async def __register_all_cogs(self):

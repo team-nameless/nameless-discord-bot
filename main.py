@@ -17,7 +17,7 @@ from config import Config
 upstream_version_txt_url = (
     "https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt"
 )
-
+os.chdir(Path(__file__).resolve().parent)
 
 class Nameless(commands.AutoShardedBot):
     def check_for_updates(self):
@@ -43,9 +43,7 @@ class Nameless(commands.AutoShardedBot):
 
     async def __register_all_cogs(self):
         if hasattr(Config, "COGS"):
-            r = re.compile(r"^(?!_.).*Cog.py")
-            os.chdir(Path(__file__).resolve().parent)
-            allowed_cogs = list(filter(r.match, os.listdir("cogs")))
+            allowed_cogs = list(filter(global_deps.cogs_regex.match, os.listdir("cogs")))
 
             for cog_name in Config.COGS:
                 fail_reason = ""

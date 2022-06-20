@@ -1,5 +1,5 @@
-import logging
 import logging.handlers
+import re
 import sys
 from datetime import datetime
 from typing import List
@@ -14,7 +14,8 @@ from database import CRUD
 crud_database = CRUD()
 
 # Stuffs
-__nameless_version__ = "0.4.2-beta"
+cogs_regex = re.compile(r"^(?!_.).*Cog.py")
+__nameless_version__ = "0.5.0-beta"
 needed_permissions = Permissions.none()
 needed_permissions.manage_roles = True
 needed_permissions.manage_channels = True

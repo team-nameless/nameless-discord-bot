@@ -11,7 +11,7 @@ from ossapi import User, UserLookupKey, Score, ScoreType, GameMode, OssapiV2
 
 import global_deps
 from config import Config
-from customs import Utility
+from customs.DiscordWaiter import DiscordWaiter
 
 __all__ = ["OsuCog"]
 
@@ -223,7 +223,7 @@ class OsuCog(commands.Cog):
 
                 try:
                     msg: discord.Message = await self.bot.wait_for(
-                        "message", check=Utility.message_waiter(ctx), timeout=30
+                        "message", check=DiscordWaiter.message_waiter(ctx), timeout=30
                     )
                     prompt = msg.content
                     await msg.delete(delay=1.0)

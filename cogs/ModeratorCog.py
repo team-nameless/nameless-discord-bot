@@ -6,7 +6,7 @@ from discord import Forbidden, HTTPException, app_commands
 from discord.ext import commands
 
 from config import Config
-from customs import Utility
+from customs.DiscordWaiter import DiscordWaiter
 from global_deps import crud_database
 
 __all__ = ["ModeratorCog"]
@@ -35,7 +35,7 @@ class ModeratorCog(commands.Cog):
         await ctx.send(f"Mention members you want to {action} with reason {reason}")
 
         msg: discord.Message = await client.wait_for(
-            "message", check=Utility.message_waiter(ctx), timeout=30
+            "message", check=DiscordWaiter.message_waiter(ctx), timeout=30
         )
         mentioned_members = msg.mentions
         responses = []

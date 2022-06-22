@@ -9,7 +9,7 @@ from discord.app_commands import Choice
 from discord.ext import commands
 from discord_together.discordTogetherMain import defaultApplications
 
-import global_deps
+import shared_vars
 from config import Config
 
 __all__ = ["GeneralCog"]
@@ -178,11 +178,11 @@ class GeneralCog(commands.Cog):
 
         servers_count = len(ctx.bot.guilds)
         total_members_count = sum(len(guild.members) for guild in ctx.bot.guilds)
-        uptime = int(global_deps.start_time.timestamp())
+        uptime = int(shared_vars.start_time.timestamp())
         bot_inv = (
             f"https://discord.com/api/oauth2/authorize"
             f"?client_id={ctx.bot.user.id}"
-            f"&permissions={global_deps.needed_permissions.value}"
+            f"&permissions={shared_vars.needed_permissions.value}"
             f"&scope=bot%20applications.commands"
         )
 
@@ -210,8 +210,8 @@ class GeneralCog(commands.Cog):
             .add_field(name="Last launch/Uptime", value=f"<t:{uptime}:R>")
             .add_field(
                 name="Bot version",
-                value=f"Current: {global_deps.__nameless_current_version__}\n"
-                f"Latest: {global_deps.__nameless_upstream_version__}",
+                value=f"Current: {shared_vars.__nameless_current_version__}\n"
+                f"Latest: {shared_vars.__nameless_upstream_version__}",
             )
             .add_field(
                 name="Library version", value=f"discord.py v{discord.__version__}"

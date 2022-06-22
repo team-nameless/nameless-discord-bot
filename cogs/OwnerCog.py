@@ -7,13 +7,13 @@ from discord import app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
 
-import global_deps
+import shared_vars
 from config import Config
 
 __all__ = ["OwnerCog"]
 cogs_list = list(
     "cogs." + z.replace(".py", "")
-    for z in filter(global_deps.cogs_regex.match, os.listdir("cogs"))
+    for z in filter(shared_vars.cogs_regex.match, os.listdir("cogs"))
 )
 
 

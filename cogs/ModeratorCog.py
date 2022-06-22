@@ -7,7 +7,7 @@ from discord.ext import commands
 
 from config import Config
 from customs.DiscordWaiter import DiscordWaiter
-from global_deps import crud_database
+from shared_vars import crud_database
 
 __all__ = ["ModeratorCog"]
 

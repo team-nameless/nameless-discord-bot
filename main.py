@@ -13,7 +13,7 @@ from packaging import version
 from sqlalchemy.orm import close_all_sessions
 
 import customs
-import global_deps
+import shared_vars
 from config import Config
 from database.crud import CRUD
 
@@ -46,8 +46,8 @@ class Nameless(commands.AutoShardedBot):
         super().__init__(command_prefix, **kwargs)
 
     def check_for_updates(self):
-        nameless_version = version.parse(global_deps.__nameless_current_version__)
-        upstream_version = version.parse(global_deps.__nameless_upstream_version__)
+        nameless_version = version.parse(shared_vars.__nameless_current_version__)
+        upstream_version = version.parse(shared_vars.__nameless_upstream_version__)
 
         logging.info(
             "Current version: %s - Upstream version: %s",
@@ -65,12 +65,12 @@ class Nameless(commands.AutoShardedBot):
         # Write current version in case I forgot
         with open("version.txt", "w", encoding="utf-8") as f:
             logging.info("Writing current version into version.txt")
-            f.write(global_deps.__nameless_current_version__)
+            f.write(shared_vars.__nameless_current_version__)
 
     async def __register_all_cogs(self):
         if hasattr(Config, "COGS"):
             allowed_cogs = list(
-                filter(global_deps.cogs_regex.match, os.listdir("cogs"))
+                filter(shared_vars.cogs_regex.match, os.listdir("cogs"))
             )
 
             for cog_name in Config.COGS:
@@ -137,7 +137,7 @@ class Nameless(commands.AutoShardedBot):
         )
 
     async def on_member_join(self, member: discord.Member):
-        db_guild, _ = global_deps.crud_database.get_or_create_guild_record(member.guild)
+        db_guild, _ = shared_vars.crud_database.get_or_create_guild_record(member.guild)
 
         if db_guild.is_welcome_enabled:
             if db_guild.welcome_message != "":
@@ -154,7 +154,7 @@ class Nameless(commands.AutoShardedBot):
                     )
 
     async def on_member_remove(self, member: discord.Member):
-        db_guild, _ = global_deps.crud_database.get_or_create_guild_record(member.guild)
+        db_guild, _ = shared_vars.crud_database.get_or_create_guild_record(member.guild)
 
         if db_guild.is_goodbye_enabled:
             if db_guild.goodbye_message != "":
@@ -197,7 +197,7 @@ class Nameless(commands.AutoShardedBot):
                     "%(asctime)s - [%(levelname)s] [%(name)s] %(message)s"
                 )
             )
-            global_deps.additional_handlers.append(file_handler)
+            shared_vars.additional_handlers.append(file_handler)
 
         for logger in self.loggers:
             if logger.name != "root":
@@ -206,21 +206,21 @@ class Nameless(commands.AutoShardedBot):
 
             logger.setLevel(log_level)
 
-            for handler in global_deps.additional_handlers:
+            for handler in shared_vars.additional_handlers:
                 logger.handlers.append(handler)
 
             if logger.parent:
                 logger.parent.setLevel(log_level)
                 logger.parent.handlers[:] = [stdout_handler]
-                for handler in global_deps.additional_handlers:
+                for handler in shared_vars.additional_handlers:
                     logger.parent.handlers.append(handler)
                 logger.parent.propagate = False
 
     def start_bot(self, token: str = ""):
         self.patch_loggers()
         self.check_for_updates()
-        global_deps.start_time = datetime.now()
-        global_deps.crud_database = CRUD()
+        shared_vars.start_time = datetime.now()
+        shared_vars.crud_database = CRUD()
         self.run(token if token else Config.TOKEN, log_handler=None)
 
 

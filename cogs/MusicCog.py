@@ -15,7 +15,7 @@ from discord.ext import commands
 from discord.utils import escape_markdown
 from wavelink.ext import spotify
 
-import global_deps
+import shared_vars
 from cogs.checks import MusicCogCheck
 from config import Config
 from customs.Utility import Utility
@@ -369,9 +369,9 @@ class MusicCog(commands.Cog):
         setattr(vc, "loop_play_count", 0)
 
         if is_radio:
-            dbg, _ = global_deps.crud_database.get_or_create_guild_record(ctx.guild)
+            dbg, _ = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
             dbg.radio_start_time = discord.utils.utcnow()
-            global_deps.crud_database.save_changes()
+            shared_vars.crud_database.save_changes()
 
         await self.__internal_play2(vc, url, is_radio)
 
@@ -608,7 +608,7 @@ class MusicCog(commands.Cog):
         track: wavelink.Track = vc.track  # pyright: ignore
 
         is_stream = track.is_stream()
-        dbg, _ = global_deps.crud_database.get_or_create_guild_record(ctx.guild)
+        dbg, _ = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
 
         try:
             next_tr = vc.queue.copy().get()

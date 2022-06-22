@@ -9,7 +9,7 @@ from discord.ext import commands
 from DiscordUtils import Pagination
 from ossapi import GameMode, OssapiV2, Score, ScoreType, User, UserLookupKey
 
-import global_deps
+import shared_vars
 from config import Config
 from customs.DiscordWaiter import DiscordWaiter
 
@@ -69,7 +69,7 @@ class OsuCog(commands.Cog):
     async def osu(self, ctx: commands.Context, member: Optional[discord.Member]):
         """View someone's osu! *linked* profile"""
         await ctx.defer()
-        dbu, _ = global_deps.crud_database.get_or_create_user_record(
+        dbu, _ = shared_vars.crud_database.get_or_create_user_record(
             member if member else ctx.author
         )
 
@@ -95,9 +95,9 @@ class OsuCog(commands.Cog):
     async def update(self, ctx: commands.Context, username: str, mode: str = "Osu"):
         """Update your auto search"""
         await ctx.defer()
-        dbu, _ = global_deps.crud_database.get_or_create_user_record(ctx.author)
+        dbu, _ = shared_vars.crud_database.get_or_create_user_record(ctx.author)
         dbu.osu_username, dbu.osu_mode = username, mode.title()
-        global_deps.crud_database.save_changes()
+        shared_vars.crud_database.save_changes()
         await ctx.send("Updated")
 
     @osu.command()
@@ -117,9 +117,9 @@ class OsuCog(commands.Cog):
     ):
         """Force database to update a member's auto search"""
         await ctx.defer()
-        dbu, _ = global_deps.crud_database.get_or_create_user_record(member)
+        dbu, _ = shared_vars.crud_database.get_or_create_user_record(member)
         dbu.osu_username, dbu.osu_mode = username, mode.title()
-        global_deps.crud_database.save_changes()
+        shared_vars.crud_database.save_changes()
         await ctx.send("Updated")
 
     async def __generic_check(
@@ -342,7 +342,7 @@ class OsuCog(commands.Cog):
     ):
         """Check osu! profile of a member"""
         await ctx.defer()
-        dbu, _ = global_deps.crud_database.get_or_create_user_record(member)
+        dbu, _ = shared_vars.crud_database.get_or_create_user_record(member)
 
         if dbu.osu_username == "":
             await ctx.send(content="This user did not linked to me")

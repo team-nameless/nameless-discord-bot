@@ -7,9 +7,6 @@ __all__ = ["MusicCogCheck"]
 
 
 class MusicCogCheck(BaseCheck):
-    def __init__(self):
-        super().__init__()
-
     @staticmethod
     @BaseCheck.allow_help_message
     def user_and_bot_in_voice(ctx: commands.Context):

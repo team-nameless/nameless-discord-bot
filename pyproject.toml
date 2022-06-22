@@ -15,6 +15,7 @@ reportUnnecessaryTypeIgnoreComment = "warning"
 reportOptionalMemberAccess = "warning"
 reportOptionalSubscript = "warning"
 reportUnusedImport = "error"
+useLibraryCodeForTypes = true
 pythonVersion = "3.8"
 typeCheckingMode = "basic"
 

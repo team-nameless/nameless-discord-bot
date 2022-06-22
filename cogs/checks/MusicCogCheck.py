@@ -57,7 +57,7 @@ class MusicCogCheck(BaseCheck):
     @BaseCheck.allow_help_message
     def must_not_be_a_stream(ctx: commands.Context):
         vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-        if vc and vc.track and vc.track.is_stream():
+        if vc and vc.track and vc.track.is_stream():  # pyright: ignore
             raise commands.CheckFailure("I can't use this command on streams.")
 
         return True

@@ -27,7 +27,11 @@ class Utility:
         port: Optional[int]
         db_name: str
 
-        if hasattr(config_cls, "DATABASE") and (db := config_cls.DATABASE):
+        if (
+            config_cls
+            and hasattr(config_cls, "DATABASE")
+            and (db := config_cls.DATABASE)
+        ):
             dialect = db["dialect"]
             driver = db["driver"]
             username = db["username"]

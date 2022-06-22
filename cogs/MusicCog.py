@@ -325,9 +325,9 @@ class MusicCog(commands.Cog):
             and getattr(player, "play_now_allowed")
         ):
             if track.is_stream():
-                await chn.send(f"Streaming music from {track.uri}")
+                await chn.send(f"Streaming music from {track.uri}")  # pyright: ignore
             else:
-                await chn.send(  # type: ignore
+                await chn.send(  # pyright: ignore
                     f"Playing: **{track.title}** from **{track.author}** ({track.uri})"
                 )
 
@@ -413,7 +413,7 @@ class MusicCog(commands.Cog):
 
         try:
             await ctx.author.voice.channel.connect(  # pyright: ignore
-                cls=wavelink.Player, self_deaf=True  # pyright: ignore
+                cls=wavelink.Player, self_deaf=True
             )
             await ctx.send("Connected to your current voice channel")
         except ClientException:
@@ -609,6 +609,7 @@ class MusicCog(commands.Cog):
 
         is_stream = track.is_stream()
         dbg, _ = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
+        # next_tr: Optional[Union[Type[wavelink.Track], wavelink.tracks.Playable]]
 
         try:
             next_tr = vc.queue.copy().get()
@@ -629,8 +630,14 @@ class MusicCog(commands.Cog):
                     value=escape_markdown(track.title),
                     inline=False,
                 )
-                .add_field(name="Author", value=escape_markdown(track.author))
-                .add_field(name="Source", value=escape_markdown(track.uri))
+                .add_field(
+                    name="Author",
+                    value=escape_markdown(track.author) if track.author else "N/A",
+                )
+                .add_field(
+                    name="Source",
+                    value=escape_markdown(track.uri) if track.uri else "N/A",
+                )
                 .add_field(
                     name="Playtime" if is_stream else "Position",
                     value=str(
@@ -650,7 +657,9 @@ class MusicCog(commands.Cog):
                 .add_field(name="Paused", value=vc.is_paused())
                 .add_field(
                     name="Next track",
-                    value=f"[{escape_markdown(next_tr.title)} by {escape_markdown(next_tr.author)}]({next_tr.uri})"
+                    value=f"[{escape_markdown(next_tr.title) if next_tr.title else 'Unknown title'} "  # pyright: ignore
+                    f"by {escape_markdown(next_tr.author)}]"  # pyright: ignore
+                    f"({next_tr.uri})"  # pyright: ignore
                     if next_tr
                     else None,
                 )
@@ -796,20 +805,31 @@ class MusicCog(commands.Cog):
         """Add track(s) from playlist to queue"""
         await ctx.defer()
 
-        tracks: List[wavelink.SearchableTrack] = []
+        tracks: Optional[
+            Union[
+                List[wavelink.YouTubeTrack],
+                List[wavelink.YouTubeMusicTrack],
+                List[spotify.SpotifyTrack],
+                List[wavelink.SoundCloudTrack],
+                List[Type[wavelink.tracks.Playable]],
+                List[Type[wavelink.SearchableTrack]],
+            ]
+        ] = []
 
         if source == "youtube":
             try:
-                pl = (await wavelink.YouTubePlaylist.search(query=url)).tracks
+                pl = (
+                    await wavelink.YouTubePlaylist.search(url, return_first=True)
+                ).tracks
             except wavelink.LoadTrackError:
-                pl = await wavelink.YouTubeTrack.search(query=url)
+                pl = await wavelink.YouTubeTrack.search(url)
             tracks = pl
         elif source == "ytmusic":
-            tracks = await wavelink.YouTubeMusicTrack.search(query=url)
+            tracks = await wavelink.YouTubeMusicTrack.search(url)
         elif source == "spotify":
             tracks = await spotify.SpotifyTrack.search(
-                query=url, type=spotify.SpotifySearchType.playlist
-            )
+                url, type=spotify.SpotifySearchType.playlist
+            )  # pyright: ignore
         elif source == "soundcloud":
             tracks = await wavelink.SoundCloudTrack.search(query=url)
 
@@ -820,11 +840,13 @@ class MusicCog(commands.Cog):
             return
 
         player: wavelink.Player = ctx.voice_client  # pyright: ignore
-        accepted_tracks = [track for track in tracks if not track.is_stream()]
-        player.queue.extend(accepted_tracks)
+        accepted_tracks = [
+            track for track in tracks if not track.is_stream()  # pyright: ignore
+        ]
+        player.queue.extend(accepted_tracks)  # pyright: ignore
         await ctx.send(f"Added {len(tracks)} track(s) from {url} to the queue")
 
-        embeds = self.generate_embeds_from_tracks(accepted_tracks)
+        embeds = self.generate_embeds_from_tracks(accepted_tracks)  # pyright: ignore
         await self.show_paginated_tracks(ctx, embeds)
 
     @queue.command()

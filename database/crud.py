@@ -32,7 +32,7 @@ class CRUD:
         self.engine = create_engine(
             self.db_url,
             logging_name=self.db_name,
-            hide_parameters=not config_cls.LAB,
+            hide_parameters=not config_cls.LAB if config_cls else True,
         )
         _session = sessionmaker(bind=self.engine)
         self.__session = _session()
@@ -55,7 +55,7 @@ class CRUD:
 
     def get_or_create_user_record(
         self, discord_user: Union[discord.Member, discord.User, discord.Object]
-    ) -> Tuple[Optional[DbUser], bool]:
+    ) -> Tuple[DbUser, bool]:
         """
         Get an existing discord_user record, create a new record if one doesn't exist
         :param discord_user: User entity of discord.

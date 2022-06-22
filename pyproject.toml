@@ -63,7 +63,7 @@ ignore = ["CVS"]
 
 # Add files or directories matching the regex patterns to the ignore-list. The
 # regex matches against paths and can be in Posix or Windows format.
-ignore-paths = ["alembic|alembic"]
+ignore-paths = ["alembic"]
 
 # Files or directories matching the regex patterns are skipped. The regex matches
 # against base names, not paths. The default value ignores Emacs file locks
@@ -371,7 +371,7 @@ confidence = ["HIGH", "CONTROL_FLOW", "INFERENCE", "INFERENCE_FAILURE", "UNDEFIN
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use "--disable=all --enable=classes
 # --disable=W".
-disable = ["raw-checker-failed", "bad-inline-option", "locally-disabled", "file-ignored", "suppressed-message", "useless-suppression", "deprecated-pragma", "use-symbolic-message-instead", "missing-module-docstring", "missing-class-docstring", "missing-function-docstring", "invalid-name", "unused-argument"]
+disable = ["raw-checker-failed", "bad-inline-option", "locally-disabled", "file-ignored", "suppressed-message", "useless-suppression", "deprecated-pragma", "use-symbolic-message-instead", "missing-module-docstring", "missing-class-docstring", "missing-function-docstring", "invalid-name", "unused-argument", "design", "format", "bare-except", "unneeded-not", "undefined-variable", "unused-import", "unused-variable", "no-self-argument", "bad-classmethod-argument", "bad-mcs-classmethod-argument", "assigning-non-slot", "protected-access"]
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

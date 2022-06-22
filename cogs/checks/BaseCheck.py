@@ -1,4 +1,5 @@
 from typing import Callable
+
 from discord.ext import commands
 
 __all__ = ["BaseCheck"]

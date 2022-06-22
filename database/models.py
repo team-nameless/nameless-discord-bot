@@ -1,13 +1,13 @@
 import datetime
 
 from sqlalchemy import (
-    Column,
     BigInteger,
+    Boolean,
+    Column,
+    DateTime,
     SmallInteger,
     Text,
-    Boolean,
     UnicodeText,
-    DateTime,
 )
 from sqlalchemy.orm import declarative_base
 

@@ -3,22 +3,22 @@ import datetime
 import logging
 import math
 import random
-from typing import List, Any, Union, Optional, Dict, Type
+from typing import Any, Dict, List, Optional, Type, Union
 from urllib import parse
 
-import DiscordUtils
 import discord
+import DiscordUtils
 import wavelink
 from discord import ClientException, app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
 from discord.utils import escape_markdown
 from wavelink.ext import spotify
-from customs.Utility import Utility
 
 import global_deps
-from config import Config
 from cogs.checks import MusicCogCheck
+from config import Config
+from customs.Utility import Utility
 
 __all__ = ["MusicCog"]
 

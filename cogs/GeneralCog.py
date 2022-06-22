@@ -1,6 +1,6 @@
 import datetime
 import logging
-from typing import Optional, List, Union
+from typing import List, Optional, Union
 
 import discord
 import discord_together

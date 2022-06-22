@@ -1,7 +1,7 @@
 import logging
 import os
-import sys
 import subprocess
+import sys
 
 from discord import app_commands
 from discord.app_commands import Choice

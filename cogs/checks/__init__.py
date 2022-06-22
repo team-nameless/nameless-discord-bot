@@ -1,4 +1,4 @@
 __all__ = []
 
-from .MusicCogCheck import *
 from .BaseCheck import *
+from .MusicCogCheck import *

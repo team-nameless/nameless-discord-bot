@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Awaitable
+from typing import Awaitable, Callable
 
 import discord
 from discord import Forbidden, HTTPException, app_commands

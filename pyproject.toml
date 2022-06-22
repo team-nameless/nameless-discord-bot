@@ -23,7 +23,7 @@ typeCheckingMode = "basic"
 profile = "black"
 combine_as_imports = true
 combine_star = true
-max_line_length = 120
+line_length = 120
 
 [tool.pylint.main]
 # Analyse import fallback blocks. This can be used to support both Python 2 and 3

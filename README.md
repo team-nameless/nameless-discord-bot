@@ -15,12 +15,11 @@ A rewrite of [original nameless*](https://github.com/FoxeiZ/nameless), now with 
 
 ## How to run this bot?
 
-- First, install `python3` or `pypy`, latest version preferred.
+- First, install `python3`, latest version preferred.
 - Second, create a virtual environment so your global "python" won't be badly affected and activate it (most IDEs
   automatically activate it for you)
 
 ```shell
-# Replace python3 with pypy if you are going to use pypy
 python3 -m venv venv
 source venv/bin/activate
 ```

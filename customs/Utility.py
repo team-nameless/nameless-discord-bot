@@ -1,5 +1,5 @@
 import logging
-from typing import Tuple, Type, Optional
+from typing import Optional, Tuple, Type
 from urllib.parse import quote_plus as qp, urlparse
 
 __all__ = ["Utility"]
@@ -16,40 +16,53 @@ class Utility:
     ) -> Tuple[str, str, str, str, str, str, Optional[int], str]:
         """
         Get the database connection URL based on the config and its components.
-        :param config_cls: The class used to retrieve config. Defaults to config.Config.
+        :param config_cls: The class used to retrieve config. Defaults to None.
         :return: Database connection URL
         """
+        dialect: str
+        driver: str
+        username: str
+        password: str
+        host: str
+        port: Optional[int]
+        db_name: str
+
         if hasattr(config_cls, "DATABASE") and (db := config_cls.DATABASE):
-            dialect: str = db["dialect"]
-            driver: str = qp(f"+{db['driver']}", safe="+") if db["driver"] else ""
-            username: str = db["username"] if db["username"] else ""
-            password: str = qp(f":{db['password']}", safe=":") if db["password"] else ""
-            at: str = qp("@", safe="@") if username and password else ""
-            host: str = db["host"]
-            port: str = qp(f":{db['port']}", safe=":") if db["port"] else ""
+            dialect = db["dialect"]
+            driver = db["driver"]
+            username = db["username"]
+            password = db["password"]
+            host = db["host"]
+            port = int(db["port"] if db["port"] else 0)
             db_name: str = db["db_name"]
+        else:
+            logging.warning("Falling back to SQLite")
+            dialect = "sqlite"
+            driver = ""
+            username = ""
+            password = ""
+            at = ""
+            host = ""
+            port = None
+            db_name = "nameless.db"
 
-            return (
-                f"{dialect}{driver}://{username}{password}{at}{host}{port}/{db_name}",
-                dialect,
-                db["driver"],
-                username,
-                db["password"],
-                host,
-                db["port"],
-                db_name,
-            )
+        driver: str = qp(f"+{driver}", safe="+") if driver else ""
+        password: str = qp(f":{password}", safe=":") if password else ""
+        at: str = qp("@", safe="@") if username and password else ""
+        port_str: str = qp(f":{port}", safe=":") if port else ""
 
-        logging.warning("Using SQLite database as fallback method")
+        url = f"{dialect}{driver}://{username}{password}{at}{host}{port_str}/{db_name}"
+        logging.info("Using %s as database URL", url)
+
         return (
-            "sqlite:///nameless.db",
-            "sqlite",
-            "",
-            "",
-            "",
-            "",
-            None,
-            "nameless.db",
+            url,
+            dialect,
+            driver,
+            username,
+            password,
+            host,
+            port,
+            db_name,
         )
 
     @staticmethod

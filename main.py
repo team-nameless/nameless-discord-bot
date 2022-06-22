@@ -1,21 +1,50 @@
 import logging
+import logging.handlers
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
+from typing import List, Optional
 
 import discord
 from discord.ext import commands
-from discord.ext.commands import errors, ExtensionFailed
+from discord.ext.commands import ExtensionFailed, errors
 from packaging import version
 from sqlalchemy.orm import close_all_sessions
 
+import customs
 import global_deps
 from config import Config
+from database.crud import CRUD
 
 os.chdir(Path(__file__).resolve().parent)
+log_level: int = (
+    logging.DEBUG if hasattr(Config, "LAB") and Config.LAB else logging.INFO
+)
+logging.basicConfig(level=log_level)
+
+stdout_handler = logging.StreamHandler(sys.stdout)
+stdout_handler.setFormatter(customs.ColoredFormatter())
+logging.getLogger().handlers[:] = [stdout_handler]
 
 
 class Nameless(commands.AutoShardedBot):
+    def __init__(self, command_prefix, **kwargs):
+        self.log_level: int = (
+            logging.DEBUG if hasattr(Config, "LAB") and Config.LAB else logging.INFO
+        )
+
+        self.loggers: List[logging.Logger] = [
+            logging.getLogger(),
+            logging.getLogger("sqlalchemy.engine"),
+            logging.getLogger("sqlalchemy.dialects"),
+            logging.getLogger("sqlalchemy.orm"),
+            logging.getLogger("sqlalchemy.pool"),
+            logging.getLogger("ossapi.ossapiv2"),
+        ]
+
+        super().__init__(command_prefix, **kwargs)
+
     def check_for_updates(self):
         nameless_version = version.parse(global_deps.__nameless_current_version__)
         upstream_version = version.parse(global_deps.__nameless_upstream_version__)
@@ -158,9 +187,48 @@ class Nameless(commands.AutoShardedBot):
         close_all_sessions()
         await super().close()
 
+    def patch_loggers(self) -> None:
+        if hasattr(Config, "LAB") and Config.LAB:
+            file_handler = logging.FileHandler(
+                filename="nameless.log", mode="w", delay=True
+            )
+            file_handler.setFormatter(
+                logging.Formatter(
+                    "%(asctime)s - [%(levelname)s] [%(name)s] %(message)s"
+                )
+            )
+            global_deps.additional_handlers.append(file_handler)
 
-def main():
-    global_deps.start_time = datetime.now()
+        for logger in self.loggers:
+            if logger.name != "root":
+                logger.handlers[:] = [stdout_handler]
+                logger.propagate = False
+
+            logger.setLevel(log_level)
+
+            for handler in global_deps.additional_handlers:
+                logger.handlers.append(handler)
+
+            if logger.parent:
+                logger.parent.setLevel(log_level)
+                logger.parent.handlers[:] = [stdout_handler]
+                for handler in global_deps.additional_handlers:
+                    logger.parent.handlers.append(handler)
+                logger.parent.propagate = False
+
+    def start_bot(self, token: str = ""):
+        self.patch_loggers()
+        self.check_for_updates()
+        global_deps.start_time = datetime.now()
+        global_deps.crud_database = CRUD()
+        self.run(token if token else Config.TOKEN, log_handler=None)
+
+
+def main(
+    token: str = "", prefixes: Optional[List[str]] = None, desc: str = "Just a bot"
+):
+    if prefixes is None:
+        prefixes = []
 
     intents = discord.Intents.default()
     intents.members = True
@@ -168,11 +236,12 @@ def main():
         hasattr(Config, "RECEIVE_MESSAGE_COMMANDS") and Config.RECEIVE_MESSAGE_COMMANDS
     )
 
-    client = Nameless(
-        intents=intents, command_prefix=Config.PREFIXES, description="Just a bot"
+    nameless = Nameless(
+        intents=intents,
+        command_prefix=prefixes if prefixes else Config.PREFIXES,
+        description=desc,
     )
-    client.check_for_updates()
-    client.run(Config.TOKEN, log_handler=None)
+    nameless.start_bot(token)
 
 
 if __name__ == "__main__":

@@ -1,13 +1,13 @@
 import datetime
 import logging
-from typing import Optional, List, Dict
+from typing import Dict, List, Optional
 
 import discord
-from DiscordUtils import Pagination
 from discord import Color, app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
-from ossapi import User, UserLookupKey, Score, ScoreType, GameMode, OssapiV2
+from DiscordUtils import Pagination
+from ossapi import GameMode, OssapiV2, Score, ScoreType, User, UserLookupKey
 
 import global_deps
 from config import Config
@@ -63,10 +63,6 @@ class OsuCog(commands.Cog):
     def __init__(self, bot: commands.AutoShardedBot):
         self.bot = bot
         self.api = OssapiV2(Config.OSU["client_id"], Config.OSU["client_secret"])
-        self.api.log.propagate = False
-        self.api.log.parent.propagate = False
-        self.api.log.handlers[:] = global_deps.default_handlers
-        self.api.log.parent.handlers[:] = []
 
     @commands.hybrid_group(fallback="get")
     @app_commands.guilds(*Config.GUILD_IDs)

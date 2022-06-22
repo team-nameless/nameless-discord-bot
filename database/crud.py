@@ -1,13 +1,14 @@
-from typing import Optional, Tuple, Union, Type
+from typing import Optional, Tuple, Type, Union
 
 import discord
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.util import IdentitySet
 
 import config
 from customs import Utility
-from .models import Base, DbUser, DbGuild
+
+from .models import Base, DbGuild, DbUser
 
 __all__ = ["CRUD"]
 
@@ -28,7 +29,11 @@ class CRUD:
             self.password,
             self.db_name,
         ) = Utility.get_db_url(config_cls)
-        self.engine = create_engine(self.db_url, logging_name=self.db_name)
+        self.engine = create_engine(
+            self.db_url,
+            logging_name=self.db_name,
+            hide_parameters=not config_cls.LAB,
+        )
         _session = sessionmaker(bind=self.engine)
         self.__session = _session()
         Base.metadata.create_all(self.engine)

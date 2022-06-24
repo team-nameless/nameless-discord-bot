@@ -30,10 +30,18 @@ class GeneralCog(commands.Cog):
     async def create_activity(
         self,
         ctx: commands.Context,
-        voice_channel: discord.VoiceChannel,
+        voice_channel: Optional[discord.VoiceChannel],
         target: str = "youtube",
     ):
+        await ctx.defer()
+
         """Generate an embedded activity link"""
+        if not voice_channel:
+            voice_channel = ctx.author.voice.channel
+
+        if not voice_channel:
+            await ctx.send("You need to be in a voice channel, or provide a voice channel for me")
+            return
 
         msg = await ctx.send("Generating link")
 

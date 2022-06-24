@@ -40,5 +40,6 @@ needed_permissions.use_application_commands = True
 needed_permissions.connect = True
 needed_permissions.speak = True
 needed_permissions.use_voice_activation = True
+needed_permissions.create_instant_invite = True
 
 start_time: datetime = datetime.min

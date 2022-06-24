@@ -130,7 +130,7 @@ class Nameless(commands.AutoShardedBot):
         logging.error(
             "[%s] We have gone under a crisis!!! (args: [ %s ])",
             event_method,
-            ", ".join(args),
+            ", ".join([str(a) for a in list(args)]),
             stack_info=True,
             exc_info=True,
             extra={**kwargs},

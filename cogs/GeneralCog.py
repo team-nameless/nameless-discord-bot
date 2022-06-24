@@ -33,11 +33,10 @@ class GeneralCog(commands.Cog):
         voice_channel: Optional[discord.VoiceChannel],
         target: str = "youtube",
     ):
-        await ctx.defer()
-
         """Generate an embedded activity link"""
+        await ctx.defer()
         if not voice_channel:
-            voice_channel = ctx.author.voice.channel
+            voice_channel = ctx.author.voice.channel if ctx.author.voice else None
 
         if not voice_channel:
             await ctx.send("You need to be in a voice channel, or provide a voice channel for me")
@@ -51,7 +50,7 @@ class GeneralCog(commands.Cog):
             )
         ).create_link(voice_channel.id, target)
 
-        await msg.edit(content=f"Here is your link: {inv}")
+        await msg.edit(content=f"Here is your link of {target} for {voice_channel.mention}: {inv}")
 
     @commands.hybrid_command()
     @app_commands.guilds(*Config.GUILD_IDs)

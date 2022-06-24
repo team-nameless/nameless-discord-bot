@@ -27,6 +27,7 @@ class GeneralCog(commands.Cog):
     @app_commands.choices(
         target=[Choice(name=k, value=k) for k, _ in defaultApplications.items()]
     )
+    @commands.guild_only()
     async def create_activity(
         self,
         ctx: commands.Context,
@@ -35,11 +36,13 @@ class GeneralCog(commands.Cog):
     ):
         """Generate an embedded activity link"""
         await ctx.defer()
-        if not voice_channel:
-            voice_channel = ctx.author.voice.channel if ctx.author.voice else None
+        if not voice_channel and ctx.author.voice:  # pyright: ignore
+            voice_channel = ctx.author.voice.channel  # pyright: ignore
 
         if not voice_channel:
-            await ctx.send("You need to be in a voice channel, or provide a voice channel for me")
+            await ctx.send(
+                "You need to be in a voice channel, or provide a voice channel for me"
+            )
             return
 
         msg = await ctx.send("Generating link")
@@ -50,7 +53,9 @@ class GeneralCog(commands.Cog):
             )
         ).create_link(voice_channel.id, target)
 
-        await msg.edit(content=f"Here is your link of {target} for {voice_channel.mention}: {inv}")
+        await msg.edit(
+            content=f"Here is your link of {target} for {voice_channel.mention}: {inv}"
+        )
 
     @commands.hybrid_command()
     @app_commands.guilds(*Config.GUILD_IDs)

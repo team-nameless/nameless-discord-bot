@@ -189,7 +189,7 @@ class MusicCog(commands.Cog):
             )
         else:
             # I know, bad design
-            global music_default_sources
+            global music_default_sources  # pylint: disable=global-statement
             music_default_sources += ["spotify"]
 
         bot.loop.create_task(self.connect_nodes())

@@ -18,7 +18,7 @@ class BaseCheck:
         Note: this is a decorator.
         """
 
-        def pred(ctx: commands.Context) -> bool:
+        def pred(ctx: commands.Context, /, **kwargs) -> bool:
             return (
                 ctx.invoked_with is not None and ctx.invoked_with == "help"
             ) or check_fn(ctx)

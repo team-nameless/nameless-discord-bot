@@ -58,8 +58,12 @@ class Utility:
         vport: str = qp(f":{'*' * len(str(port))}", safe=":") if port else ""
         vhost: str = "*" * len(host) if host else ""
 
-        finish_url = f"{dialect}{pdriver}://{username}{ppassword}{at}{host}{pport}/{db_name}"
-        secret_url = f"{dialect}{pdriver}://{username}{vpassword}{at}{vhost}{vport}/{db_name}"
+        finish_url = (
+            f"{dialect}{pdriver}://{username}{ppassword}{at}{host}{pport}/{db_name}"
+        )
+        secret_url = (
+            f"{dialect}{pdriver}://{username}{vpassword}{at}{vhost}{vport}/{db_name}"
+        )
         logging.info("Using %s as database URL", secret_url)
 
         return (

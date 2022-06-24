@@ -45,7 +45,6 @@ class Utility:
             driver = ""
             username = ""
             password = ""
-            at = ""
             host = ""
             port = None
             db_name = "nameless.db"
@@ -55,11 +54,16 @@ class Utility:
         at: str = qp("@", safe="@") if username and password else ""
         pport: str = qp(f":{port}", safe=":") if port else ""
 
-        url = f"{dialect}{pdriver}://{username}{ppassword}{at}{host}{pport}/{db_name}"
-        logging.info("Using %s as database URL", url)
+        vpassword: str = qp(f":{'*' * len(password)}", safe=":") if password else ""
+        vport: str = qp(f":{'*' * len(str(port))}", safe=":") if port else ""
+        vhost: str = "*" * len(host) if host else ""
+
+        finish_url = f"{dialect}{pdriver}://{username}{ppassword}{at}{host}{pport}/{db_name}"
+        secret_url = f"{dialect}{pdriver}://{username}{vpassword}{at}{vhost}{vport}/{db_name}"
+        logging.info("Using %s as database URL", secret_url)
 
         return (
-            url,
+            finish_url,
             dialect,
             driver,
             username,

@@ -6,7 +6,6 @@ __all__ = ["Config"]
 
 
 class Config:
-    """Example config class. Also used as a fallback configuration"""
     # Enable experimental stuffs
     # Set to True if you know what you are doing
     LAB: bool = False
@@ -23,7 +22,7 @@ class Config:
     RECEIVE_MENTION_PREFIX: bool = True
 
     # Support server url
-    SUPPORT_SERVER_URL: str = "https://rick-roll.ed"
+    SUPPORT_SERVER_URL: str = "https://example.com"
 
     # Guild IDs to register commands
     # Leave empty array for global (slash commands takes one hour to mitigate, text takes immediately)
@@ -40,7 +39,7 @@ class Config:
     COGS: List[str] = ["Music", "Osu", "General"]
 
     # Guild prefixes for text commands
-    PREFIXES: List[str] = ["alongprefix."]
+    PREFIXES: List[str] = ["aprefix."]
 
     # Bot status
     # For example: "Playing with me"
@@ -66,7 +65,7 @@ class Config:
         "password": "",
         "host": "",
         "port": None,
-        "db_name": "lilia.db",
+        "db_name": "nameless.db",
     }
 
     # Configurations for Lavalink servers for music commands

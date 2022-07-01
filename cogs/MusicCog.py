@@ -819,7 +819,7 @@ class MusicCog(commands.Cog):
         if source == "youtube":
             try:
                 pl = (
-                    await wavelink.YouTubePlaylist.search(url, return_first=True)
+                    await wavelink.YouTubePlaylist.search(url)
                 ).tracks
             except wavelink.LoadTrackError:
                 pl = await wavelink.YouTubeTrack.search(url)

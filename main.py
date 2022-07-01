@@ -4,7 +4,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 import discord
 from discord.ext import commands
@@ -13,6 +13,7 @@ from packaging import version
 from sqlalchemy.orm import close_all_sessions
 
 import customs
+from customs.Utility import Utility
 import shared_vars
 from config import Config
 from database.crud import CRUD
@@ -216,19 +217,28 @@ class Nameless(commands.AutoShardedBot):
                     logger.parent.handlers.append(handler)
                 logger.parent.propagate = False
 
-    def start_bot(self, token: str = ""):
+    def start_bot(self):
         self.patch_loggers()
         self.check_for_updates()
         shared_vars.start_time = datetime.now()
         shared_vars.crud_database = CRUD()
-        self.run(token if token else Config.TOKEN, log_handler=None)
+        self.run(Config.TOKEN, log_handler=None)
 
 
-def main(
-    token: str = "", prefixes: Optional[List[str]] = None, desc: str = "Just a bot"
-):
-    if prefixes is None:
-        prefixes = []
+def main():
+    can_cont = Utility.is_valid_config_class(Config)
+
+    if not isinstance(can_cont, bool):
+        logging.warning(
+            "This bot might run into error because not all fields are presented"
+        )
+    else:
+        if not can_cont:
+            logging.error("Fields validation failed, the bot will exit")
+            sys.exit()
+
+    prefixes = Config.PREFIXES
+    allow_mention = Config.RECEIVE_MENTION_PREFIX
 
     intents = discord.Intents.default()
     intents.members = True
@@ -238,10 +248,12 @@ def main(
 
     nameless = Nameless(
         intents=intents,
-        command_prefix=prefixes if prefixes else Config.PREFIXES,
-        description=desc,
+        command_prefix=commands.when_mentioned_or(*prefixes)
+        if allow_mention
+        else prefixes,
+        description="Just a bot",
     )
-    nameless.start_bot(token)
+    nameless.start_bot()
 
 
 if __name__ == "__main__":

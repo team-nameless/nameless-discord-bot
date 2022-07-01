@@ -2,6 +2,8 @@ import logging
 from typing import Optional, Tuple, Type
 from urllib.parse import quote_plus as qp, urlparse
 
+import config_example
+
 __all__ = ["Utility"]
 
 
@@ -80,3 +82,34 @@ class Utility:
     @staticmethod
     def is_an_url(url: str) -> bool:
         return urlparse(url).netloc != ""
+
+    @staticmethod
+    def is_valid_config_class(config_cls: Type) -> Optional[bool]:
+        """
+        Validate config class.
+        
+        True if can run.
+        None if can run with warnings.
+        False if can not run.
+        """
+        try:
+            current_fields = config_cls.__annotations__.keys()
+            important_fields = ["TOKEN"]
+            
+            for field in important_fields:
+                if field not in current_fields:
+                    logging.error("Missing important field %s in %s", field, config_cls.__name__)
+                    return False
+                    
+            is_field_fulfilled = True
+            available_fields = config_example.Config.__annotations__.keys()
+            
+            for field in current_fields:
+                if field not in available_fields:
+                    logging.warning("Missing %s in %s", field, config_cls.__name__)
+                    is_field_fulfilled = None
+                    
+            return is_field_fulfilled
+        except AttributeError:
+            logging.error("__annotations__ not found in %s", config_cls.__name__)
+            return False

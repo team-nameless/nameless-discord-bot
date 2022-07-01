@@ -17,6 +17,7 @@ class FakeConfig:
 class PartialConfig:
     TOKEN = ""
     COGS = []
+    PREFIXES = []
 
 
 class TestUtility:

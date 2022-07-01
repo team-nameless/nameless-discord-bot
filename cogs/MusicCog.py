@@ -361,8 +361,6 @@ class MusicCog(commands.Cog):
     ):
         vc: wavelink.Player = ctx.voice_client  # pyright: ignore
 
-       
-
         if is_radio:
             dbg, _ = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
             dbg.radio_start_time = discord.utils.utcnow()
@@ -411,7 +409,7 @@ class MusicCog(commands.Cog):
                 cls=wavelink.Player, self_deaf=True
             )
             await ctx.send("Connected to your current voice channel")
-            
+
             vc: wavelink.Player = ctx.voice_client  # pyright: ignore
             setattr(vc, "skip_sent", False)
             setattr(vc, "stop_sent", False)
@@ -982,7 +980,7 @@ class MusicCog(commands.Cog):
 
         vc.queue.clear()
         await ctx.send("Cleared the queue")
-        
+
     @add.after_invoke
     @add_playlist.after_invoke
     async def autoplay_queue(self, ctx: commands.Context):

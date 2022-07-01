@@ -93,8 +93,8 @@ class Utility:
         False if can not run.
         """
         try:
-            current_fields = config_cls.__annotations__.keys()
-            important_fields = ["TOKEN"]
+            current_fields = config_cls.__dict__.keys()
+            important_fields = ["TOKEN", "COGS"]
 
             for field in important_fields:
                 if field not in current_fields:
@@ -103,15 +103,14 @@ class Utility:
                     )
                     return False
 
-            is_field_fulfilled = True
-            available_fields = config_example.Config.__annotations__.keys()
+            available_fields = config_example.Config.__dict__.keys()
 
-            for field in current_fields:
-                if field not in available_fields:
+            for field in available_fields:
+                if field not in current_fields:
                     logging.warning("Missing %s in %s", field, config_cls.__name__)
-                    is_field_fulfilled = None
+                    return None
 
-            return is_field_fulfilled
-        except AttributeError:
-            logging.error("__annotations__ not found in %s", config_cls.__name__)
+            return True
+        except AttributeError as err:
+            logging.error("Something bad happened", exc_info=err)
             return False

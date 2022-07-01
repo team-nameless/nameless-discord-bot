@@ -1,4 +1,5 @@
 from customs import Utility
+from config_example import Config
 
 
 class FakeConfig:
@@ -11,6 +12,10 @@ class FakeConfig:
         "port": 12345,
         "db_name": "dame_dane",
     }
+    
+class PartialConfig:
+    TOKEN = ""
+    COGS = []
 
 
 class TestUtility:
@@ -67,3 +72,11 @@ class TestUtility:
         assert not Utility.is_an_url("bao.moe")
         assert not Utility.is_an_url("discord.com")
         assert not Utility.is_an_url("m.me")
+        
+    def test_invalid_conf(self):
+        assert Utility.is_valid_config_class(None) is False
+        assert Utility.is_valid_config_class(FakeConfig) is False
+        
+    def test_valid_conf(self):
+        assert Utility.is_valid_config_class(Config)
+        assert Utility.is_valid_config_class(PartialConfig) is None

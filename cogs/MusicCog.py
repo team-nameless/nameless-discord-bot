@@ -240,7 +240,7 @@ class MusicCog(commands.Cog):
         try:
             while track := copycat.get():
                 upcoming = (
-                    f"{idx} - "
+                    f"{idx + 1} - "
                     f"[{escape_markdown(track.title)} by {escape_markdown(track.author)}]"  # pyright: ignore
                     f"({track.uri})\n"  # pyright: ignore
                 )

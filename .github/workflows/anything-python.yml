@@ -29,7 +29,7 @@ jobs:
           pip install --upgrade setuptools wheel
           pip install -U -r requirements_core.txt
           pip install -U -r requirements_dev.txt
-
+      
       - name: Create dummy config file
         run: |
           cp config.example.py config.py

@@ -361,12 +361,7 @@ class MusicCog(commands.Cog):
     ):
         vc: wavelink.Player = ctx.voice_client  # pyright: ignore
 
-        setattr(vc, "skip_sent", False)
-        setattr(vc, "stop_sent", False)
-        setattr(vc, "loop_sent", False)
-        setattr(vc, "play_now_allowed", True)
-        setattr(vc, "trigger_channel_id", ctx.channel.id)
-        setattr(vc, "loop_play_count", 0)
+       
 
         if is_radio:
             dbg, _ = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
@@ -416,6 +411,14 @@ class MusicCog(commands.Cog):
                 cls=wavelink.Player, self_deaf=True
             )
             await ctx.send("Connected to your current voice channel")
+            
+            vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+            setattr(vc, "skip_sent", False)
+            setattr(vc, "stop_sent", False)
+            setattr(vc, "loop_sent", False)
+            setattr(vc, "play_now_allowed", True)
+            setattr(vc, "trigger_channel_id", ctx.channel.id)
+            setattr(vc, "loop_play_count", 0)
         except ClientException:
             await ctx.send("Already connected")
 
@@ -677,7 +680,7 @@ class MusicCog(commands.Cog):
         vc: wavelink.Player = ctx.voice_client  # pyright: ignore
 
         embeds = self.generate_embeds_from_queue(vc.queue)
-        await self.show_paginated_tracks(ctx, embeds)
+        self.bot.loop.create_task(self.show_paginated_tracks(ctx, embeds))
 
     @queue.command()
     @commands.guild_only()
@@ -790,7 +793,7 @@ class MusicCog(commands.Cog):
         await m.edit(content=f"Added {len(vals)} tracks into the queue", view=None)
 
         embeds = self.generate_embeds_from_tracks(soon_to_add_queue)
-        await self.show_paginated_tracks(ctx, embeds)
+        self.bot.loop.create_task(self.show_paginated_tracks(ctx, embeds))
 
     @queue.command()
     @commands.guild_only()
@@ -820,7 +823,7 @@ class MusicCog(commands.Cog):
             try:
                 pl = (
                     await wavelink.YouTubePlaylist.search(url)
-                ).tracks
+                ).tracks  # pyright: ignore
             except wavelink.LoadTrackError:
                 pl = await wavelink.YouTubeTrack.search(url)
             tracks = pl
@@ -847,7 +850,7 @@ class MusicCog(commands.Cog):
         await ctx.send(f"Added {len(tracks)} track(s) from {url} to the queue")
 
         embeds = self.generate_embeds_from_tracks(accepted_tracks)  # pyright: ignore
-        await self.show_paginated_tracks(ctx, embeds)
+        self.bot.loop.create_task(self.show_paginated_tracks(ctx, embeds))
 
     @queue.command()
     @commands.guild_only()
@@ -979,6 +982,13 @@ class MusicCog(commands.Cog):
 
         vc.queue.clear()
         await ctx.send("Cleared the queue")
+        
+    @add.after_invoke
+    @add_playlist.after_invoke
+    async def autoplay_queue(self, ctx: commands.Context):
+        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        if not vc.is_playing():
+            await vc.play(vc.queue.get())
 
 
 async def setup(bot: commands.AutoShardedBot):

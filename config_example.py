@@ -2,8 +2,11 @@ from typing import Any, Dict, List, Optional
 
 import discord
 
+__all__ = ["Config"]
+
 
 class Config:
+    """Example config class. Also used as a fallback configuration"""
     # Enable experimental stuffs
     # Set to True if you know what you are doing
     LAB: bool = False
@@ -15,6 +18,9 @@ class Config:
     # Choose when to receive message commands
     # This will *potentially* slow down the bot if your bot is in many (large) guilds
     RECEIVE_MESSAGE_COMMANDS: bool = True
+
+    # Whether to receive mention prefix
+    RECEIVE_MENTION_PREFIX: bool = True
 
     # Support server url
     SUPPORT_SERVER_URL: str = "https://rick-roll.ed"

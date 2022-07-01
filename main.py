@@ -238,7 +238,9 @@ def main():
             sys.exit()
 
     prefixes = Config.PREFIXES
-    allow_mention = hasattr(Config, "RECEIVE_MENTION_PREFIX") and Config.RECEIVE_MENTION_PREFIX
+    allow_mention = (
+        hasattr(Config, "RECEIVE_MENTION_PREFIX") and Config.RECEIVE_MENTION_PREFIX
+    )
 
     intents = discord.Intents.default()
     intents.members = True

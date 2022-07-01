@@ -94,7 +94,7 @@ class Utility:
         """
         try:
             current_fields = config_cls.__dict__.keys()
-            important_fields = ["TOKEN", "COGS"]
+            important_fields = ["TOKEN", "COGS", "PREFIXES"]
 
             for field in important_fields:
                 if field not in current_fields:

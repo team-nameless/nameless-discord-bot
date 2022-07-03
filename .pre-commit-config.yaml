@@ -1,0 +1,16 @@
+repos:
+  - repo: local
+    hooks:
+      - id: black
+        name: black
+        entry: black
+        always_run: true
+        language: system
+        pass_filenames: false
+        fail_fast: true
+        args:
+          [
+            ".",
+            "--check",
+            "--diff",
+          ]

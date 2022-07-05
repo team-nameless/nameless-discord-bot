@@ -22,14 +22,21 @@ class Nameless(commands.AutoShardedBot):
         self,
         command_prefix,
         config_cls=config_example.Config,
+        config_dict=None,
         *args,
         **kwargs,
     ):
         super().__init__(command_prefix, *args, **kwargs)
 
+        if config_dict is None:
+            config_dict = {}
         self.config_cls = config_cls
+
+        for k, v in config_dict:
+            setattr(config_cls, k, v)
+
         self.log_level: int = kwargs.get("log_level", logging.INFO)
-        self.allow_update_checks: bool = kwargs.get("allow_updates_checks", True)
+        self.allow_update_checks: bool = kwargs.get("allow_updates_checks", False)
         self.loggers: List[logging.Logger] = [
             logging.getLogger(),
             logging.getLogger("sqlalchemy.engine"),

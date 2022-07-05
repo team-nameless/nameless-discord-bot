@@ -2,20 +2,27 @@
 
 > Not exhaustive, but it should be practical.
 
-- First of all, install/upgrade development dependencies:
+- First:
+  - Install/upgrade development dependencies:
 
-```shell
-pip install --upgrade -r requirements_dev.txt
-```
+  ```shell
+  pip install --upgrade -r requirements_dev.txt
+  ```
+  
+  - Install `pre-commit` hooks if you have not.
+  
+  ```shell
+  pre-commit install
+  ```
 
 - Coding conventions:
   - We follow `flake8` and `pylint` rule.
   - We follow `black` code style.
-    - Be sure to format the document with `black` before committing:
+    - Be sure to format the document with `black` and `isort` before committing:
 
    ```shell
-   black .
    isort .
+   black .
    ```
 
   - When creating commands:

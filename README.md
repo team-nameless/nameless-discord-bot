@@ -3,7 +3,7 @@
 A rewrite of [original nameless*](https://github.com/FoxeiZ/nameless), now with collaborations.
 
 [![Last Commit](https://badgen.net/github/last-commit/nameless-on-discord/nameless/main)]()
-[![Python](https://badgen.net/badge/Python/3.8%2B/)]()
+[![Python](https://badgen.net/badge/Python/3.8%2B/)](https://python.org)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 [![CodeFactor](https://www.codefactor.io/repository/github/nameless-on-discord/nameless/badge/main)](https://www.codefactor.io/repository/github/nameless-on-discord/nameless/overview/main)
@@ -15,7 +15,7 @@ A rewrite of [original nameless*](https://github.com/FoxeiZ/nameless), now with 
 
 ## How to run this bot?
 
-- First, install `python3`, latest version preferred.
+- First, install `python3` - minimum version `3.8`, latest version preferred.
 - Second, create a virtual environment so your global "python" won't be badly affected and activate it (most IDEs
   automatically activate it for you)
 
@@ -44,17 +44,17 @@ python main.py -OO
 alembic stamp head
 ```
 
-## Noice, your code is so cool, and I wanna contribute my parts on them
+## Noice, your code is so cool, and I want to contribute!
 
 See [CONTRIBUTING.md](https://github.com/Lilia-Workshop/nameless/blob/main/CONTRIBUTING.md)
 
-## Oh look, there are branches
+## Oh look, there are branches!
 
 - `main`: Stable codes that is ready for production.
 - `feat/{name}`: New features that will be pushed to `main`
 - `fix/{#}` or `fix/{name}`: Bug fixes that will be pushed after passing checks.
 
-## Hey! I want to throw money at you
+## Hey! I want to throw money at you!
 
 - Oh, thank you for your generosity! You can look for the sponsor button or some link at the sidebar, any value is
   appreciated.

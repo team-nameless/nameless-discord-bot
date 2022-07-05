@@ -63,5 +63,5 @@ See [CONTRIBUTING.md](https://github.com/Lilia-Workshop/nameless/blob/main/CONTR
 
 ## The team
 
-- Me, of course, lol.
+- [Swyrin](https://github.com/Swyreee).
 - [FoxeiZ](https://github.com/FoxeiZ)

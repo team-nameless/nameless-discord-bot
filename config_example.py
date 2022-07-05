@@ -21,6 +21,9 @@ class Config:
     # Whether to receive mention prefix
     RECEIVE_MENTION_PREFIX: bool = True
 
+    # Bot description
+    BOT_DESCRIPTION: str = "Just a bot"
+
     # Support server url
     SUPPORT_SERVER_URL: str = "https://example.com"
 

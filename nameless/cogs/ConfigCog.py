@@ -7,7 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from config import Config
-from shared_vars import crud_database
+from nameless.shared_vars import crud_database
 
 __all__ = ["ConfigCog"]
 

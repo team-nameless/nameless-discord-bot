@@ -1,4 +1,4 @@
-name: anything-python
+name: everything python
 
 on:
   push:
@@ -7,20 +7,16 @@ on:
       - main
 
 jobs:
-  lint:
+  run:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [ '3.8' ]
-
-    name: CI on Python ${{ matrix.python-version }}
+    name: CI on Python 3.8
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.8
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.8'
 
       - name: Install dependencies
         id: install-deps
@@ -52,10 +48,9 @@ jobs:
 
       - name: Run tests and return coverages
         run: |
-          pytest --cov-report term-missing --cov=database --cov=customs.Utility tests/
+          pytest --cov-report term-missing --cov=nameless.database --cov=nameless.customs.Utility tests/
 
       - name: Deploy to server
-        if: ${{ matrix.python-version == '3.8' }}
         run: |
           sudo apt install sshpass -y
           echo pm2 restart ${{ secrets.INSTANCE_NAME }} > script.sh

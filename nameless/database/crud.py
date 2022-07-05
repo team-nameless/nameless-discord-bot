@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.util import IdentitySet
 
 import config
-from customs import Utility
+from nameless.commons import Utility
 
 from .models import Base, DbGuild, DbUser
 

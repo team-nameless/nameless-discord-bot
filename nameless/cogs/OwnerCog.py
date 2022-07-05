@@ -7,13 +7,13 @@ from discord import app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
 
-import shared_vars
+from nameless import shared_vars
 from config import Config
 
 __all__ = ["OwnerCog"]
 cogs_list = list(
-    "cogs." + z.replace(".py", "")
-    for z in filter(shared_vars.cogs_regex.match, os.listdir("cogs"))
+    "nameless.cogs." + z.replace(".py", "")
+    for z in filter(shared_vars.cogs_regex.match, os.listdir("nameless/cogs"))
 )
 
 

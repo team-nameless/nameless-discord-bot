@@ -6,8 +6,8 @@ from discord import Forbidden, HTTPException, app_commands
 from discord.ext import commands
 
 from config import Config
-from customs.DiscordWaiter import DiscordWaiter
-from shared_vars import crud_database
+from nameless.customs.DiscordWaiter import DiscordWaiter
+from nameless.shared_vars import crud_database
 
 __all__ = ["ModeratorCog"]
 

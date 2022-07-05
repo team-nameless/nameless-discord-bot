@@ -1,10 +1,9 @@
 [tool.pyright]
 include = [
-    "cogs",
-    "customs",
-    "database",
-    "./config.example.py",
-    "./main.py",
+    "nameless",
+    "tests",
+    "config_example.py",
+    "main.py",
 ]
 exclude = [
     "alembic",

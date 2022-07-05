@@ -20,7 +20,9 @@ class BaseCheck:
 
         def pred(ctx: commands.Context, /, **kwargs) -> bool:
             return (
-                ctx.invoked_with is not None and ctx.invoked_with == "help"
-            ) or check_fn(ctx)
+                ctx.invoked_with == "help"
+                if ctx.invoked_with is not None
+                else check_fn(ctx)
+            )
 
         return pred

@@ -15,10 +15,10 @@ from discord.ext import commands
 from discord.utils import escape_markdown
 from wavelink.ext import spotify
 
-import shared_vars
-from cogs.checks import MusicCogCheck
+from nameless import shared_vars
+from nameless.cogs.checks import MusicCogCheck
 from config import Config
-from customs.Utility import Utility
+from nameless.commons import Utility
 
 __all__ = ["MusicCog"]
 

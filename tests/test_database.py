@@ -1,7 +1,7 @@
 import discord
 import pytest
 
-import database
+from nameless import database
 
 _crud = database.CRUD(None)
 

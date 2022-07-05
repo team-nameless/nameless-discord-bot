@@ -1,23 +1,35 @@
+import logging
 import re
+import sys
 from datetime import datetime
 from typing import List
 
 from discord import Permissions
 import requests
 
-from database.crud import CRUD
+from nameless import customs
+from nameless.database import CRUD
 
 # Database setup
 crud_database: CRUD
 
-# Stuffs
+# Logging
+stdout_handler = logging.StreamHandler(sys.stdout)
+stdout_handler.setFormatter(customs.ColoredFormatter())
+
+# Patterns
 cogs_regex = re.compile(r"^(?!_.).*Cog.py")
+
+# Meta
 upstream_version_txt_url = (
     "https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt"
 )
+start_time: datetime = datetime.min
 additional_handlers: List = []
 __nameless_current_version__ = "0.9.0-beta"
 __nameless_upstream_version__ = requests.get(upstream_version_txt_url).text
+
+# Perms
 needed_permissions = Permissions.none()
 needed_permissions.manage_roles = True
 needed_permissions.manage_channels = True
@@ -41,5 +53,3 @@ needed_permissions.connect = True
 needed_permissions.speak = True
 needed_permissions.use_voice_activation = True
 needed_permissions.create_instant_invite = True
-
-start_time: datetime = datetime.min

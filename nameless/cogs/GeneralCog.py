@@ -9,7 +9,7 @@ from discord.app_commands import Choice
 from discord.ext import commands
 from discord_together.discordTogetherMain import defaultApplications
 
-import shared_vars
+from nameless import shared_vars
 from config import Config
 
 __all__ = ["GeneralCog"]

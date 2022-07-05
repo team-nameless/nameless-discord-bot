@@ -1,4 +1,3 @@
-from .checks import *
 from .ConfigCog import *
 from .ExperimentalCog import *
 from .GeneralCog import *

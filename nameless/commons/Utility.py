@@ -29,18 +29,14 @@ class Utility:
         port: Optional[int]
         db_name: str
 
-        if (
-            config_cls
-            and hasattr(config_cls, "DATABASE")
-            and (db := config_cls.DATABASE)
-        ):
-            dialect = db["dialect"]
-            driver = db["driver"]
-            username = db["username"]
-            password = db["password"]
-            host = db["host"]
-            port = int(db["port"] if db["port"] else 0)
-            db_name: str = db["db_name"]
+        if config_cls and (db := getattr(config_cls, "DATABASE", {})):
+            dialect = db.get("dialect", "sqlite")
+            driver = db.get("driver", "")
+            username = db.get("username", "")
+            password = db.get("password", "")
+            host = db.get("host", "")
+            port = int(db.get("port", 0))
+            db_name: str = db.get("db_name", "nameless.db")
         else:
             logging.warning("Falling back to SQLite")
             dialect = "sqlite"
@@ -88,13 +84,19 @@ class Utility:
         """
         Validate config class.
 
-        True if can run.
-        None if can run with warnings.
-        False if can not run.
+        True if Nameless can proceed to run.
+        None if Nameless can proceed to run with warnings.
+        False if Nameless can not proceed to run.
         """
         try:
-            current_fields = config_cls.__dict__.keys()
-            important_fields = ["TOKEN", "COGS", "PREFIXES"]
+            current_fields = list(
+                filter(lambda x: x[0:2] != "__", config_cls.__dict__.keys())
+            )
+            available_fields = list(
+                filter(lambda x: x[0:2] != "__", config_example.Config.__dict__.keys())
+            )
+
+            important_fields = ["TOKEN"]
 
             for field in important_fields:
                 if field not in current_fields:
@@ -103,14 +105,14 @@ class Utility:
                     )
                     return False
 
-            available_fields = config_example.Config.__dict__.keys()
+            result = True
 
             for field in available_fields:
                 if field not in current_fields:
                     logging.warning("Missing %s in %s", field, config_cls.__name__)
-                    return None
+                    result = None
 
-            return True
+            return result
         except AttributeError as err:
             logging.error("Something bad happened", exc_info=err)
             return False

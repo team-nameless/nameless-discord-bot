@@ -9,8 +9,8 @@ from discord.app_commands import Choice
 from discord.ext import commands
 from discord_together.discordTogetherMain import defaultApplications
 
-from nameless import shared_vars
 from config import Config
+from nameless import shared_vars
 
 __all__ = ["GeneralCog"]
 
@@ -20,7 +20,7 @@ class GeneralCog(commands.Cog):
         self.bot = bot
 
     @commands.hybrid_command()
-    @app_commands.guilds(*Config.GUILD_IDs)
+    @app_commands.guilds(*getattr(Config, "GUILD_IDs", []))
     @app_commands.describe(
         target="Your desired activity", voice_channel="Target voice channel"
     )
@@ -58,7 +58,7 @@ class GeneralCog(commands.Cog):
         )
 
     @commands.hybrid_command()
-    @app_commands.guilds(*Config.GUILD_IDs)
+    @app_commands.guilds(*getattr(Config, "GUILD_IDs", []))
     @app_commands.describe(member="Target member, you by default")
     async def user(
         self,
@@ -114,7 +114,7 @@ class GeneralCog(commands.Cog):
 
     @commands.hybrid_command()
     @commands.guild_only()
-    @app_commands.guilds(*Config.GUILD_IDs)
+    @app_commands.guilds(*getattr(Config, "GUILD_IDs", []))
     async def guild(self, ctx: commands.Context):
         """View this guild's information"""
         await ctx.defer()
@@ -183,7 +183,7 @@ class GeneralCog(commands.Cog):
 
     @commands.hybrid_command()
     @commands.guild_only()
-    @app_commands.guilds(*Config.GUILD_IDs)
+    @app_commands.guilds(*getattr(Config, "GUILD_IDs", []))
     async def the_bot(self, ctx: commands.Context):
         """View my information"""
         await ctx.defer()

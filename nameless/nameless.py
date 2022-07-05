@@ -5,13 +5,11 @@ from typing import List
 
 import discord
 from discord.ext import commands
-
 from discord.ext.commands import ExtensionFailed, errors
-
 from packaging import version
 from sqlalchemy.orm import close_all_sessions
 
-from config import Config
+import config_example
 from nameless import shared_vars
 from nameless.database import CRUD
 from nameless.shared_vars import stdout_handler
@@ -20,7 +18,15 @@ __all__ = ["Nameless"]
 
 
 class Nameless(commands.AutoShardedBot):
-    def __init__(self, command_prefix, config_cls=Config, **kwargs):
+    def __init__(
+        self,
+        command_prefix,
+        config_cls=config_example.Config,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(command_prefix, *args, **kwargs)
+
         self.config_cls = config_cls
         self.log_level: int = kwargs.get("log_level", logging.INFO)
         self.allow_update_checks: bool = kwargs.get("allow_updates_checks", True)
@@ -32,8 +38,7 @@ class Nameless(commands.AutoShardedBot):
             logging.getLogger("sqlalchemy.pool"),
             logging.getLogger("ossapi.ossapiv2"),
         ]
-
-        super().__init__(command_prefix, **kwargs)
+        self.description = getattr(config_cls, "BOT_DESCRIPTION", "")
 
     def check_for_updates(self):
         nameless_version = version.parse(shared_vars.__nameless_current_version__)
@@ -58,7 +63,7 @@ class Nameless(commands.AutoShardedBot):
             f.write(shared_vars.__nameless_current_version__)
 
     async def __register_all_cogs(self):
-        if hasattr(self.config_cls, "COGS"):
+        if getattr(self.config_cls, "COGS", []):
             allowed_cogs = list(
                 filter(shared_vars.cogs_regex.match, os.listdir("nameless/cogs"))
             )
@@ -81,7 +86,7 @@ class Nameless(commands.AutoShardedBot):
                     logging.error("Unable to load %s! %s", cog_name, fail_reason)
         else:
             logging.warning(
-                "config_cls.COGS is None, nothing will be loaded (config_cls=%s)",
+                "config_cls.COGS is None or non-existence, nothing will be loaded (config_cls=%s)",
                 self.config_cls.__name__,
             )
 
@@ -92,7 +97,7 @@ class Nameless(commands.AutoShardedBot):
         logging.info("Registering commands")
         await self.__register_all_cogs()
 
-        if self.config_cls.GUILD_IDs:
+        if getattr(self.config_cls, "GUILD_IDs", []):
             for _id in self.config_cls.GUILD_IDs:
                 logging.info("Syncing commands with guild ID %d", _id)
                 sf = discord.Object(_id)
@@ -100,24 +105,25 @@ class Nameless(commands.AutoShardedBot):
         else:
             logging.info("Syncing commands globally")
             await self.tree.sync()
+            logging.warning(
+                "Please wait at least one hour before using global commands"
+            )
 
-        logging.info("Setting presence")
-        await self.change_presence(
-            status=self.config_cls.STATUS["user_status"],
-            activity=discord.Activity(
-                type=self.config_cls.STATUS["type"]
-                if self.config_cls.STATUS["type"]
-                or (
-                    self.config_cls.STATUS["type"] == discord.ActivityType.streaming
-                    and self.config_cls.STATUS["url"]
-                )
-                else discord.ActivityType.playing,
-                name=self.config_cls.STATUS["name"],
-                url=self.config_cls.STATUS["url"]
-                if self.config_cls.STATUS["url"]
-                else None,
-            ),
-        )
+        if status := getattr(self.config_cls, "STATUS", {}):
+            logging.info("Setting presence")
+
+            await self.change_presence(
+                status=status.get("user_status", discord.Status.online),
+                activity=discord.Activity(
+                    type=status.get("type", discord.ActivityType.playing),
+                    name=status.get("name", "something"),
+                    url=status.get("url", ""),
+                ),
+            )
+        else:
+            logging.warning(
+                "Presence is not set since you did not provide values properly"
+            )
 
         logging.info("Logged in as %s (ID: %s)", str(self.user), self.user.id)
 
@@ -183,7 +189,7 @@ class Nameless(commands.AutoShardedBot):
         await super().close()
 
     def patch_loggers(self) -> None:
-        if hasattr(self.config_cls, "LAB") and self.config_cls.LAB:
+        if getattr(self.config_cls, "LAB", False):
             file_handler = logging.FileHandler(
                 filename="nameless.log", mode="w", delay=True
             )
@@ -223,4 +229,4 @@ class Nameless(commands.AutoShardedBot):
 
         shared_vars.start_time = datetime.now()
         shared_vars.crud_database = CRUD()
-        self.run(self.config_cls.TOKEN, log_handler=None)
+        self.run(getattr(self.config_cls, "TOKEN", ""), log_handler=None)

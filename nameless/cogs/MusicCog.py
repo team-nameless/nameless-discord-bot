@@ -15,9 +15,9 @@ from discord.ext import commands
 from discord.utils import escape_markdown
 from wavelink.ext import spotify
 
+from config import Config
 from nameless import shared_vars
 from nameless.cogs.checks import MusicCogCheck
-from config import Config
 from nameless.commons import Utility
 
 __all__ = ["MusicCog"]
@@ -177,10 +177,9 @@ class MusicCog(commands.Cog):
     def __init__(self, bot: commands.AutoShardedBot):
         self.bot = bot
         self.can_use_spotify = bool(
-            Config.LAVALINK.get("spotify")
-            and Config.LAVALINK["spotify"]
-            and Config.LAVALINK["spotify"]["client_id"]
-            and Config.LAVALINK["spotify"]["client_secret"]
+            (sp := Config.LAVALINK.get("spotify"))
+            and sp.get("client_id")
+            and sp.get("client_secret")
         )
 
         if not self.can_use_spotify:
@@ -382,7 +381,7 @@ class MusicCog(commands.Cog):
             raise commands.CommandError(f"No tracks found for {url}")
 
     @commands.hybrid_group(fallback="radio")
-    @app_commands.guilds(*Config.GUILD_IDs)
+    @app_commands.guilds(*getattr(Config, "GUILD_IDs", []))
     @commands.guild_only()
     @app_commands.describe(url="Radio url")
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
@@ -990,7 +989,7 @@ class MusicCog(commands.Cog):
 
 
 async def setup(bot: commands.AutoShardedBot):
-    if hasattr(Config, "LAVALINK") and Config.LAVALINK and Config.LAVALINK["nodes"]:
+    if (lvl := getattr(Config, "LAVALINK", None)) and getattr(lvl, "nodes", []):
         await bot.add_cog(MusicCog(bot))
         logging.info("Cog of %s added!", __name__)
     else:

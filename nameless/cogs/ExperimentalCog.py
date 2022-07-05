@@ -12,7 +12,7 @@ class ExperimentalCog(commands.Cog):
 
 
 async def setup(bot: commands.AutoShardedBot):
-    if hasattr(Config, "LAB") and Config.LAB:
+    if getattr(Config, "LAB", False):
         await bot.add_cog(ExperimentalCog(bot))
         logging.info("Cog of %s added!", __name__)
     else:

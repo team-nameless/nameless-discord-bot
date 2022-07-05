@@ -1,5 +1,5 @@
-from nameless.customs import Utility
 from config_example import Config
+from nameless.customs import Utility
 
 
 class FakeConfig:

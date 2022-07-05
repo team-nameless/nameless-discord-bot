@@ -4,8 +4,8 @@ import sys
 from datetime import datetime
 from typing import List
 
-from discord import Permissions
 import requests
+from discord import Permissions
 
 from nameless import customs
 from nameless.database import CRUD

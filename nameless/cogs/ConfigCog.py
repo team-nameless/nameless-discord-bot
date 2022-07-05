@@ -20,7 +20,7 @@ class ConfigCog(commands.Cog):
     @commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
     @commands.has_guild_permissions(manage_guild=True)
-    @app_commands.guilds(*Config.GUILD_IDs)
+    @app_commands.guilds(*getattr(Config, "GUILD_IDs", []))
     async def config(self, ctx: commands.Context):
         """View configured properties"""
         await ctx.defer()

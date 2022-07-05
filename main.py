@@ -8,14 +8,12 @@ import discord
 from discord.ext import commands
 
 import nameless.shared_vars
+from config import Config
 from nameless import Nameless
 from nameless.commons import Utility
-from config import Config
 
 os.chdir(Path(__file__).resolve().parent)
-log_level: int = (
-    logging.DEBUG if hasattr(Config, "LAB") and Config.LAB else logging.INFO
-)
+log_level: int = logging.DEBUG if getattr(Config, "LAB", False) else logging.INFO
 logging.basicConfig(level=log_level)
 logging.getLogger().handlers[:] = [nameless.shared_vars.stdout_handler]
 
@@ -25,28 +23,24 @@ def main():
 
     if not isinstance(can_cont, bool):
         logging.warning(
-            "This bot might run into error because not all fields are presented"
+            "This bot might run into errors because not all fields are presented"
         )
     else:
         if not can_cont:
             logging.error("Fields validation failed, the bot will exit")
             sys.exit()
 
-    prefixes = Config.PREFIXES
-    allow_mention = (
-        hasattr(Config, "RECEIVE_MENTION_PREFIX") and Config.RECEIVE_MENTION_PREFIX
-    )
+    prefixes = getattr(Config, "PREFIXES", [])
+    allow_mention = getattr(Config, "RECEIVE_MENTION_PREFIX", False)
 
     intents = discord.Intents.default()
     intents.members = True
-    intents.message_content = (
-        hasattr(Config, "RECEIVE_MESSAGE_COMMANDS") and Config.RECEIVE_MESSAGE_COMMANDS
-    )
+    intents.message_content = getattr(Config, "RECEIVE_MESSAGE_COMMANDS", False)
 
     inst = Nameless(
         commands.when_mentioned_or(*prefixes) if allow_mention else prefixes,
         intents=intents,
-        description=Config.BOT_DESCRIPTION,
+        config_cls=Config,
         log_level=log_level,
         allow_updates_checks=True,
     )

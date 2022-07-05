@@ -9,8 +9,8 @@ from discord.ext import commands
 from DiscordUtils import Pagination
 from ossapi import GameMode, OssapiV2, Score, ScoreType, User, UserLookupKey
 
-from nameless import shared_vars
 from config import Config
+from nameless import shared_vars
 from nameless.customs.DiscordWaiter import DiscordWaiter
 
 __all__ = ["OsuCog"]
@@ -65,7 +65,7 @@ class OsuCog(commands.Cog):
         self.api = OssapiV2(Config.OSU["client_id"], Config.OSU["client_secret"])
 
     @commands.hybrid_group(fallback="get")
-    @app_commands.guilds(*Config.GUILD_IDs)
+    @app_commands.guilds(*getattr(Config, "GUILD_IDs", []))
     async def osu(self, ctx: commands.Context, member: Optional[discord.Member]):
         """View someone's osu! *linked* profile"""
         await ctx.defer()
@@ -378,16 +378,15 @@ class OsuCog(commands.Cog):
 
 async def setup(bot: commands.AutoShardedBot):
     if (
-        hasattr(Config, "OSU")
-        and Config.OSU
-        and Config.OSU["client_id"]
-        and Config.OSU["client_secret"]
+        (osu := getattr(Config, "OSU", None))
+        and getattr(osu, "client_id", "")
+        and getattr(osu, "client_secret", "")
     ):
         await bot.add_cog(OsuCog(bot))
         logging.info("Cog of %s added!", __name__)
     else:
         raise commands.ExtensionFailed(
-            __name__, ValueError("osu! configuration values are not enough!")
+            __name__, ValueError("osu! configuration values are not properly provided!")
         )
 
 

@@ -7,8 +7,8 @@ from discord import app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
 
-from nameless import shared_vars
 from config import Config
+from nameless import shared_vars
 
 __all__ = ["OwnerCog"]
 cogs_list = list(
@@ -23,7 +23,7 @@ class OwnerCog(commands.Cog):
 
     @commands.is_owner()
     @commands.hybrid_command()
-    @app_commands.guilds(*Config.GUILD_IDs)
+    @app_commands.guilds(*getattr(Config, "GUILD_IDs", []))
     async def shutdown(self, ctx: commands.Context):
         """Shutdown the bot"""
         await ctx.send("Bye owo!")
@@ -31,7 +31,7 @@ class OwnerCog(commands.Cog):
 
     @commands.is_owner()
     @commands.hybrid_command()
-    @app_commands.guilds(*Config.GUILD_IDs)
+    @app_commands.guilds(*getattr(Config, "GUILD_IDs", []))
     @app_commands.choices(module_name=[Choice(name=c, value=c) for c in cogs_list])
     @app_commands.describe(module_name="The Python-qualified module name")
     async def reload(self, ctx: commands.Context, module_name: str):
@@ -48,7 +48,7 @@ class OwnerCog(commands.Cog):
 
     @commands.is_owner()
     @commands.hybrid_command()
-    @app_commands.guilds(*Config.GUILD_IDs)
+    @app_commands.guilds(*getattr(Config, "GUILD_IDs", []))
     @app_commands.choices(module_name=[Choice(name=c, value=c) for c in cogs_list])
     @app_commands.describe(module_name="The Python-qualified module name")
     async def load(self, ctx: commands.Context, module_name: str):
@@ -65,7 +65,7 @@ class OwnerCog(commands.Cog):
 
     @commands.is_owner()
     @commands.hybrid_command()
-    @app_commands.guilds(*Config.GUILD_IDs)
+    @app_commands.guilds(*getattr(Config, "GUILD_IDs", []))
     @app_commands.choices(module_name=[Choice(name=c, value=c) for c in cogs_list])
     @app_commands.describe(module_name="The Python-qualified module name")
     async def unload(self, ctx: commands.Context, module_name: str):
@@ -82,7 +82,7 @@ class OwnerCog(commands.Cog):
 
     @commands.is_owner()
     @commands.hybrid_command()
-    @app_commands.guilds(*Config.GUILD_IDs)
+    @app_commands.guilds(*getattr(Config, "GUILD_IDs", []))
     async def restart(self, ctx: commands.Context):
         """Restart the bot"""
         await ctx.defer()

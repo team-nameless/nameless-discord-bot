@@ -17,7 +17,7 @@ class ModeratorCog(commands.Cog):
         self.bot = bot
 
     @commands.hybrid_group(fallback="do-not-use")
-    @app_commands.guilds(*Config.GUILD_IDs)
+    @app_commands.guilds(*getattr(Config, "GUILD_IDs", []))
     @commands.guild_only()
     async def mod(self, ctx: commands.Context):
         """Nothing here!"""

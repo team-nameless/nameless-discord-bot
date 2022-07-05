@@ -32,7 +32,7 @@ class CRUD:
         self.engine = create_engine(
             self.db_url,
             logging_name=self.db_name,
-            hide_parameters=not config_cls.LAB if config_cls else True,
+            hide_parameters=not getattr(config_cls, "LAB", False),
         )
         _session = sessionmaker(bind=self.engine)
         self.__session = _session()

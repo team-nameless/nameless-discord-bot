@@ -83,17 +83,21 @@ class NamelessConfig:
         "password": "",
         "host": "",
         "port": None,
+        # ${instance_name} will be replaced by the instance name if running multiple instances
         "db_name": "nameless.db",
     }
 
     # Configurations for Lavalink servers for music commands
     LAVALINK: Dict[str, Any] = {
-        # Your lavalink nodes
-        # Each node is a dictionary with the following keys: host (str), port (int), password (str), is_secure (bool)
+        # Your lavalink node configurations
+        # Each node config is a dictionary with the following keys:
+        #   host (str),
+        #   port (int),
+        #   password (str),
+        #   is_secure (bool)
         "nodes": [],
-        # Spotify configuration
+        # Configuration for spotify integrations, safe to ignore
         # You can get these from here: https://developer.spotify.com/dashboard/applications
-        # Safe to ignore?
         "spotify": {
             "client_id": "",
             "client_secret": "",

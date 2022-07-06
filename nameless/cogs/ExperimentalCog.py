@@ -2,7 +2,7 @@ import logging
 
 from discord.ext import commands
 
-from config import Config
+from NamelessConfig import NamelessConfig
 
 __all__ = ["ExperimentalCog"]
 
@@ -12,12 +12,13 @@ class ExperimentalCog(commands.Cog):
 
 
 async def setup(bot: commands.AutoShardedBot):
-    if getattr(Config, "LAB", False):
+    if getattr(NamelessConfig, "LAB", False):
         await bot.add_cog(ExperimentalCog(bot))
         logging.info("Cog of %s added!", __name__)
     else:
         raise commands.ExtensionFailed(
-            __name__, ValueError("ExperimentalCog requires Config.LAB set to True")
+            __name__,
+            ValueError("ExperimentalCog requires NamelessConfig.LAB set to True"),
         )
 
 

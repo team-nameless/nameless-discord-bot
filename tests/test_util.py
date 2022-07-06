@@ -1,5 +1,5 @@
-from config_example import Config
-from nameless.customs import Utility
+from NamelessConfig_example import NamelessConfig
+from nameless.commons import Utility
 
 
 class FakeConfig:
@@ -80,5 +80,5 @@ class TestUtility:
         assert Utility.is_valid_config_class(FakeConfig) is False
 
     def test_valid_conf(self):
-        assert Utility.is_valid_config_class(Config)
+        assert Utility.is_valid_config_class(NamelessConfig)
         assert Utility.is_valid_config_class(PartialConfig) is None

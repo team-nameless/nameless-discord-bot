@@ -2,7 +2,7 @@ import logging
 from typing import Optional, Tuple, Type
 from urllib.parse import quote_plus as qp, urlparse
 
-import config_example
+import NamelessConfig_example
 
 __all__ = ["Utility"]
 
@@ -93,7 +93,10 @@ class Utility:
                 filter(lambda x: x[0:2] != "__", config_cls.__dict__.keys())
             )
             available_fields = list(
-                filter(lambda x: x[0:2] != "__", config_example.Config.__dict__.keys())
+                filter(
+                    lambda x: x[0:2] != "__",
+                    NamelessConfig_example.NamelessConfig.__dict__.keys(),
+                )
             )
 
             important_fields = ["TOKEN"]

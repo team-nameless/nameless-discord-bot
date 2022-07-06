@@ -9,7 +9,7 @@ from discord.app_commands import Choice
 from discord.ext import commands
 from discord_together.discordTogetherMain import defaultApplications
 
-from config import Config
+from NamelessConfig import NamelessConfig
 from nameless import shared_vars
 
 __all__ = ["GeneralCog"]
@@ -20,7 +20,7 @@ class GeneralCog(commands.Cog):
         self.bot = bot
 
     @commands.hybrid_command()
-    @app_commands.guilds(*getattr(Config, "GUILD_IDs", []))
+    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
     @app_commands.describe(
         target="Your desired activity", voice_channel="Target voice channel"
     )
@@ -49,7 +49,7 @@ class GeneralCog(commands.Cog):
 
         inv = await (
             await discord_together.DiscordTogether(  # pyright: ignore
-                Config.TOKEN, debug=Config.LAB
+                NamelessConfig.TOKEN, debug=NamelessConfig.LAB
             )
         ).create_link(voice_channel.id, target)
 
@@ -58,7 +58,7 @@ class GeneralCog(commands.Cog):
         )
 
     @commands.hybrid_command()
-    @app_commands.guilds(*getattr(Config, "GUILD_IDs", []))
+    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
     @app_commands.describe(member="Target member, you by default")
     async def user(
         self,
@@ -114,7 +114,7 @@ class GeneralCog(commands.Cog):
 
     @commands.hybrid_command()
     @commands.guild_only()
-    @app_commands.guilds(*getattr(Config, "GUILD_IDs", []))
+    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
     async def guild(self, ctx: commands.Context):
         """View this guild's information"""
         await ctx.defer()
@@ -183,7 +183,7 @@ class GeneralCog(commands.Cog):
 
     @commands.hybrid_command()
     @commands.guild_only()
-    @app_commands.guilds(*getattr(Config, "GUILD_IDs", []))
+    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
     async def the_bot(self, ctx: commands.Context):
         """View my information"""
         await ctx.defer()
@@ -202,8 +202,11 @@ class GeneralCog(commands.Cog):
         support_inv = ""
 
         try:
-            if hasattr(Config, "SUPPORT_SERVER_URL") and Config.SUPPORT_SERVER_URL:
-                inv = await self.bot.fetch_invite(Config.SUPPORT_SERVER_URL)
+            if (
+                hasattr(NamelessConfig, "SUPPORT_SERVER_URL")
+                and NamelessConfig.SUPPORT_SERVER_URL
+            ):
+                inv = await self.bot.fetch_invite(NamelessConfig.SUPPORT_SERVER_URL)
                 support_inv = inv.url
         except NotFound:
             pass

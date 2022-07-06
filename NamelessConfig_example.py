@@ -2,10 +2,10 @@ from typing import Any, Dict, List, Optional
 
 import discord
 
-__all__ = ["Config"]
+__all__ = ["NamelessConfig"]
 
 
-class Config:
+class NamelessConfig:
     # Enable experimental stuffs
     # Set to True if you know what you are doing
     LAB: bool = False
@@ -32,7 +32,7 @@ class Config:
     GUILD_IDs = []
 
     # Choose which cog(s) to load
-    # Available options:    Config,
+    # Available options:    NamelessConfig,
     #                       Experimental (requires `LAB` set as True),
     #                       General,
     #                       Moderator,

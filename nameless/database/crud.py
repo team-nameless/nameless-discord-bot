@@ -5,7 +5,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.util import IdentitySet
 
-import config
 from nameless.commons import Utility
 
 from .models import Base, DbGuild, DbUser
@@ -18,7 +17,7 @@ class CRUD:
     Basic database CRUD operations.
     """
 
-    def __init__(self, config_cls: Optional[Type[config.Config]] = config.Config):
+    def __init__(self, config_cls: Optional[Type] = None):
         (
             self.db_url,
             self.dialect,

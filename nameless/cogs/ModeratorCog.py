@@ -5,7 +5,7 @@ import discord
 from discord import Forbidden, HTTPException, app_commands
 from discord.ext import commands
 
-from config import Config
+from NamelessConfig import NamelessConfig
 from nameless.customs.DiscordWaiter import DiscordWaiter
 from nameless.shared_vars import crud_database
 
@@ -17,7 +17,7 @@ class ModeratorCog(commands.Cog):
         self.bot = bot
 
     @commands.hybrid_group(fallback="do-not-use")
-    @app_commands.guilds(*getattr(Config, "GUILD_IDs", []))
+    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
     @commands.guild_only()
     async def mod(self, ctx: commands.Context):
         """Nothing here!"""

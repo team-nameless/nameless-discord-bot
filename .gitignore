@@ -1,4 +1,4 @@
-config.py
+NamelessConfig.py
 *.db
 *.db-journal
 

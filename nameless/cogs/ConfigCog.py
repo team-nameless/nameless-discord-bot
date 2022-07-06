@@ -6,7 +6,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from config import Config
+from NamelessConfig import NamelessConfig
 from nameless.shared_vars import crud_database
 
 __all__ = ["ConfigCog"]
@@ -20,7 +20,7 @@ class ConfigCog(commands.Cog):
     @commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
     @commands.has_guild_permissions(manage_guild=True)
-    @app_commands.guilds(*getattr(Config, "GUILD_IDs", []))
+    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
     async def config(self, ctx: commands.Context):
         """View configured properties"""
         await ctx.defer()

@@ -1,7 +1,8 @@
 import logging
 import os
+import sys
 from datetime import datetime
-from typing import List
+from typing import List, Type, Optional
 
 import discord
 from discord.ext import commands
@@ -9,34 +10,37 @@ from discord.ext.commands import ExtensionFailed, errors
 from packaging import version
 from sqlalchemy.orm import close_all_sessions
 
-import config_example
 from nameless import shared_vars
+from nameless.commons import Utility
 from nameless.database import CRUD
 from nameless.shared_vars import stdout_handler
 
 __all__ = ["Nameless"]
+
+from pathlib import Path
+
+os.chdir(Path(__file__).resolve().parent)
+logging.getLogger().handlers[:] = [shared_vars.stdout_handler]
 
 
 class Nameless(commands.AutoShardedBot):
     def __init__(
         self,
         command_prefix,
-        config_cls=config_example.Config,
-        config_dict=None,
+        config_cls: Optional[Type] = None,
         *args,
         **kwargs,
     ):
         super().__init__(command_prefix, *args, **kwargs)
 
-        if config_dict is None:
-            config_dict = {}
         self.config_cls = config_cls
-
-        for k, v in config_dict:
-            setattr(config_cls, k, v)
-
-        self.log_level: int = kwargs.get("log_level", logging.INFO)
+        self.log_level: int = kwargs.get(
+            "log_level",
+            logging.DEBUG if getattr(self.config_cls, "LAB", False) else logging.INFO,
+        )
         self.allow_update_checks: bool = kwargs.get("allow_updates_checks", False)
+        self.global_logger = logging.getLogger()
+
         self.loggers: List[logging.Logger] = [
             logging.getLogger(),
             logging.getLogger("sqlalchemy.engine"),
@@ -45,37 +49,45 @@ class Nameless(commands.AutoShardedBot):
             logging.getLogger("sqlalchemy.pool"),
             logging.getLogger("ossapi.ossapiv2"),
         ]
-        self.description = getattr(config_cls, "BOT_DESCRIPTION", "")
+        self.description = getattr(self.config_cls, "BOT_DESCRIPTION", "")
 
     def check_for_updates(self):
-        nameless_version = version.parse(shared_vars.__nameless_current_version__)
-        upstream_version = version.parse(shared_vars.__nameless_upstream_version__)
 
-        logging.info(
-            "Current version: %s - Upstream version: %s",
-            nameless_version,
-            upstream_version,
-        )
-
-        if nameless_version < upstream_version:
-            logging.warning("You need to update your code!")
-        elif nameless_version == upstream_version:
-            logging.info("You are using latest version!")
+        if not self.allow_update_checks:
+            self.global_logger.warning(
+                "Your bot might fall behind updates, consider setting allow_updates_check to True"
+            )
         else:
-            logging.warning("You are using a version NEWER than original code!")
+            nameless_version = version.parse(shared_vars.__nameless_current_version__)
+            upstream_version = version.parse(shared_vars.__nameless_upstream_version__)
 
-        # Write current version in case I forgot
-        with open("version.txt", "w", encoding="utf-8") as f:
-            logging.info("Writing current version into version.txt")
-            f.write(shared_vars.__nameless_current_version__)
-
-    async def __register_all_cogs(self):
-        if getattr(self.config_cls, "COGS", []):
-            allowed_cogs = list(
-                filter(shared_vars.cogs_regex.match, os.listdir("nameless/cogs"))
+            self.global_logger.info(
+                "Current version: %s - Upstream version: %s",
+                nameless_version,
+                upstream_version,
             )
 
-            for cog_name in self.config_cls.COGS:
+            if nameless_version < upstream_version:
+                self.global_logger.warning("You need to update your code!")
+            elif nameless_version == upstream_version:
+                self.global_logger.info("You are using latest version!")
+            else:
+                self.global_logger.warning(
+                    "You are using a version NEWER than original code!"
+                )
+
+            # Write current version in case I forgot
+            with open("version.txt", "w", encoding="utf-8") as f:
+                logging.info("Writing current version into version.txt")
+                f.write(shared_vars.__nameless_current_version__)
+
+    async def __register_all_cogs(self):
+        if cogs := getattr(self.config_cls, "COGS", []):
+            allowed_cogs = list(
+                filter(shared_vars.cogs_regex.match, os.listdir("cogs"))
+            )
+
+            for cog_name in cogs:
                 fail_reason = ""
 
                 if cog_name + "Cog.py" in allowed_cogs:
@@ -104,8 +116,8 @@ class Nameless(commands.AutoShardedBot):
         logging.info("Registering commands")
         await self.__register_all_cogs()
 
-        if getattr(self.config_cls, "GUILD_IDs", []):
-            for _id in self.config_cls.GUILD_IDs:
+        if ids := getattr(self.config_cls, "GUILD_IDs", []):
+            for _id in ids:
                 logging.info("Syncing commands with guild ID %d", _id)
                 sf = discord.Object(_id)
                 await self.tree.sync(guild=sf)
@@ -226,14 +238,19 @@ class Nameless(commands.AutoShardedBot):
 
     def start_bot(self):
         self.patch_loggers()
+        self.check_for_updates()
 
-        if self.allow_update_checks:
-            self.check_for_updates()
-        else:
+        can_cont = Utility.is_valid_config_class(self.config_cls)
+
+        if not isinstance(can_cont, bool):
             logging.warning(
-                "Your bot might fall behind updates, consider setting allow_updates_check to True"
+                "This bot might run into errors because not all fields are presented"
             )
+        else:
+            if not can_cont:
+                logging.error("Fields validation failed, the bot will exit")
+                sys.exit()
 
         shared_vars.start_time = datetime.now()
-        shared_vars.crud_database = CRUD()
+        shared_vars.crud_database = CRUD(self.config_cls)
         self.run(getattr(self.config_cls, "TOKEN", ""), log_handler=None)

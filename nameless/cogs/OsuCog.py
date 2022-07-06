@@ -9,7 +9,7 @@ from discord.ext import commands
 from DiscordUtils import Pagination
 from ossapi import GameMode, OssapiV2, Score, ScoreType, User, UserLookupKey
 
-from config import Config
+from NamelessConfig import NamelessConfig
 from nameless import shared_vars
 from nameless.customs.DiscordWaiter import DiscordWaiter
 
@@ -62,10 +62,12 @@ class FailInclusionConfirmationView(discord.ui.View):
 class OsuCog(commands.Cog):
     def __init__(self, bot: commands.AutoShardedBot):
         self.bot = bot
-        self.api = OssapiV2(Config.OSU["client_id"], Config.OSU["client_secret"])
+        self.api = OssapiV2(
+            NamelessConfig.OSU["client_id"], NamelessConfig.OSU["client_secret"]
+        )
 
     @commands.hybrid_group(fallback="get")
-    @app_commands.guilds(*getattr(Config, "GUILD_IDs", []))
+    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
     async def osu(self, ctx: commands.Context, member: Optional[discord.Member]):
         """View someone's osu! *linked* profile"""
         await ctx.defer()
@@ -378,9 +380,9 @@ class OsuCog(commands.Cog):
 
 async def setup(bot: commands.AutoShardedBot):
     if (
-        (osu := getattr(Config, "OSU", None))
-        and getattr(osu, "client_id", "")
-        and getattr(osu, "client_secret", "")
+        (osu := getattr(NamelessConfig, "OSU", None))
+        and osu.get("client_id", "")
+        and osu.get("client_secret", "")
     ):
         await bot.add_cog(OsuCog(bot))
         logging.info("Cog of %s added!", __name__)

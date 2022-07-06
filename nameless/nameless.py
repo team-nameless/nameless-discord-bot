@@ -191,7 +191,6 @@ class Nameless(commands.AutoShardedBot):
         self, ctx: commands.Context, err: errors.CommandError, /
     ) -> None:
         if not isinstance(err, errors.CommandNotFound):
-            await ctx.defer()
             await ctx.send(f"Something went wrong when executing the command: {err}")
 
         logging.exception(

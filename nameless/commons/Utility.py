@@ -35,7 +35,7 @@ class Utility:
             username = db.get("username", "")
             password = db.get("password", "")
             host = db.get("host", "")
-            port = int(db.get("port", 0))
+            port = db.get("port")
             db_name: str = db.get("db_name", "nameless.db")
         else:
             logging.warning("Falling back to SQLite")

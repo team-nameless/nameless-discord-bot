@@ -21,7 +21,6 @@ def main(args: List[str]):
 
         nameless = Nameless(
             config_cls=cfg,
-            instance_name="nameless1",
             intents=intents,
             command_prefix=commands.when_mentioned_or(*prefixes)
             if allow_mention

@@ -6,6 +6,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+import nameless
 from NamelessConfig import NamelessConfig
 from nameless.shared_vars import crud_database
 
@@ -13,7 +14,7 @@ __all__ = ["ConfigCog"]
 
 
 class ConfigCog(commands.Cog):
-    def __init__(self, bot: discord.AutoShardedClient):
+    def __init__(self, bot: nameless.Nameless):
         self.bot = bot
 
     @commands.hybrid_group(fallback="get")
@@ -174,11 +175,11 @@ class ConfigCog(commands.Cog):
         )
 
 
-async def setup(bot: commands.AutoShardedBot):
+async def setup(bot: nameless.Nameless):
     await bot.add_cog(ConfigCog(bot))
     logging.info("Cog of %s added!", __name__)
 
 
-async def teardown(bot: commands.AutoShardedBot):
+async def teardown(bot: nameless.Nameless):
     await bot.remove_cog("ConfigCog")
     logging.warning("Cog of %s removed!", __name__)

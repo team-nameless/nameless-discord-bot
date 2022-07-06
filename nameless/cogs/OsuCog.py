@@ -9,6 +9,7 @@ from discord.ext import commands
 from DiscordUtils import Pagination
 from ossapi import GameMode, OssapiV2, Score, ScoreType, User, UserLookupKey
 
+import nameless
 from NamelessConfig import NamelessConfig
 from nameless import shared_vars
 from nameless.customs.DiscordWaiter import DiscordWaiter
@@ -60,7 +61,7 @@ class FailInclusionConfirmationView(discord.ui.View):
 
 
 class OsuCog(commands.Cog):
-    def __init__(self, bot: commands.AutoShardedBot):
+    def __init__(self, bot: nameless.Nameless):
         self.bot = bot
         self.api = OssapiV2(
             NamelessConfig.OSU["client_id"], NamelessConfig.OSU["client_secret"]
@@ -378,7 +379,7 @@ class OsuCog(commands.Cog):
         await self.__generic_check(ctx, request, username, mode)
 
 
-async def setup(bot: commands.AutoShardedBot):
+async def setup(bot: nameless.Nameless):
     if (
         (osu := getattr(NamelessConfig, "OSU", None))
         and osu.get("client_id", "")
@@ -392,6 +393,6 @@ async def setup(bot: commands.AutoShardedBot):
         )
 
 
-async def teardown(bot: commands.AutoShardedBot):
+async def teardown(bot: nameless.Nameless):
     await bot.remove_cog("OsuCog")
     logging.warning("Cog of %s removed!", __name__)

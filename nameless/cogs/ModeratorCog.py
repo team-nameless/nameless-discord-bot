@@ -5,6 +5,7 @@ import discord
 from discord import Forbidden, HTTPException, app_commands
 from discord.ext import commands
 
+import nameless
 from NamelessConfig import NamelessConfig
 from nameless.customs.DiscordWaiter import DiscordWaiter
 from nameless.shared_vars import crud_database
@@ -13,7 +14,7 @@ __all__ = ["ModeratorCog"]
 
 
 class ModeratorCog(commands.Cog):
-    def __init__(self, bot: commands.AutoShardedBot) -> None:
+    def __init__(self, bot: nameless.Nameless) -> None:
         self.bot = bot
 
     @commands.hybrid_group(fallback="do-not-use")
@@ -257,11 +258,11 @@ class ModeratorCog(commands.Cog):
         await self.__generic_mute(ctx, member, reason, False)
 
 
-async def setup(bot: commands.AutoShardedBot):
+async def setup(bot: nameless.Nameless):
     await bot.add_cog(ModeratorCog(bot))
     logging.info("Cog of %s added!", __name__)
 
 
-async def teardown(bot: commands.AutoShardedBot):
+async def teardown(bot: nameless.Nameless):
     await bot.remove_cog("ModeratorCog")
     logging.warning("Cog of %s removed!", __name__)

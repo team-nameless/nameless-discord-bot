@@ -6,12 +6,14 @@ from NamelessConfig import NamelessConfig
 
 __all__ = ["ExperimentalCog"]
 
+import nameless
+
 
 class ExperimentalCog(commands.Cog):
     pass
 
 
-async def setup(bot: commands.AutoShardedBot):
+async def setup(bot: nameless.Nameless):
     if getattr(NamelessConfig, "LAB", False):
         await bot.add_cog(ExperimentalCog(bot))
         logging.info("Cog of %s added!", __name__)
@@ -22,6 +24,6 @@ async def setup(bot: commands.AutoShardedBot):
         )
 
 
-async def teardown(bot: commands.AutoShardedBot):
+async def teardown(bot: nameless.Nameless):
     await bot.remove_cog("ExperimentalCog")
     logging.warning("Cog of %s removed!", __name__)

@@ -52,7 +52,6 @@ class Nameless(commands.AutoShardedBot):
         self.description = getattr(self.config_cls, "BOT_DESCRIPTION", "")
 
     def check_for_updates(self):
-
         if not self.allow_update_checks:
             self.global_logger.warning(
                 "Your bot might fall behind updates, consider setting allow_updates_check to True"
@@ -76,10 +75,10 @@ class Nameless(commands.AutoShardedBot):
                     "You are using a version NEWER than original code!"
                 )
 
-            # Write current version in case I forgot
-            with open("version.txt", "w", encoding="utf-8") as f:
-                logging.info("Writing current version into version.txt")
-                f.write(shared_vars.__nameless_current_version__)
+        # Write current version in case I forgot
+        with open("../version.txt", "w", encoding="utf-8") as f:
+            logging.info("Writing current version into version.txt")
+            f.write(shared_vars.__nameless_current_version__)
 
     async def __register_all_cogs(self):
         if cogs := getattr(self.config_cls, "COGS", []):

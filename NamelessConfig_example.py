@@ -32,7 +32,7 @@ class NamelessConfig:
     GUILD_IDs = []
 
     # Choose which cog(s) to load
-    # Available options:    NamelessConfig,
+    # Available options:    Config,
     #                       Experimental (requires `LAB` set as True),
     #                       General,
     #                       Moderator,

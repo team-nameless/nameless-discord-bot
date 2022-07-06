@@ -38,7 +38,7 @@ class Nameless(commands.AutoShardedBot):
             "log_level",
             logging.DEBUG if getattr(self.config_cls, "LAB", False) else logging.INFO,
         )
-        self.allow_update_checks: bool = kwargs.get("allow_updates_checks", False)
+        self.allow_updates_check: bool = kwargs.get("allow_updates_check", False)
         self.global_logger = logging.getLogger()
 
         self.loggers: List[logging.Logger] = [
@@ -52,7 +52,7 @@ class Nameless(commands.AutoShardedBot):
         self.description = getattr(self.config_cls, "BOT_DESCRIPTION", "")
 
     def check_for_updates(self):
-        if not self.allow_update_checks:
+        if not self.allow_updates_check:
             self.global_logger.warning(
                 "Your bot might fall behind updates, consider setting allow_updates_check to True"
             )

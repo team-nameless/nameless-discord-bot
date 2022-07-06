@@ -26,9 +26,9 @@ logging.getLogger().handlers[:] = [shared_vars.stdout_handler]
 class Nameless(commands.AutoShardedBot):
     def __init__(
         self,
+        *args,
         command_prefix,
         config_cls: Optional[Type] = None,
-        *args,
         **kwargs,
     ):
         super().__init__(command_prefix, *args, **kwargs)

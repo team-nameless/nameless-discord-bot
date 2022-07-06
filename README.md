@@ -5,6 +5,7 @@ A rewrite of [original nameless*](https://github.com/FoxeiZ/nameless), now with 
 [![Last Commit](https://badgen.net/github/last-commit/nameless-on-discord/nameless/main)]()
 [![Python](https://badgen.net/badge/Python/3.8%2B/)](https://python.org)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Latest tag](https://badgen.net/github/tag/nameless-on-discord/nameless)]()
 
 [![CodeFactor](https://www.codefactor.io/repository/github/nameless-on-discord/nameless/badge/main)](https://www.codefactor.io/repository/github/nameless-on-discord/nameless/overview/main)
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/Lilia-Workshop/nameless.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/nameless-on-discord/nameless/alerts/)
@@ -34,6 +35,8 @@ pip install -r requirements_core.txt
 
 - Lastly, run the `main.py` file:
 
+> :warning: Update checks are disabled by default, if you want to enable it, use flag `--allow-updates-check`
+
 ```shell
 python main.py -OO
 ```
@@ -51,6 +54,7 @@ See [CONTRIBUTING.md](https://github.com/Lilia-Workshop/nameless/blob/main/CONTR
 ## Oh look, there are branches!
 
 - `main`: Stable codes that is ready for production.
+- `dev`: Most codes will be pushed to here.
 - `feat/{name}`: New features that will be pushed to `main`
 - `fix/{#}` or `fix/{name}`: Bug fixes that will be pushed after passing checks.
 
@@ -63,5 +67,5 @@ See [CONTRIBUTING.md](https://github.com/Lilia-Workshop/nameless/blob/main/CONTR
 
 ## The team
 
-- [Swyrin](https://github.com/Swyreee).
+- [Swyrin](https://github.com/Swyreee)
 - [FoxeiZ](https://github.com/FoxeiZ)

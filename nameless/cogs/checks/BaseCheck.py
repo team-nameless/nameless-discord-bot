@@ -44,4 +44,4 @@ class BaseCheck:
 
             return True
 
-        return commands.check(pred)
+        return pred

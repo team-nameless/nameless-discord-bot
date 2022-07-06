@@ -4,9 +4,8 @@ from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
 
-from alembic import context
-
 import NamelessConfig
+from alembic import context
 from nameless.commons import Utility
 from nameless.database import Base
 
@@ -14,9 +13,9 @@ from nameless.database import Base
 # access to the values within the .ini file in use.
 config = context.config
 try:
-    url, a, b, c, d, e, f, g = Utility.get_db_url(NamelessConfig.NamelessConfig)
+    db_url, a, b, c, d, e, f, g = Utility.get_db_url(NamelessConfig.NamelessConfig)
 except ModuleNotFoundError:
-    url, a, b, c, d, e, f, g = Utility.get_db_url()
+    db_url, a, b, c, d, e, f, g = Utility.get_db_url()
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -24,7 +23,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-config.set_main_option("sqlalchemy.url", url)
+config.set_main_option("sqlalchemy.url", db_url)
 
 # add your model's MetaData object here
 # for 'autogenerate' support

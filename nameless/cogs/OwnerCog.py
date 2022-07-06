@@ -8,8 +8,8 @@ from discord.app_commands import Choice
 from discord.ext import commands
 
 import nameless
-from NamelessConfig import NamelessConfig
 from nameless import shared_vars
+from NamelessConfig import NamelessConfig
 
 __all__ = ["OwnerCog"]
 cogs_list = list(

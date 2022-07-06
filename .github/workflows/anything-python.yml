@@ -28,7 +28,7 @@ jobs:
 
       - name: Create dummy config file
         run: |
-          cp config_example.py config.py
+          cp NamelessConfig_example.py NamelessConfig.py
 
       - name: Run Pyright
         run: |

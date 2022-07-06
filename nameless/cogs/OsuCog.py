@@ -10,9 +10,9 @@ from DiscordUtils import Pagination
 from ossapi import GameMode, OssapiV2, Score, ScoreType, User, UserLookupKey
 
 import nameless
-from NamelessConfig import NamelessConfig
 from nameless import shared_vars
 from nameless.customs.DiscordWaiter import DiscordWaiter
+from NamelessConfig import NamelessConfig
 
 __all__ = ["OsuCog"]
 

@@ -10,8 +10,8 @@ from discord.ext import commands
 from discord_together.discordTogetherMain import defaultApplications
 
 import nameless
-from NamelessConfig import NamelessConfig
 from nameless import shared_vars
+from NamelessConfig import NamelessConfig
 
 __all__ = ["GeneralCog"]
 

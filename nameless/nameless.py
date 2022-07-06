@@ -2,7 +2,8 @@ import logging
 import os
 import sys
 from datetime import datetime
-from typing import List, Type, Optional
+from pathlib import Path
+from typing import List, Optional, Type
 
 import discord
 from discord.ext import commands
@@ -16,8 +17,6 @@ from nameless.database import CRUD
 from nameless.shared_vars import stdout_handler
 
 __all__ = ["Nameless"]
-
-from pathlib import Path
 
 os.chdir(Path(__file__).resolve().parent)
 logging.getLogger().handlers[:] = [shared_vars.stdout_handler]

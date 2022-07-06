@@ -1,5 +1,5 @@
-from NamelessConfig_example import NamelessConfig
 from nameless.commons import Utility
+from NamelessConfig_example import NamelessConfig
 
 
 class FakeConfig:

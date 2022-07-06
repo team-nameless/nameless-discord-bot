@@ -16,10 +16,10 @@ from discord.utils import escape_markdown
 from wavelink.ext import spotify
 
 import nameless
-from NamelessConfig import NamelessConfig
 from nameless import shared_vars
 from nameless.cogs.checks import MusicCogCheck
 from nameless.commons import Utility
+from NamelessConfig import NamelessConfig
 
 __all__ = ["MusicCog"]
 

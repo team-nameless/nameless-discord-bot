@@ -1,5 +1,6 @@
-from typing import Callable
+from typing import Callable, List
 
+import discord
 from discord.ext import commands
 
 __all__ = ["BaseCheck"]
@@ -15,7 +16,7 @@ class BaseCheck:
     def allow_help_message(check_fn: Callable[[commands.Context], bool]):
         """
         Bypasses command-specific checks.
-        Note: this is a decorator.
+        Note: this is a decorator for a check.
         """
 
         def pred(ctx: commands.Context, /, **kwargs) -> bool:
@@ -26,3 +27,21 @@ class BaseCheck:
             )
 
         return pred
+
+    @staticmethod
+    def require_intents(intents: List[discord.Intents]):
+        """
+        Require this command to have specific intent.
+        Note: this is a decorator for a command.
+        """
+
+        async def pred(ctx: commands.Context, /, **kwargs) -> bool:
+            set_intents = ctx.bot.intents
+
+            for intent in intents:
+                if (set_intents.value & intent.flag) != intent.flag:
+                    return False
+
+            return True
+
+        return commands.check(pred)

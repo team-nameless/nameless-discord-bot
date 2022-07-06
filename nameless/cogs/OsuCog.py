@@ -131,6 +131,8 @@ class OsuCog(commands.Cog):
         request: str,
         username: str,
         mode: str,
+        include_fails: bool,
+        count: int,
         is_from_context: bool = False,
     ):
         m = await ctx.send("Processing")
@@ -212,36 +214,34 @@ class OsuCog(commands.Cog):
             elif request == "recents":
                 request_type = ScoreType.RECENT
 
-            limit: int
             prompt: str
-            include_fails: bool
 
             # limit count
-            if not is_from_context:
+            if not is_from_context and ctx.bot.intents.message_content:
                 m = await m.edit(content="How many records do you want to get?")
 
                 try:
                     msg: discord.Message = await self.bot.wait_for(
                         "message", check=DiscordWaiter.message_waiter(ctx), timeout=30
                     )
-                    prompt = msg.content
+
+                    count = int(msg.content)
                     await msg.delete(delay=1.0)
                 except TimeoutError:
                     await m.edit(content="Timed out")
                     return
-            else:
-                prompt = "1"
-
-            try:
-                limit = int(prompt)
-            except ValueError:
-                await ctx.send(
-                    "Invalid number provided. Please correct then run again."
-                )
-                return
+                except ValueError:
+                    await ctx.send(
+                        "Invalid number provided. Please correct then run again."
+                    )
+                    return
 
             # fail inclusion prompt
-            if not is_from_context and request == "recents":
+            if (
+                not is_from_context
+                and request == "recents"
+                and ctx.bot.intents.message_content
+            ):
                 view = FailInclusionConfirmationView()
                 m = await m.edit(
                     content="Do you want to include fail scores?", view=view
@@ -253,11 +253,9 @@ class OsuCog(commands.Cog):
 
                 view.stop()
                 include_fails = view.is_confirmed
-            else:
-                include_fails = True
 
             scores: List[Score] = self.api.user_scores(
-                osu_user.id, request_type, include_fails, the_mode, limit
+                osu_user.id, request_type, include_fails, the_mode, count
             )
 
             if len(scores) == 0:
@@ -330,7 +328,11 @@ class OsuCog(commands.Cog):
     @osu.command()
     @commands.guild_only()
     @app_commands.describe(
-        member="Target member", request="Request type", mode="osu! mode"
+        member="Target member",
+        request="Request type",
+        mode="osu! mode",
+        include_fail="Whether to include fail records (only in 'recents')",
+        count="Records count (only in records queries)",
     )
     @app_commands.choices(
         mode=[Choice(name=k, value=k) for k in [*osu_modes, "default"]],
@@ -342,6 +344,8 @@ class OsuCog(commands.Cog):
         member: discord.Member,
         request: str = "profile",
         mode: str = "default",
+        include_fail: bool = True,
+        count: int = 1,
     ):
         """Check osu! profile of a member"""
         await ctx.defer()
@@ -356,12 +360,18 @@ class OsuCog(commands.Cog):
             request,
             dbu.osu_username,
             dbu.osu_mode if mode == "default" else mode,
+            include_fail,
+            count,
         )
 
     @osu.command()
     @commands.guild_only()
     @app_commands.describe(
-        username="osu! username", request="Request type", mode="osu! mode"
+        username="osu! username",
+        request="Request type",
+        mode="osu! mode",
+        include_fail="Whether to include fail records (only in 'recents')",
+        count="Records count (only in records queries)",
     )
     @app_commands.choices(
         mode=[Choice(name=k, value=k) for k in [*osu_modes, "default"]],
@@ -373,10 +383,12 @@ class OsuCog(commands.Cog):
         username: str,
         request: str = "profile",
         mode: str = "default",
+        include_fail: bool = True,
+        count: int = 1,
     ):
         """Check a custom osu! profile"""
         await ctx.defer()
-        await self.__generic_check(ctx, request, username, mode)
+        await self.__generic_check(ctx, request, username, mode, include_fail, count)
 
 
 async def setup(bot: nameless.Nameless):

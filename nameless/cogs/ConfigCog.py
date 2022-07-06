@@ -7,6 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 
 import nameless
+from nameless.cogs.checks import BaseCheck
 from nameless.shared_vars import crud_database
 from NamelessConfig import NamelessConfig
 
@@ -65,6 +66,7 @@ class ConfigCog(commands.Cog):
     @app_commands.checks.has_permissions(manage_guild=True)
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.describe(message="New welcome message")
+    @BaseCheck.require_intents([discord.Intents.members])
     async def set_welcome_message(
         self,
         ctx: commands.Context,
@@ -82,6 +84,7 @@ class ConfigCog(commands.Cog):
     @app_commands.checks.has_permissions(manage_guild=True)
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.describe(message="New goodbye message")
+    @BaseCheck.require_intents([discord.Intents.members])
     async def set_goodbye_message(
         self,
         ctx: commands.Context,
@@ -99,6 +102,7 @@ class ConfigCog(commands.Cog):
     @app_commands.checks.has_permissions(manage_guild=True)
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.describe(dest_channel="Goodbye message delivery channel")
+    @BaseCheck.require_intents([discord.Intents.members])
     async def set_goodbye_channel(
         self,
         ctx: commands.Context,
@@ -116,6 +120,7 @@ class ConfigCog(commands.Cog):
     @app_commands.checks.has_permissions(manage_guild=True)
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.describe(dest_channel="Welcome message delivery channel")
+    @BaseCheck.require_intents([discord.Intents.members])
     async def set_welcome_channel(
         self,
         ctx: commands.Context,
@@ -132,6 +137,7 @@ class ConfigCog(commands.Cog):
     @commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
     @commands.has_guild_permissions(manage_guild=True)
+    @BaseCheck.require_intents([discord.Intents.members])
     async def toggle_welcome(self, ctx: commands.Context):
         """Toggle welcome message delivery allowance"""
         await ctx.defer()
@@ -146,6 +152,7 @@ class ConfigCog(commands.Cog):
     @commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
     @commands.has_guild_permissions(manage_guild=True)
+    @BaseCheck.require_intents([discord.Intents.members])
     async def toggle_goodbye(self, ctx: commands.Context):
         """Toggle goodbye message delivery allowance"""
         await ctx.defer()

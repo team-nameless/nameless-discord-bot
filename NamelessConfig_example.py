@@ -14,11 +14,26 @@ class NamelessConfig:
     # Get it here: https://discord.com/developers/applications/{your-bot-id}/bot
     TOKEN: str = ""
 
-    # Choose when to receive message commands
-    # This will *potentially* slow down the bot if your bot is in many (large) guilds
-    RECEIVE_MESSAGE_COMMANDS: bool = True
+    # Choose when to receive texts
+    # This will potentially slow down the bot if your bot is in many (large) guilds
+    # This will decide whether the bot should:
+    # - Receive text commands
+    # - Receive response from prompts (will use default values)
+    # (Requires "MESSAGE CONTENT" intent to be enabled on bot dashboard if this sets to True)
+    # (Might require verification if the bot is over 100 guilds)
+    RECEIVE_TEXTS: bool = False
 
-    # Whether to receive mention prefix
+    # Choose when to receive member events
+    # This will potentially slow down the bot if your bot is in many (large) guilds
+    # This will decide whether the bot should:
+    # - Receive guild member event (for welcome/goodbye notifications)
+    # (Requires "GUILD MEMBERS" intent to be enabled on bot dashboard if this sets to True)
+    # (Might require verification if the bot is over 100 guilds)
+    RECEIVE_MEMBER_EVENTS: bool = True
+
+    # Choose when to receive mention prefix
+    # This is unaffected by the RECEIVE_TEXT setting since Discord allow mentions to the bot, despite "MESSAGE CONTENT"
+    # intent is disabled
     RECEIVE_MENTION_PREFIX: bool = True
 
     # Bot description

@@ -16,8 +16,8 @@ def main(args: List[str]):
         allow_mention = getattr(cfg, "RECEIVE_MENTION_PREFIX", False)
 
         intents = discord.Intents.default()
-        intents.message_content = True
-        intents.members = getattr(cfg, "RECEIVE_MESSAGE_COMMANDS", False)
+        intents.message_content = getattr(cfg, "RECEIVE_TEXTS", False)
+        intents.members = getattr(cfg, "RECEIVE_MEMBER_EVENTS", False)
 
         nameless = Nameless(
             config_cls=cfg,

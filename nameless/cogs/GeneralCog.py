@@ -50,7 +50,7 @@ class GeneralCog(commands.Cog):
 
         inv = await (
             await discord_together.DiscordTogether(  # pyright: ignore
-                NamelessConfig.TOKEN, debug=NamelessConfig.LAB
+                NamelessConfig.TOKEN, debug=getattr(NamelessConfig, "LAB", False)
             )
         ).create_link(voice_channel.id, target)
 
@@ -203,11 +203,8 @@ class GeneralCog(commands.Cog):
         support_inv = ""
 
         try:
-            if (
-                hasattr(NamelessConfig, "SUPPORT_SERVER_URL")
-                and NamelessConfig.SUPPORT_SERVER_URL
-            ):
-                inv = await self.bot.fetch_invite(NamelessConfig.SUPPORT_SERVER_URL)
+            if sp_url := getattr(NamelessConfig, "SUPPORT_SERVER_URL", ""):
+                inv = await self.bot.fetch_invite(sp_url)
                 support_inv = inv.url
         except NotFound:
             pass

@@ -1,6 +1,5 @@
 from typing import Callable, List
 
-import discord
 from discord.ext import commands
 
 __all__ = ["BaseCheck"]
@@ -29,7 +28,7 @@ class BaseCheck:
         return pred
 
     @staticmethod
-    def require_intents(intents: List[discord.Intents]):
+    def require_intents(intents: List):
         """
         Require this command to have specific intent.
         Note: this is a decorator for a command.

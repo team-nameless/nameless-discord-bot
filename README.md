@@ -5,12 +5,19 @@ A rewrite of [original nameless*](https://github.com/FoxeiZ/nameless), now with 
 [![Last Commit](https://badgen.net/github/last-commit/nameless-on-discord/nameless/main)]()
 [![Python](https://badgen.net/badge/Python/3.8%2B/)](https://python.org)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Latest tag](https://badgen.net/github/tag/nameless-on-discord/nameless)]()
+[![Latest tag](https://badgen.net/github/tag/nameless-on-discord/nameless?label=Latest%20Stable%20Version)]()
 
 [![CodeFactor](https://www.codefactor.io/repository/github/nameless-on-discord/nameless/badge/main)](https://www.codefactor.io/repository/github/nameless-on-discord/nameless/overview/main)
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/Lilia-Workshop/nameless.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/nameless-on-discord/nameless/alerts/)
 [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/Lilia-Workshop/nameless.svg?logo=lgtm&logoWidth=18)]()
-[![anything-python](https://badgen.net/github/checks/nameless-on-discord/nameless/main?label=Continuous%20Ingerations&icon=github)]()
+
+----------------------------------------
+
+## CI Status
+
+| Stable (main)                                                                                             | Development (dev)                                                                                      |
+|-----------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------|
+| [![MAIN CI](https://badgen.net/github/checks/nameless-on-discord/nameless/main?label=main&icon=github)]() | [![DEV CI](https://badgen.net/github/checks/nameless-on-discord/nameless/dev?label=dev&icon=github)]() |
 
 ----------------------------------------
 
@@ -41,7 +48,7 @@ pip install -r requirements_core.txt
 python main.py -OO
 ```
 
-- In case you encounter the `Target database is not up to date` problem:
+> In case you encounter the `Target database is not up to date` problem:
 
 ```shell
 alembic stamp head
@@ -53,8 +60,8 @@ See [CONTRIBUTING.md](https://github.com/Lilia-Workshop/nameless/blob/main/CONTR
 
 ## Oh look, there are branches!
 
-- `main`: Stable codes that is ready for production.
-- `dev`: Most codes will be pushed to here.
+- [main](https://github.com/nameless-on-discord/nameless/tree/main): Stable codes that is production-ready.
+- [dev](https://github.com/nameless-on-discord/nameless/tree/dev): Most up-to-date features will be pushed to here.
 - `feat/{name}`: New features that will be pushed to `main`
 - `fix/{#}` or `fix/{name}`: Bug fixes that will be pushed after passing checks.
 
@@ -69,3 +76,4 @@ See [CONTRIBUTING.md](https://github.com/Lilia-Workshop/nameless/blob/main/CONTR
 
 - [Swyrin](https://github.com/Swyreee)
 - [FoxeiZ](https://github.com/FoxeiZ)
+- And [all the contributors](https://github.com/nameless-on-discord/nameless/graphs/contributors)

@@ -200,7 +200,15 @@ class GeneralCog(commands.Cog):
             f"&scope=bot%20applications.commands"
         )
 
-        github_link = "https://github.com/nameless-on-discord/nameless"
+        nameless_meta = getattr(NamelessConfig, "META", {})
+        github_link = nameless_meta.get("github", None)
+        github_link = (
+            github_link
+            if github_link
+            else "https://github.com/nameless-on-discord/nameless"
+            if isinstance(github_link, str)
+            else "{github_link}"
+        )
         support_inv = ""
 
         try:
@@ -215,8 +223,12 @@ class GeneralCog(commands.Cog):
                 title="Something about me!",
                 color=discord.Color.orange(),
                 timestamp=datetime.datetime.now(),
-                description=f"I am a bot created from [nameless*]({github_link}) code made by Swyrin#7193 "
-                "and [FoxeiZ](https://github.com/FoxeiZ)",
+                description=getattr(
+                    NamelessConfig,
+                    "BOT_DESCRIPTION",
+                    "I am a bot created from [nameless*]({github_link}) code "
+                    f"made by Swyrin#7193 and [FoxeiZ](https://github.com/FoxeiZ)",
+                ).replace("{github_link}", github_link),
             )
             .set_thumbnail(url=ctx.bot.user.avatar.url)
             .add_field(name="Servers count", value=f"{servers_count}")
@@ -224,8 +236,7 @@ class GeneralCog(commands.Cog):
             .add_field(name="Last launch/Uptime", value=f"<t:{uptime}:R>")
             .add_field(
                 name="Bot version",
-                value=f"Current: {shared_vars.__nameless_current_version__}\n"
-                f"Latest: {shared_vars.__nameless_upstream_version__}",
+                value=shared_vars.__nameless_current_version__,
             )
             .add_field(
                 name="Library version", value=f"discord.py v{discord.__version__}"

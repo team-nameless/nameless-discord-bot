@@ -36,7 +36,16 @@ class NamelessConfig:
     # intent is disabled
     RECEIVE_MENTION_PREFIX: bool = True
 
+    # Metadata of the bot
+    META: Dict[str, Any] = {
+        # GitHub/any source control link
+        # Use None for closed source (like when you are having a private fork)
+        "github": "",
+    }
+
     # Bot description
+    # Available placeholders:   {github_link} - META[github], or "original nameless repo link" if META[github] is "".
+    #                                           If it is None, set to literal "{github_link}"
     BOT_DESCRIPTION: str = "Just a bot"
 
     # Support server url

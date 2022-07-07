@@ -12,6 +12,7 @@ on:
     branches:
       - main
       - dev
+  workflow_dispatch:
 
 jobs:
   run:

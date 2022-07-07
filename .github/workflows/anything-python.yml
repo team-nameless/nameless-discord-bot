@@ -1,10 +1,17 @@
-name: everything python
+name: anything python
 
 on:
   push:
+    tags-ignore:
+      - "*.*"
+    branches:
+      - dev
   pull_request:
+    tags-ignore:
+      - "*.*"
     branches:
       - main
+      - dev
 
 jobs:
   run:
@@ -51,6 +58,7 @@ jobs:
           pytest --cov-report term-missing --cov=nameless.database --cov=nameless.commons.Utility tests/
 
       - name: Deploy to server
+        if: ${{ github.ref == "refs/heads/dev" }}
         run: |
           sudo apt install sshpass -y
           echo pm2 restart ${{ secrets.INSTANCE_NAME }} > script.sh

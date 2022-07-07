@@ -1,6 +1,7 @@
 import datetime
 import logging
 from typing import List, Optional, Union
+from platform import python_version, python_implementation
 
 import discord
 import discord_together
@@ -228,6 +229,10 @@ class GeneralCog(commands.Cog):
             )
             .add_field(
                 name="Library version", value=f"discord.py v{discord.__version__}"
+            )
+            .add_field(
+                name="Python version",
+                value=f"{python_implementation()} {python_version()}",
             )
             .add_field(
                 name="Commands count", value=f"{len(list(self.bot.walk_commands()))}"

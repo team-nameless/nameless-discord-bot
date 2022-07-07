@@ -1,8 +1,14 @@
+import contextlib
+import datetime
+import io
 import logging
 import os
+import re
 import subprocess
 import sys
+import textwrap
 
+import discord.ui
 from discord import app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
@@ -12,6 +18,7 @@ from nameless import shared_vars
 from NamelessConfig import NamelessConfig
 
 __all__ = ["OwnerCog"]
+
 cogs_list = list(
     "nameless.cogs." + z.replace(".py", "")
     for z in filter(shared_vars.cogs_regex.match, os.listdir("cogs"))
@@ -90,6 +97,53 @@ class OwnerCog(commands.Cog):
         await ctx.send("See you soon!")
         logging.warning("Restarting using [%s %s]", sys.executable, " ".join(sys.argv))
         subprocess.run([sys.executable, *sys.argv], check=False)
+
+    @commands.is_owner()
+    @commands.hybrid_command(name="eval")
+    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
+    async def _eval(self, ctx: commands.Context, *, code: str):
+        """Evaluate some pieces of python code"""
+        await ctx.defer()
+        code = re.sub("```python|```py|```|`", "", code)
+
+        try:
+            with contextlib.redirect_stdout((out := io.StringIO())):
+                exec(
+                    f"async def func():\n{textwrap.indent(code, '    ')}",
+                    (
+                        t := {
+                            "discord": discord,
+                            "commands": commands,
+                            "bot": self.bot,
+                            "ctx": ctx,
+                            "channel": ctx.channel,
+                            "author": ctx.author,
+                            "guild": ctx.guild,
+                            "message": ctx.message,
+                        }
+                    ),
+                )
+
+                returns = await t["func"]()
+                result = f"{out.getvalue()}"
+        except RuntimeError as e:
+            result = e
+
+        result = str(result if result else "No Result")[:1024]
+        returns = str(returns)[:1024]
+
+        embed = (
+            discord.Embed(
+                title=f"Code result for {ctx.author}",
+                description=f"```\n{code}\n```",
+                timestamp=datetime.datetime.now(),
+                color=discord.Color.orange(),
+            )
+            .add_field(name="Result", value=result, inline=False)
+            .add_field(name="Return value", value=returns, inline=False)
+        )
+
+        await ctx.send(embed=embed)
 
 
 async def setup(bot: nameless.Nameless):

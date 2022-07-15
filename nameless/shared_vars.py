@@ -26,7 +26,7 @@ upstream_version_txt_url = (
 )
 start_time: datetime = datetime.min
 additional_handlers: List = []
-__nameless_current_version__ = "1.0.0"
+__nameless_current_version__ = "1.0.2"
 __nameless_upstream_version__ = requests.get(upstream_version_txt_url).text
 
 # Perms

@@ -12,12 +12,14 @@ on:
     branches:
       - main
       - dev
+  # Should be triggered manually when this is on main branch
   workflow_dispatch:
 
 jobs:
-  run:
+  dev-run:
+    if: ${{ github.ref }} == 'refs/heads/dev'
     runs-on: ubuntu-latest
-    name: CI on Python 3.8
+    name: Dev instance test, lint and publish
     steps:
       - uses: actions/checkout@v3
 
@@ -27,7 +29,6 @@ jobs:
           python-version: '3.8'
 
       - name: Install dependencies
-        id: install-deps
         run: |
           pip install --upgrade pip
           pip install --upgrade setuptools wheel
@@ -58,9 +59,19 @@ jobs:
         run: |
           pytest --cov-report term-missing --cov=nameless.database --cov=nameless.commons.Utility tests/
 
-      - name: Deploy to server
-        if: ${{ github.ref }} == 'refs/heads/dev'
+      - name: Deploy to server (dev)
         run: |
           sudo apt install sshpass -y
           echo pm2 restart ${{ secrets.INSTANCE_NAME }} > script.sh
+          sshpass -p ${{ secrets.SSH_PASSWORD }} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" < script.sh > /dev/null
+
+  stable-publish:
+    runs-on: ubuntu-latest
+    name: Stable instance publish
+    steps:
+      - name: Deploy to server (stable)
+        if: ${{ github.ref }} == 'refs/heads/main'
+        run: |
+          sudo apt install sshpass -y
+          echo pm2 restart ${{ secrets.STABLE_INSTANCE_NAME }} > script.sh
           sshpass -p ${{ secrets.SSH_PASSWORD }} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" < script.sh > /dev/null

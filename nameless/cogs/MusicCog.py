@@ -12,6 +12,7 @@ import wavelink
 from discord import ClientException, app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
+from discord.ext.commands import Range
 from discord.utils import escape_markdown
 from wavelink.ext import spotify
 
@@ -203,7 +204,7 @@ class MusicCog(commands.Cog):
 
         for idx, track in enumerate(tracks):
             upcoming = (
-                f"{idx} - "
+                f"{idx + 1} - "
                 f"[{escape_markdown(track.title)} by {escape_markdown(track.author)}]"  # pyright: ignore
                 f"({track.uri})\n"
             )
@@ -319,11 +320,12 @@ class MusicCog(commands.Cog):
     ):
         chn = player.guild.get_channel(getattr(player, "trigger_channel_id"))
 
-        if (
-            chn
-            and not getattr(player, "loop_sent")
-            and getattr(player, "play_now_allowed")
+        if getattr(player, "play_now_allowed") and (
+            (chn is not None and not getattr(player, "loop_sent"))
+            or (getattr(player, "should_send_play_now"))
         ):
+            setattr(player, "should_send_play_now", False)
+
             if track.is_stream():
                 await chn.send(f"Streaming music from {track.uri}")  # pyright: ignore
             else:
@@ -336,20 +338,25 @@ class MusicCog(commands.Cog):
         self, player: wavelink.Player, track: wavelink.Track, reason: str
     ):
         if getattr(player, "stop_sent"):
+            setattr(player, "stop_sent", False)
             return
 
         chn = player.guild.get_channel(getattr(player, "trigger_channel_id"))
 
+        is_loop = getattr(player, "loop_sent")
+        is_skip = getattr(player, "skip_sent")
+
         try:
-            if getattr(player, "loop_sent") and not getattr(player, "skip_sent"):
+            if is_loop and not is_skip:
                 setattr(
                     player, "loop_play_count", getattr(player, "loop_play_count") + 1
                 )
-            else:
+            elif is_loop and is_skip:
                 setattr(player, "loop_play_count", 0)
-                setattr(player, "loop_sent", False)
                 setattr(player, "skip_sent", False)
                 track = await player.queue.get_wait()  # pyright: ignore
+            elif is_skip and not is_loop:
+                track = await player.queue.get_wait()
 
             await self.__internal_play2(player, track.uri)  # pyright: ignore
         except wavelink.QueueEmpty:
@@ -414,6 +421,7 @@ class MusicCog(commands.Cog):
             setattr(vc, "skip_sent", False)
             setattr(vc, "stop_sent", False)
             setattr(vc, "loop_sent", False)
+            setattr(vc, "should_send_play_now", False)
             setattr(vc, "play_now_allowed", True)
             setattr(vc, "trigger_channel_id", ctx.channel.id)
             setattr(vc, "loop_play_count", 0)
@@ -477,7 +485,7 @@ class MusicCog(commands.Cog):
             return
 
         await vc.resume()
-        await ctx.send("Resuming")
+        await ctx.send("Resumed")
 
     @music.command()
     @commands.guild_only()
@@ -491,7 +499,7 @@ class MusicCog(commands.Cog):
         setattr(vc, "stop_sent", True)
 
         await vc.stop()
-        await ctx.send("Stopping")
+        await ctx.send("Stopped")
 
     @music.command()
     @commands.guild_only()
@@ -499,7 +507,7 @@ class MusicCog(commands.Cog):
     @commands.check(MusicCogCheck.bot_must_silent)
     @commands.check(MusicCogCheck.queue_has_element)
     async def play_queue(self, ctx: commands.Context):
-        """Play entire queue"""
+        """Play entire queue. Normally the queue should autoplay, but who knows?"""
         await ctx.defer()
 
         vc: wavelink.Player = ctx.voice_client  # pyright: ignore
@@ -517,15 +525,20 @@ class MusicCog(commands.Cog):
     @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
     @commands.check(MusicCogCheck.queue_has_element)
     async def skip(self, ctx: commands.Context):
-        """Skip a song. Remind you that the loop effect DOES NOT apply"""
+        """Skip a song."""
         await ctx.defer()
 
         vc: wavelink.Player = ctx.voice_client  # pyright: ignore
         track: wavelink.Track = vc.track  # pyright: ignore
 
         if await VoteMenu("skip", track.title, ctx, vc).start():
+            setattr(vc, "should_send_play_now", True)
+
             setattr(vc, "skip_sent", True)
             await vc.stop()
+            await ctx.send("Next track should be played now")
+        else:
+            await ctx.send("Not skipping because not enough votes!")
 
     @music.command()
     @commands.guild_only()
@@ -536,7 +549,7 @@ class MusicCog(commands.Cog):
     @app_commands.checks.has_permissions(manage_guild=True)
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
     @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
-    async def seek(self, ctx: commands.Context, pos: int = 0):
+    async def seek(self, ctx: commands.Context, pos: Range[int, 0] = 0):
         """Seek to a position in a track"""
         await ctx.defer()
 
@@ -563,7 +576,7 @@ class MusicCog(commands.Cog):
     @app_commands.checks.has_permissions(manage_guild=True)
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
     @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
-    async def seek_segment(self, ctx: commands.Context, segment: int = 0):
+    async def seek_segment(self, ctx: commands.Context, segment: Range[int, 0, 10] = 0):
         """Seek to a segment in a track"""
         await ctx.defer()
 
@@ -682,43 +695,24 @@ class MusicCog(commands.Cog):
 
     @queue.command()
     @commands.guild_only()
-    @app_commands.describe(
-        indexes="The indexes to remove (1-based), separated by comma"
-    )
+    @app_commands.describe(idx="The index to remove (1-based)")
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
     @commands.check(MusicCogCheck.queue_has_element)
-    async def delete(self, ctx: commands.Context, indexes: str):
-        """Remove tracks from queue atomically"""
+    async def delete(self, ctx: commands.Context, idx: Range[int, 1]):
+        """Remove track from queue"""
         await ctx.defer()
 
         vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-
-        positions = indexes.replace(" ", "").split(",")
-        result = ""
-        success_cnt = 0
         q = vc.queue._queue
 
-        for position in positions:
-            try:
-                pos = int(position)
-                if pos < 0:
-                    result += f"Invalid position: {pos}\n"
-                    continue
-
-                if not q[pos]:
-                    result += f"Already marked track #{pos} as deleted\n"
-                    continue
-
-                result += f"Marked track #{pos} as deleted\n"
-                success_cnt += 1
-                q[pos - 1] = None
-            except ValueError:
-                result += f"Invalid value: {position}\n"
+        deleted_track: wavelink.Track = q[idx - 1]
 
         vc.queue._queue = collections.deque([t for t in q if t])
-        await ctx.send(f"{result}\n{success_cnt} tracks deleted")
+        await ctx.send(
+            f"Deleted track at position #{idx}: **{deleted_track.title}** from **{deleted_track.author}**"
+        )
 
     @queue.command()
     @commands.guild_only()
@@ -857,7 +851,9 @@ class MusicCog(commands.Cog):
     @app_commands.checks.has_permissions(manage_guild=True)
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
     @commands.check(MusicCogCheck.queue_has_element)
-    async def move(self, ctx: commands.Context, before: int, after: int):
+    async def move(
+        self, ctx: commands.Context, before: Range[int, 1], after: Range[int, 1]
+    ):
         """Move track to new position"""
         await ctx.defer()
 
@@ -887,7 +883,9 @@ class MusicCog(commands.Cog):
     @app_commands.checks.has_permissions(manage_guild=True)
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
     @commands.check(MusicCogCheck.queue_has_element)
-    async def move_relative(self, ctx: commands.Context, pos: int, diff: int):
+    async def move_relative(
+        self, ctx: commands.Context, pos: Range[int, 1], diff: Range[int, 0]
+    ):
         """Move track to new position using relative difference"""
         await self.move(ctx, pos, pos + diff)
 
@@ -896,46 +894,31 @@ class MusicCog(commands.Cog):
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
     @commands.check(MusicCogCheck.queue_has_element)
     @app_commands.describe(
-        pos1='First track positions, separated by comma, covered by pair of "',
-        pos2='Second track positions, separated by comma, covered by pair of "',
+        pos1="First track position (1-indexed)",
+        pos2="Second track position (1-indexed)",
     )
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
-    async def swap(self, ctx: commands.Context, pos1: str, pos2: str):
-        """Swap two or more tracks. "swap "1,2,3" "4,5,6" will swap 1 with 4, 2 with 5, 4 with 6"""
+    async def swap(
+        self, ctx: commands.Context, pos1: Range[int, 1], pos2: Range[int, 1]
+    ):
+        """Swap two tracks."""
         await ctx.defer()
 
         vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-        int_q = vc.queue._queue
-        q_length = len(int_q)
+        q = vc.queue._queue
+        q_length = len(q)
 
-        a1 = pos1.replace(" ", "").split(",")
-        a2 = pos2.replace(" ", "").split(",")
-
-        if len(a1) != len(a2):
-            await ctx.send("Position counts are not equal")
+        if not (1 <= pos1 <= q_length and 1 <= pos2 <= q_length):
+            await ctx.send(f"Invalid position(s): ({pos1}, {pos2})")
             return
 
-        resp = ""
+        q[pos1 - 1], q[pos2 - 1] = (
+            q[pos2 - 1],
+            q[pos1 - 1],
+        )
 
-        for before, after in zip(a1, a2):
-            try:
-                before = int(before)
-                after = int(after)
-
-                if not (1 <= before <= q_length and 1 <= after <= q_length):
-                    resp += f"Invalid position(s): ({before}, {after})\n"
-                    continue
-
-                int_q[before - 1], int_q[after - 1] = (
-                    int_q[after - 1],
-                    int_q[before - 1],
-                )
-                resp += f"Swapped #{before} and #{after}\n"
-            except ValueError:
-                resp += f"Invalid pair: ({before}, {after})\n"
-
-        await ctx.send(resp[:996])
+        await ctx.send(f"Swapped track #{pos1} and #{pos2}")
 
     @queue.command()
     @commands.guild_only()

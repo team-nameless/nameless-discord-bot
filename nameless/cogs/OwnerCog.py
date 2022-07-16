@@ -107,7 +107,6 @@ class OwnerCog(commands.Cog):
         await ctx.defer()
         code = re.sub("```python|```py|```|`", "", code)
         returns = ""
-        results = ""
 
         try:
             with contextlib.redirect_stdout((out := io.StringIO())):

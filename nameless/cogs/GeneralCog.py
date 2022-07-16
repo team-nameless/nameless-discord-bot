@@ -227,7 +227,7 @@ class GeneralCog(commands.Cog):
                     NamelessConfig,
                     "BOT_DESCRIPTION",
                     "I am a bot created from [nameless*]({github_link}) code "
-                    f"made by Swyrin#7193 and [FoxeiZ](https://github.com/FoxeiZ)",
+                    "made by Swyrin#7193 and [FoxeiZ](https://github.com/FoxeiZ)",
                 ).replace("{github_link}", github_link),
             )
             .set_thumbnail(url=ctx.bot.user.avatar.url)

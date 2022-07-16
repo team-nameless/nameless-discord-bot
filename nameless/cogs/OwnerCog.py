@@ -8,6 +8,7 @@ import subprocess
 import sys
 import textwrap
 
+import discord
 import discord.ui
 from discord import app_commands
 from discord.app_commands import Choice
@@ -105,6 +106,8 @@ class OwnerCog(commands.Cog):
         """Evaluate some pieces of python code"""
         await ctx.defer()
         code = re.sub("```python|```py|```|`", "", code)
+        returns = ""
+        results = ""
 
         try:
             with contextlib.redirect_stdout((out := io.StringIO())):

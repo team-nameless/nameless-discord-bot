@@ -356,7 +356,7 @@ class MusicCog(commands.Cog):
                 setattr(player, "skip_sent", False)
                 track = await player.queue.get_wait()  # pyright: ignore
             elif is_skip and not is_loop:
-                track = await player.queue.get_wait()
+                track = await player.queue.get_wait()  # pyright: ignore
 
             await self.__internal_play2(player, track.uri)  # pyright: ignore
         except wavelink.QueueEmpty:

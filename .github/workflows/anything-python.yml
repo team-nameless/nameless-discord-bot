@@ -17,7 +17,7 @@ on:
 
 jobs:
   dev-run:
-    if: ${{ github.ref }} == 'refs/heads/dev'
+    if: ${{ github.ref == 'refs/heads/dev' }}
     runs-on: ubuntu-latest
     name: Dev instance test, lint and publish
     steps:
@@ -45,7 +45,7 @@ jobs:
 
       - name: Run flake8
         run: |
-          flake8
+          flake8 --select=E
 
       - name: Run pylint
         run: |
@@ -68,9 +68,9 @@ jobs:
   stable-publish:
     runs-on: ubuntu-latest
     name: Stable instance publish
+    if: ${{ github.ref == 'refs/heads/main' }}
     steps:
       - name: Deploy to server (stable)
-        if: ${{ github.ref }} == 'refs/heads/main'
         run: |
           sudo apt install sshpass -y
           echo pm2 restart ${{ secrets.STABLE_INSTANCE_NAME }} > script.sh

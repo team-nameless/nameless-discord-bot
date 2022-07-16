@@ -16,8 +16,7 @@ from discord.ext.commands import Range
 from discord.utils import escape_markdown
 from wavelink.ext import spotify
 
-import nameless
-from nameless import shared_vars
+from nameless import shared_vars, Nameless
 from nameless.cogs.checks import MusicCogCheck
 from nameless.commons import Utility
 from NamelessConfig import NamelessConfig
@@ -176,7 +175,7 @@ class TrackPickDropdown(discord.ui.Select):
 
 
 class MusicCog(commands.Cog):
-    def __init__(self, bot: nameless.Nameless):
+    def __init__(self, bot: Nameless):
         self.bot = bot
         self.can_use_spotify = bool(
             (sp := NamelessConfig.LAVALINK.get("spotify"))
@@ -972,7 +971,7 @@ class MusicCog(commands.Cog):
             await vc.play(vc.queue.get())
 
 
-async def setup(bot: nameless.Nameless):
+async def setup(bot: Nameless):
     if (lvl := getattr(NamelessConfig, "LAVALINK", None)) and lvl.get("nodes", []):
         await bot.add_cog(MusicCog(bot))
         logging.info("Cog of %s added!", __name__)
@@ -982,6 +981,6 @@ async def setup(bot: nameless.Nameless):
         )
 
 
-async def teardown(bot: nameless.Nameless):
+async def teardown(bot: Nameless):
     await bot.remove_cog("MusicCog")
     logging.warning("Cog of %s removed!", __name__)

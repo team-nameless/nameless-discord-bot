@@ -10,15 +10,14 @@ from discord.app_commands import Choice
 from discord.ext import commands
 from discord_together.discordTogetherMain import defaultApplications
 
-import nameless
-from nameless import shared_vars
+from nameless import shared_vars, Nameless
 from NamelessConfig import NamelessConfig
 
 __all__ = ["GeneralCog"]
 
 
 class GeneralCog(commands.Cog):
-    def __init__(self, bot: nameless.Nameless) -> None:
+    def __init__(self, bot: Nameless) -> None:
         self.bot = bot
 
     @commands.hybrid_command()
@@ -263,11 +262,11 @@ class GeneralCog(commands.Cog):
         await ctx.send(embed=embed)
 
 
-async def setup(bot: nameless.Nameless):
+async def setup(bot: Nameless):
     await bot.add_cog(GeneralCog(bot))
     logging.info("Cog of %s added!", __name__)
 
 
-async def teardown(bot: nameless.Nameless):
+async def teardown(bot: Nameless):
     await bot.remove_cog("GeneralCog")
     logging.warning("Cog of %s removed!", __name__)

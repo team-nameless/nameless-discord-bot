@@ -14,8 +14,7 @@ from discord import app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
 
-import nameless
-from nameless import shared_vars
+from nameless import shared_vars, Nameless
 from NamelessConfig import NamelessConfig
 
 __all__ = ["OwnerCog"]
@@ -27,7 +26,7 @@ cogs_list = list(
 
 
 class OwnerCog(commands.Cog):
-    def __init__(self, bot: nameless.Nameless):
+    def __init__(self, bot: Nameless):
         self.bot = bot
 
     @commands.is_owner()
@@ -148,11 +147,11 @@ class OwnerCog(commands.Cog):
         await ctx.send(embed=embed)
 
 
-async def setup(bot: nameless.Nameless):
+async def setup(bot: Nameless):
     await bot.add_cog(OwnerCog(bot))
     logging.info("Cog of %s added!", __name__)
 
 
-async def teardown(bot: nameless.Nameless):
+async def teardown(bot: Nameless):
     await bot.remove_cog("OwnerCog")
     logging.warning("Cog of %s removed!", __name__)

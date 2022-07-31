@@ -340,7 +340,7 @@ class MusicCog(commands.Cog):
                     if bot_player:
                         logging.debug(
                             "Guild player %s still connected even if it is removed from voice, disconnecting",
-                            bot_player.guild.id,
+                            bot_player[0].guild.id,
                         )
                         await bot_player[0].disconnect()
 

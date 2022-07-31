@@ -1,0 +1,12 @@
+{
+	"recommendations": [
+		"hbenl.vscode-test-explorer",
+		"ms-vscode.test-adapter-converter",
+		"KevinRose.vsc-python-indent",
+		"tamasfe.even-better-toml",
+		"ms-python.python",
+		"ms-python.vscode-pylance",
+		"DavidAnson.vscode-markdownlint",
+		"littlefoxteam.vscode-python-test-adapter"
+	],
+}

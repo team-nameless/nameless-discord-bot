@@ -314,7 +314,12 @@ class MusicCog(commands.Cog):
         logging.info("Node {%s} (%s) is ready!", node.identifier, node.host)
 
     @commands.Cog.listener()
-    async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
+    async def on_voice_state_update(
+        self,
+        member: discord.Member,
+        before: discord.VoiceState,
+        after: discord.VoiceState,
+    ):
         # Technically auto disconnect the bot from lavalink
         # Sometimes on manual disconnection
         if member.id == self.bot.user.id:
@@ -323,11 +328,20 @@ class MusicCog(commands.Cog):
 
             if before_was_in_voice and after_not_in_noice:
                 node_dict = wavelink.NodePool._nodes.items()
-                guilds_players = [p for (_, node) in node_dict if (p := node.get_player(member.guild))]
+                guilds_players = [
+                    p for (_, node) in node_dict if (p := node.get_player(member.guild))
+                ]
                 if guilds_players:
-                    bot_player = [player for player in guilds_players if player.client.user.id == self.bot.user.id]
+                    bot_player = [
+                        player
+                        for player in guilds_players
+                        if player.client.user.id == self.bot.user.id
+                    ]
                     if bot_player:
-                        logging.debug("Guild player %s still connected even if it is removed from voice, disconnecting", bot_player.guild.id)
+                        logging.debug(
+                            "Guild player %s still connected even if it is removed from voice, disconnecting",
+                            bot_player.guild.id,
+                        )
                         await bot_player[0].disconnect()
 
     @commands.Cog.listener()

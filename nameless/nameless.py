@@ -128,13 +128,14 @@ class Nameless(commands.AutoShardedBot):
 
         if status := getattr(self.config_cls, "STATUS", {}):
             logging.info("Setting presence")
+            url = status.get("url", None)
 
             await self.change_presence(
                 status=status.get("user_status", discord.Status.online),
                 activity=discord.Activity(
                     type=status.get("type", discord.ActivityType.playing),
                     name=status.get("name", "something"),
-                    url=status.get("url", ""),
+                    url=url if url else None,
                 ),
             )
         else:

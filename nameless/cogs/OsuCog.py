@@ -9,9 +9,8 @@ from discord.ext import commands
 from DiscordUtils import Pagination
 from ossapi import GameMode, OssapiV2, Score, ScoreType, User, UserLookupKey
 
-from nameless import shared_vars, Nameless
+from nameless import Nameless, shared_vars
 from nameless.customs.DiscordWaiter import DiscordWaiter
-from NamelessConfig import NamelessConfig
 
 __all__ = ["OsuCog"]
 
@@ -63,11 +62,12 @@ class OsuCog(commands.Cog):
     def __init__(self, bot: Nameless):
         self.bot = bot
         self.api = OssapiV2(
-            NamelessConfig.OSU["client_id"], NamelessConfig.OSU["client_secret"]
+            shared_vars.config_cls.OSU["client_id"],
+            shared_vars.config_cls.OSU["client_secret"],
         )
 
     @commands.hybrid_group(fallback="get")
-    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
+    @app_commands.guilds(*getattr(shared_vars.config_cls, "GUILD_IDs", []))
     async def osu(self, ctx: commands.Context, member: Optional[discord.Member]):
         """View someone's osu! *linked* profile"""
         await ctx.defer()
@@ -392,7 +392,7 @@ class OsuCog(commands.Cog):
 
 async def setup(bot: Nameless):
     if (
-        (osu := getattr(NamelessConfig, "OSU", None))
+        (osu := getattr(shared_vars.config_cls, "OSU", None))
         and osu.get("client_id", "")
         and osu.get("client_secret", "")
     ):

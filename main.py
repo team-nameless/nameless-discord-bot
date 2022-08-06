@@ -6,12 +6,22 @@ import discord
 from discord.ext import commands
 
 import NamelessConfig
-from nameless import Nameless
+from nameless import Nameless, shared_vars
+
+UPDATE_CHECK_FLAG = "--allow-updates-check"
+CONFIG_CLASS_FLAG = "--config_class"
 
 
 def main(args: List[str]):
     try:
-        cfg = NamelessConfig.NamelessConfig
+        cls_arg = [arg for arg in args if arg.startswith(f"{CONFIG_CLASS_FLAG}=")]
+
+        if cls_arg:
+            cfg = __import__(cls_arg[0][len(f"{CONFIG_CLASS_FLAG}=") :]).NamelessConfig
+        else:
+            cfg = NamelessConfig.NamelessConfig
+
+        shared_vars.config_cls = cfg
         prefixes = getattr(cfg, "PREFIXES", [])
         allow_mention = getattr(cfg, "RECEIVE_MENTION_PREFIX", False)
 
@@ -25,7 +35,7 @@ def main(args: List[str]):
             command_prefix=commands.when_mentioned_or(*prefixes)
             if allow_mention
             else prefixes,
-            allow_updates_check="--allow-updates-check" in args,
+            allow_updates_check=UPDATE_CHECK_FLAG in args,
             description=getattr(cfg, "BOT_DESCRIPTION", ""),
         )
 

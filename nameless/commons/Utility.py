@@ -2,14 +2,12 @@ import logging
 from typing import Optional, Tuple, Type
 from urllib.parse import quote_plus as qp, urlparse
 
-import NamelessConfig_example
-
 __all__ = ["Utility"]
 
 
 class Utility:
     """
-    List of utilities that aid the further developments of this project.
+    Utilities that aid the further developments of this project.
     """
 
     @staticmethod
@@ -78,44 +76,3 @@ class Utility:
     @staticmethod
     def is_an_url(url: str) -> bool:
         return urlparse(url).netloc != ""
-
-    @staticmethod
-    def is_valid_config_class(config_cls: Type) -> Optional[bool]:
-        """
-        Validate config class.
-
-        True if Nameless can proceed to run.
-        None if Nameless can proceed to run with warnings.
-        False if Nameless can not proceed to run.
-        """
-        try:
-            current_fields = list(
-                filter(lambda x: x[0:2] != "__", config_cls.__dict__.keys())
-            )
-            available_fields = list(
-                filter(
-                    lambda x: x[0:2] != "__",
-                    NamelessConfig_example.NamelessConfig.__dict__.keys(),
-                )
-            )
-
-            important_fields = ["TOKEN"]
-
-            for field in important_fields:
-                if field not in current_fields:
-                    logging.error(
-                        "Missing important field %s in %s", field, config_cls.__name__
-                    )
-                    return False
-
-            result = True
-
-            for field in available_fields:
-                if field not in current_fields:
-                    logging.warning("Missing %s in %s", field, config_cls.__name__)
-                    result = None
-
-            return result
-        except AttributeError as err:
-            logging.error("Something bad happened", exc_info=err)
-            return False

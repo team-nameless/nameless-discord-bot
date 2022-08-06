@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional
 
 import discord
+from typing_extensions import LiteralString
 
 __all__ = ["NamelessConfig"]
 
@@ -11,8 +12,9 @@ class NamelessConfig:
     LAB: bool = False
 
     # Bot token
-    # Get it here: https://discord.com/developers/applications/{your-bot-id}/bot
-    TOKEN: str = ""
+    # Go to here: https://discord.com/developers/applications/
+    # Then pick your client, then go to Bot->Copy Token
+    TOKEN: LiteralString = ""
 
     # Choose when to receive texts
     # This will potentially slow down the bot if your bot is in many (large) guilds
@@ -37,23 +39,28 @@ class NamelessConfig:
     RECEIVE_MENTION_PREFIX: bool = True
 
     # Metadata of the bot
-    META: Dict[str, Any] = {
-        # GitHub/any source control link
-        # Use None for closed source (like when you are having a private fork)
-        "github": "",
+    META: Dict[LiteralString, Any] = {
+        # Any source control link
+        # Use falsy values for closed source (like when you have a private fork), but remember to comply the license.
+        "source_code": "https://github.com/nameless-on-discord/nameless",
+        # A link leading to the raw version.txt file, used for latest version checking
+        # If this is a falsy value, https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt
+        "version_txt": "https://raw.githubusercontent.com/nameless-on-discord/nameless/feat/v2/version.txt",
+        # Bot support server URL
+        # This should be a valid Discord invite URL, or a URL that leads to a valid Discord invite URL
+        "support_server_url": "",
+        # Bot custom version, should be a string:
+        # Falsy value will use the value provided in nameless/shared_vars.py
+        "version": None,
+        # Bot description
+        # Placeholders: {source_code} - META[source_code], or "original nameless repo" if META[source_code] is ""
+        #                               If it was set to None, set to literal "{github_link}"
+        "bot_description": "Just a bot",
     }
-
-    # Bot description
-    # Available placeholders:   {github_link} - META[github], or "original nameless repo link" if META[github] is "".
-    #                                           If it is None, set to literal "{github_link}"
-    BOT_DESCRIPTION: str = "Just a bot"
-
-    # Support server url
-    SUPPORT_SERVER_URL: str = "https://example.com"
 
     # Guild IDs to register commands
     # Leave empty array for global (slash commands takes one hour to mitigate, text takes immediately)
-    GUILD_IDs = []
+    GUILD_IDs: List[int] = []
 
     # Choose which cog(s) to load
     # Available options:    Config,
@@ -63,14 +70,21 @@ class NamelessConfig:
     #                       Music (requires `LAVALINK` to be properly provided),
     #                       Osu (requires `OSU` to be properly provided),
     #                       Owner
-    COGS: List[str] = ["Music", "Osu", "General"]
+    COGS: List[LiteralString] = [
+        "Music",
+        "Owner",
+        "General",
+        "Config",
+        "Moderator",
+        "Osu",
+    ]
 
     # Guild prefixes for text commands
-    PREFIXES: List[str] = ["aprefix."]
+    PREFIXES: List[LiteralString] = ["nameless."]
 
     # Bot status
     # For example: "Playing with me"
-    STATUS: Dict[str, Any] = {
+    STATUS: Dict[LiteralString, Any] = {
         # Allowed: watching, competing, playing, listening, streaming
         "type": discord.ActivityType.watching,
         "name": "you",
@@ -85,19 +99,18 @@ class NamelessConfig:
     # Please note: Install driver BY YOURSELF if NOT using SQLite.
     # For example with PostgreSQL: pip install psycopg2-binary, then use "psycopg2" as "driver" below.
     # If you are too lazy to set this, leave this as default.
-    DATABASE: Optional[Dict[str, Any]] = {
+    DATABASE: Optional[Dict[LiteralString, Any]] = {
         "dialect": "sqlite",
         "driver": "",
         "username": "",
         "password": "",
         "host": "",
         "port": None,
-        # ${instance_name} will be replaced by the instance name if running multiple instances
         "db_name": "nameless.db",
     }
 
     # Configurations for Lavalink servers for music commands
-    LAVALINK: Dict[str, Any] = {
+    LAVALINK: Dict[LiteralString, Any] = {
         # Your lavalink node configurations
         # Each node config is a dictionary with the following keys:
         #   host (str),
@@ -115,7 +128,7 @@ class NamelessConfig:
 
     # Configurations for osu! commands
     # How-to: https://osu.ppy.sh/docs/index.html#client-credentials-grant
-    OSU: Dict[str, Any] = {
+    OSU: Dict[LiteralString, Any] = {
         "client_id": 0,
         "client_secret": "",
     }

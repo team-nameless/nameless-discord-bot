@@ -8,3 +8,4 @@ wavelink
 alembic
 packaging
 requests
+typing_extensions

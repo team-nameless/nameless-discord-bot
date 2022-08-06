@@ -7,5 +7,5 @@ DiscordUtils
 wavelink
 alembic
 packaging
-requests
+aiohttp
 typing_extensions

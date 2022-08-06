@@ -4,8 +4,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Type
 
+import aiohttp
 import discord
-import requests
 from discord.ext import commands
 from discord.ext.commands import ExtensionFailed, errors
 from packaging import version
@@ -109,7 +109,10 @@ class Nameless(commands.AutoShardedBot):
     async def on_shard_ready(self, shard_id: int):
         logging.info("Shard #%s is ready", shard_id)
 
-    async def on_ready(self):
+    async def setup_hook(self) -> None:
+        await self.construct_shared_vars()
+        self.check_for_updates()
+
         logging.info("Registering commands")
         await self.__register_all_cogs()
 
@@ -125,6 +128,7 @@ class Nameless(commands.AutoShardedBot):
                 "Please wait at least one hour before using global commands"
             )
 
+    async def on_ready(self):
         if status := getattr(self.bot_config, "STATUS", {}):
             logging.info("Setting presence")
             url = status.get("url", None)
@@ -233,7 +237,7 @@ class Nameless(commands.AutoShardedBot):
                     logger.parent.handlers.append(handler)
                 logger.parent.propagate = False
 
-    def construct_shared_vars(self):
+    async def construct_shared_vars(self):
         """
         Constructs variables to shared_vars.py.
         """
@@ -251,14 +255,19 @@ class Nameless(commands.AutoShardedBot):
             meta.get("version_txt", None)
             or "https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt"
         )
-        shared_vars.__nameless_upstream_version__ = requests.get(
-            shared_vars.upstream_version_txt_url
-        ).text
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(shared_vars.upstream_version_txt_url) as response:
+                if 200 <= response.status <= 299:
+                    shared_vars.__nameless_upstream_version__ = await response.text()
+                else:
+                    logging.warning(
+                        "Upstream version fetching error, using 0.0.0 as upstream version"
+                    )
+                    shared_vars.__nameless_upstream_version__ = "0.0.0"
 
     def start_bot(self):
         self.patch_loggers()
-        self.construct_shared_vars()
-        self.check_for_updates()
 
         logging.info(
             "Using %s as config class",

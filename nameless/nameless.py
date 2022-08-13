@@ -16,6 +16,7 @@ from nameless.commons import Utility
 from nameless.database import CRUD
 from nameless.shared_vars import stdout_handler
 
+
 __all__ = ["Nameless"]
 
 os.chdir(Path(__file__).resolve().parent)

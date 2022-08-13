@@ -13,6 +13,7 @@ from discord_together.discordTogetherMain import defaultApplications
 from nameless import Nameless, shared_vars
 from NamelessConfig import NamelessConfig
 
+
 __all__ = ["GeneralCog"]
 
 

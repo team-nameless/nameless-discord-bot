@@ -2,6 +2,7 @@ from typing import Any, Dict, List, Optional
 
 import discord
 
+
 __all__ = ["NamelessConfig"]
 
 

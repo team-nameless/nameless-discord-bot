@@ -21,6 +21,7 @@ from nameless.cogs.checks import MusicCogCheck
 from nameless.commons import Utility
 from NamelessConfig import NamelessConfig
 
+
 __all__ = ["MusicCog"]
 
 music_default_sources: List[str] = ["youtube", "soundcloud", "ytmusic"]

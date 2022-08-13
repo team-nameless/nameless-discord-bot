@@ -10,6 +10,7 @@ from discord import Permissions
 from nameless import customs
 from nameless.database import CRUD
 
+
 # Database setup
 crud_database: CRUD
 

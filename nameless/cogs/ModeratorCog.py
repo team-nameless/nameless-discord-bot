@@ -10,6 +10,7 @@ from nameless.customs.DiscordWaiter import DiscordWaiter
 from nameless.shared_vars import crud_database
 from NamelessConfig import NamelessConfig
 
+
 __all__ = ["ModeratorCog"]
 
 

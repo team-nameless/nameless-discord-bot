@@ -17,6 +17,7 @@ from discord.ext import commands
 from nameless import Nameless, shared_vars
 from NamelessConfig import NamelessConfig
 
+
 __all__ = ["OwnerCog"]
 
 cogs_list = list(

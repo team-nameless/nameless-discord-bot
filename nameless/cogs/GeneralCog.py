@@ -1,7 +1,7 @@
 import datetime
 import logging
+from platform import python_implementation, python_version
 from typing import List, Optional, Union
-from platform import python_version, python_implementation
 
 import discord
 import discord_together
@@ -9,9 +9,9 @@ from discord import NotFound, app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
 from discord_together.discordTogetherMain import defaultApplications
-
-from nameless import shared_vars, Nameless
 from NamelessConfig import NamelessConfig
+
+from nameless import Nameless, shared_vars
 
 __all__ = ["GeneralCog"]
 
@@ -22,12 +22,8 @@ class GeneralCog(commands.Cog):
 
     @commands.hybrid_command()
     @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
-    @app_commands.describe(
-        target="Your desired activity", voice_channel="Target voice channel"
-    )
-    @app_commands.choices(
-        target=[Choice(name=k, value=k) for k, _ in defaultApplications.items()]
-    )
+    @app_commands.describe(target="Your desired activity", voice_channel="Target voice channel")
+    @app_commands.choices(target=[Choice(name=k, value=k) for k, _ in defaultApplications.items()])
     @commands.guild_only()
     async def create_activity(
         self,
@@ -41,9 +37,7 @@ class GeneralCog(commands.Cog):
             voice_channel = ctx.author.voice.channel  # pyright: ignore
 
         if not voice_channel:
-            await ctx.send(
-                "You need to be in a voice channel, or provide a voice channel for me"
-            )
+            await ctx.send("You need to be in a voice channel, or provide a voice channel for me")
             return
 
         msg = await ctx.send("Generating link")
@@ -54,9 +48,7 @@ class GeneralCog(commands.Cog):
             )
         ).create_link(voice_channel.id, target)
 
-        await msg.edit(
-            content=f"Here is your link of {target} for {voice_channel.mention}: {inv}"
-        )
+        await msg.edit(content=f"Here is your link of {target} for {voice_channel.mention}: {inv}")
 
     @commands.hybrid_command()
     @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
@@ -74,14 +66,10 @@ class GeneralCog(commands.Cog):
         account_create_date = member.created_at
         join_date = member.joined_at  # pyright: ignore
 
-        flags = [
-            flag.replace("_", " ").title() for flag, has in member.public_flags if has
-        ]
+        flags = [flag.replace("_", " ").title() for flag, has in member.public_flags if has]
 
         # should add to cache if possible
-        mutual_guilds: List[str] = [
-            g.name for g in ctx.bot.guilds if g.get_member(member.id)
-        ]
+        mutual_guilds: List[str] = [g.name for g in ctx.bot.guilds if g.get_member(member.id)]
 
         embed = (
             discord.Embed(
@@ -127,13 +115,7 @@ class GeneralCog(commands.Cog):
         bots_count = len([member for member in members if member.bot])
         humans_count = len([member for member in members if not member.bot])
         total_count = bots_count + humans_count
-        public_threads_count = len(
-            [
-                thread
-                for thread in guild.threads  # pyright: ignore
-                if not thread.is_private()
-            ]
-        )
+        public_threads_count = len([thread for thread in guild.threads if not thread.is_private()])  # pyright: ignore
         events = guild.scheduled_events  # pyright: ignore
         boosters_count = len(guild.premium_subscribers)  # pyright: ignore
         boosts_count = guild.premium_subscription_count  # pyright: ignore
@@ -149,29 +131,21 @@ class GeneralCog(commands.Cog):
                 title=f"Something about '{guild.name}'",  # pyright: ignore
                 color=discord.Color.orange(),
             )
-            .set_thumbnail(
-                url=guild.banner.url if guild.banner else ""  # pyright: ignore
-            )
+            .set_thumbnail(url=guild.banner.url if guild.banner else "")  # pyright: ignore
             .add_field(
                 name="Guild creation date",
                 value=f"<t:{int(guild_create_date.timestamp())}:R>",
             )
             .add_field(
                 name="Member(s)",
-                value=f"Bot(s): {bots_count}\n"
-                f"Human(s): {humans_count}\n"
-                f"Total: {total_count}",
+                value=f"Bot(s): {bots_count}\n" f"Human(s): {humans_count}\n" f"Total: {total_count}",
             )
             .add_field(
                 name="Channel(s)",
                 value=f"{len(guild.channels)} channel(s) - {public_threads_count} public thread(s)",  # pyright: ignore
             )
-            .add_field(
-                name="Role(s) count", value=str(len(guild.roles))  # pyright: ignore
-            )
-            .add_field(
-                name="Pending event(s) count", value=f"{len(events)} pending event(s)"
-            )
+            .add_field(name="Role(s) count", value=str(len(guild.roles)))  # pyright: ignore
+            .add_field(name="Pending event(s) count", value=f"{len(events)} pending event(s)")
             .add_field(
                 name="Boost(s)",
                 value=f"{boosts_count} boost(s) from {boosters_count} booster(s) reaching lvl. {boost_lvl}"
@@ -237,16 +211,12 @@ class GeneralCog(commands.Cog):
                 name="Bot version",
                 value=shared_vars.__nameless_current_version__,
             )
-            .add_field(
-                name="Library version", value=f"discord.py v{discord.__version__}"
-            )
+            .add_field(name="Library version", value=f"discord.py v{discord.__version__}")
             .add_field(
                 name="Python version",
                 value=f"{python_implementation()} {python_version()}",
             )
-            .add_field(
-                name="Commands count", value=f"{len(list(self.bot.walk_commands()))}"
-            )
+            .add_field(name="Commands count", value=f"{len(list(self.bot.walk_commands()))}")
             .add_field(
                 name="Invite link",
                 value=f"[Click this]({bot_inv}) or click me then 'Add to Server'"

@@ -56,12 +56,8 @@ class Utility:
         vport: str = qp(f":{'*' * len(str(port))}", safe=":") if port else ""
         vhost: str = "*" * len(host) if host else ""
 
-        finish_url = (
-            f"{dialect}{pdriver}://{username}{ppassword}{at}{host}{pport}/{db_name}"
-        )
-        hidden_url = (
-            f"{dialect}{pdriver}://{username}{vpassword}{at}{vhost}{vport}/{db_name}"
-        )
+        finish_url = f"{dialect}{pdriver}://{username}{ppassword}{at}{host}{pport}/{db_name}"
+        hidden_url = f"{dialect}{pdriver}://{username}{vpassword}{at}{vhost}{vport}/{db_name}"
         logging.info("Using %s as database URL", hidden_url)
 
         return (
@@ -89,9 +85,7 @@ class Utility:
         False if Nameless can not proceed to run.
         """
         try:
-            current_fields = list(
-                filter(lambda x: x[0:2] != "__", config_cls.__dict__.keys())
-            )
+            current_fields = list(filter(lambda x: x[0:2] != "__", config_cls.__dict__.keys()))
             available_fields = list(
                 filter(
                     lambda x: x[0:2] != "__",
@@ -103,9 +97,7 @@ class Utility:
 
             for field in important_fields:
                 if field not in current_fields:
-                    logging.error(
-                        "Missing important field %s in %s", field, config_cls.__name__
-                    )
+                    logging.error("Missing important field %s in %s", field, config_cls.__name__)
                     return False
 
             result = True

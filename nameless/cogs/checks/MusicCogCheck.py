@@ -15,9 +15,7 @@ class MusicCogCheck(BaseCheck):
     @staticmethod
     @BaseCheck.allow_help_message
     def bot_must_play_track_not_stream(ctx: commands.Context):
-        return MusicCogCheck.bot_must_play_something(
-            ctx
-        ) and MusicCogCheck.must_not_be_a_stream(ctx)
+        return MusicCogCheck.bot_must_play_something(ctx) and MusicCogCheck.must_not_be_a_stream(ctx)
 
     @staticmethod
     @BaseCheck.allow_help_message

@@ -7,11 +7,11 @@ from discord import Color, app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
 from DiscordUtils import Pagination
+from NamelessConfig import NamelessConfig
 from ossapi import GameMode, OssapiV2, Score, ScoreType, User, UserLookupKey
 
-from nameless import shared_vars, Nameless
+from nameless import Nameless, shared_vars
 from nameless.customs.DiscordWaiter import DiscordWaiter
-from NamelessConfig import NamelessConfig
 
 __all__ = ["OsuCog"]
 
@@ -44,9 +44,7 @@ class FailInclusionConfirmationView(discord.ui.View):
         self.is_confirmed = False
 
     @discord.ui.button(label="Yep!", style=discord.ButtonStyle.green)  # pyright: ignore
-    async def confirm(
-        self, button: discord.ui.Button, interaction: discord.Interaction
-    ):
+    async def confirm(self, button: discord.ui.Button, interaction: discord.Interaction):
         self.is_confirmed = True
         self.stop()
 
@@ -62,18 +60,14 @@ class FailInclusionConfirmationView(discord.ui.View):
 class OsuCog(commands.Cog):
     def __init__(self, bot: Nameless):
         self.bot = bot
-        self.api = OssapiV2(
-            NamelessConfig.OSU["client_id"], NamelessConfig.OSU["client_secret"]
-        )
+        self.api = OssapiV2(NamelessConfig.OSU["client_id"], NamelessConfig.OSU["client_secret"])
 
     @commands.hybrid_group(fallback="get")
     @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
     async def osu(self, ctx: commands.Context, member: Optional[discord.Member]):
         """View someone's osu! *linked* profile"""
         await ctx.defer()
-        dbu, _ = shared_vars.crud_database.get_or_create_user_record(
-            member if member else ctx.author
-        )
+        dbu, _ = shared_vars.crud_database.get_or_create_user_record(member if member else ctx.author)
 
         if not dbu.osu_username:
             await ctx.send("This user did not link with me")
@@ -104,9 +98,7 @@ class OsuCog(commands.Cog):
 
     @osu.command()
     @commands.guild_only()
-    @app_commands.describe(
-        member="Target member", username="osu! username", mode="osu! mode"
-    )
+    @app_commands.describe(member="Target member", username="osu! username", mode="osu! mode")
     @app_commands.choices(mode=[Choice(name=k, value=k) for k in osu_modes])
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
@@ -230,21 +222,13 @@ class OsuCog(commands.Cog):
                     await m.edit(content="Timed out")
                     return
                 except ValueError:
-                    await ctx.send(
-                        "Invalid number provided. Please correct then run again."
-                    )
+                    await ctx.send("Invalid number provided. Please correct then run again.")
                     return
 
             # fail inclusion prompt
-            if (
-                not is_from_context
-                and request == "recents"
-                and ctx.bot.intents.message_content
-            ):
+            if not is_from_context and request == "recents" and ctx.bot.intents.message_content:
                 view = FailInclusionConfirmationView()
-                m = await m.edit(
-                    content="Do you want to include fail scores?", view=view
-                )
+                m = await m.edit(content="Do you want to include fail scores?", view=view)
 
                 if await view.wait():
                     await m.edit(content="Timed out", view=None)
@@ -253,9 +237,7 @@ class OsuCog(commands.Cog):
                 view.stop()
                 include_fails = view.is_confirmed
 
-            scores: List[Score] = self.api.user_scores(
-                osu_user.id, request_type, include_fails, the_mode, count
-            )
+            scores: List[Score] = self.api.user_scores(osu_user.id, request_type, include_fails, the_mode, count)
 
             if len(scores) == 0:
                 await m.edit(content="No suitable scores found", view=None)
@@ -288,9 +270,7 @@ class OsuCog(commands.Cog):
                         inline=False,
                     )
                     .add_field(name="Ranking", value=score.rank.name)
-                    .add_field(
-                        name="Accuracy", value=f"{round(score.accuracy * 100, 2)}%"
-                    )
+                    .add_field(name="Accuracy", value=f"{round(score.accuracy * 100, 2)}%")
                     .add_field(
                         name="Max combo",
                         value=f"{score.max_combo}x/{beatmap.max_combo}",
@@ -391,17 +371,11 @@ class OsuCog(commands.Cog):
 
 
 async def setup(bot: Nameless):
-    if (
-        (osu := getattr(NamelessConfig, "OSU", None))
-        and osu.get("client_id", "")
-        and osu.get("client_secret", "")
-    ):
+    if (osu := getattr(NamelessConfig, "OSU", None)) and osu.get("client_id", "") and osu.get("client_secret", ""):
         await bot.add_cog(OsuCog(bot))
         logging.info("Cog of %s added!", __name__)
     else:
-        raise commands.ExtensionFailed(
-            __name__, ValueError("osu! configuration values are not properly provided!")
-        )
+        raise commands.ExtensionFailed(__name__, ValueError("osu! configuration values are not properly provided!"))
 
 
 async def teardown(bot: Nameless):

@@ -84,66 +84,40 @@ class CRUD:
 
         return None, True
 
-    def get_user_record(
-        self, discord_user: Union[discord.Member, discord.User, discord.Object]
-    ) -> Optional[DbUser]:
+    def get_user_record(self, discord_user: Union[discord.Member, discord.User, discord.Object]) -> Optional[DbUser]:
         """Get user record in database"""
-        return (
-            self.session.query(DbUser)
-            .filter_by(discord_id=discord_user.id)
-            .one_or_none()
-        )
+        return self.session.query(DbUser).filter_by(discord_id=discord_user.id).one_or_none()
 
-    def get_guild_record(
-        self, discord_guild: Optional[Union[discord.Guild, discord.Object]]
-    ) -> Optional[DbGuild]:
+    def get_guild_record(self, discord_guild: Optional[Union[discord.Guild, discord.Object]]) -> Optional[DbGuild]:
         """Get guild record in database"""
         if discord_guild:
-            return (
-                self.session.query(DbGuild)
-                .filter_by(discord_id=discord_guild.id)
-                .one_or_none()
-            )
+            return self.session.query(DbGuild).filter_by(discord_id=discord_guild.id).one_or_none()
 
         return None
 
-    def create_user_record(
-        self, discord_user: Union[discord.Member, discord.User, discord.Object]
-    ) -> DbUser:
+    def create_user_record(self, discord_user: Union[discord.Member, discord.User, discord.Object]) -> DbUser:
         """Create a database entry for the Discord user and return one"""
         decoy_user = DbUser(discord_user.id)
 
-        if (  # noqa
-            not self.session.query(DbUser)
-            .filter_by(discord_id=discord_user.id)
-            .one_or_none()
-        ):
+        if not self.session.query(DbUser).filter_by(discord_id=discord_user.id).one_or_none():  # noqa
             self.session.add(decoy_user)
             self.save_changes()
             return decoy_user
 
         return self.session.query(DbUser).filter_by(discord_id=discord_user.id).one()
 
-    def create_guild_record(
-        self, discord_guild: Optional[Union[discord.Guild, discord.Object]]
-    ) -> Optional[DbGuild]:
+    def create_guild_record(self, discord_guild: Optional[Union[discord.Guild, discord.Object]]) -> Optional[DbGuild]:
         """Create a database entry for the Discord guild and return one"""
 
         if discord_guild:
             decoy_guild = DbGuild(discord_guild.id)
 
-            if (  # noqa
-                not self.session.query(DbGuild)
-                .filter_by(discord_id=discord_guild.id)
-                .one_or_none()
-            ):
+            if not self.session.query(DbGuild).filter_by(discord_id=discord_guild.id).one_or_none():  # noqa
                 self.session.add(decoy_guild)
                 self.save_changes()
                 return decoy_guild
 
-            return (
-                self.session.query(DbGuild).filter_by(discord_id=discord_guild.id).one()
-            )
+            return self.session.query(DbGuild).filter_by(discord_id=discord_guild.id).one()
 
         return None
 

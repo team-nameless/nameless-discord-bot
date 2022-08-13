@@ -14,12 +14,12 @@ from discord.app_commands import Choice
 from discord.ext import commands
 from discord.ext.commands import Range
 from discord.utils import escape_markdown
-from NamelessConfig import NamelessConfig
 from wavelink.ext import spotify
 
 from nameless import Nameless, shared_vars
 from nameless.cogs.checks import MusicCogCheck
 from nameless.commons import Utility
+from NamelessConfig import NamelessConfig
 
 __all__ = ["MusicCog"]
 

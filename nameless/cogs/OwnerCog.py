@@ -13,9 +13,9 @@ import discord.ui
 from discord import app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
-from NamelessConfig import NamelessConfig
 
 from nameless import Nameless, shared_vars
+from NamelessConfig import NamelessConfig
 
 __all__ = ["OwnerCog"]
 

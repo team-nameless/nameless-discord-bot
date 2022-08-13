@@ -3,9 +3,9 @@ import sys
 from typing import List
 
 import discord
-import NamelessConfig
 from discord.ext import commands
 
+import NamelessConfig
 from nameless import Nameless
 
 

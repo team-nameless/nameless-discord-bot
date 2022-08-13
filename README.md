@@ -38,7 +38,7 @@ source venv/bin/activate
 pip install -r requirements_core.txt
 ```
 
-- After that, edit `config.example.py` then rename to `config.py`.
+- After that, edit `NamelessConfig_example.py` then rename to `NamelessConfig.py`.
 
 - Lastly, run the `main.py` file:
 

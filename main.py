@@ -9,7 +9,7 @@ import NamelessConfig
 from nameless import Nameless, shared_vars
 
 UPDATE_CHECK_FLAG = "--allow-updates-check"
-CONFIG_CLASS_FLAG = "--config_class"
+CONFIG_CLASS_FLAG = "--config-class"
 
 
 def main(args: List[str]):

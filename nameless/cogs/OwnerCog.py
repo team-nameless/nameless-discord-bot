@@ -13,15 +13,14 @@ import discord.ui
 from discord import app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
-
-from nameless import shared_vars, Nameless
 from NamelessConfig import NamelessConfig
+
+from nameless import Nameless, shared_vars
 
 __all__ = ["OwnerCog"]
 
 cogs_list = list(
-    "nameless.cogs." + z.replace(".py", "")
-    for z in filter(shared_vars.cogs_regex.match, os.listdir("cogs"))
+    "nameless.cogs." + z.replace(".py", "") for z in filter(shared_vars.cogs_regex.match, os.listdir("cogs"))
 )
 
 

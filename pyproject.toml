@@ -2,7 +2,8 @@
 include = [
     "nameless",
     "tests",
-    "config_example.py",
+    "NamelessConfig_example.py",
+    "NamelessConfig.py",
     "main.py",
 ]
 exclude = [
@@ -23,3 +24,10 @@ profile = "black"
 combine_as_imports = true
 combine_star = true
 line_length = 120
+skip_gitignore = true
+atomic = true
+
+[tool.black]
+line-length = 120
+target-version = ['py38', 'py39']
+include = '\.pyi?$'

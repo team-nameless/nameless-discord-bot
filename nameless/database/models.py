@@ -1,14 +1,6 @@
 import datetime
 
-from sqlalchemy import (
-    BigInteger,
-    Boolean,
-    Column,
-    DateTime,
-    SmallInteger,
-    Text,
-    UnicodeText,
-)
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, SmallInteger, Text, UnicodeText
 from sqlalchemy.orm import declarative_base
 
 __all__ = ["Base", "DbUser", "DbGuild"]
@@ -61,24 +53,12 @@ class DbGuild(Base):
 
     __tablename__ = "Guilds"
     discord_id: int = Column(BigInteger, name="Id", primary_key=True)  # pyright: ignore
-    is_welcome_enabled: bool = Column(
-        Boolean, name="IsWelcomeEnabled", default=False
-    )  # pyright: ignore
-    is_goodbye_enabled: bool = Column(
-        Boolean, name="IsGoodbyeEnabled", default=False
-    )  # pyright: ignore
-    welcome_channel_id: int = Column(
-        BigInteger, name="WelcomeChannelId", default=0
-    )  # pyright: ignore
-    goodbye_channel_id: int = Column(
-        BigInteger, name="GoodbyeChannelId", default=0
-    )  # pyright: ignore
-    welcome_message: str = Column(
-        UnicodeText, name="WelcomeMessage", default=""
-    )  # pyright: ignore
-    goodbye_message: str = Column(
-        UnicodeText, name="GoodbyeMessage", default=""
-    )  # pyright: ignore
+    is_welcome_enabled: bool = Column(Boolean, name="IsWelcomeEnabled", default=False)  # pyright: ignore
+    is_goodbye_enabled: bool = Column(Boolean, name="IsGoodbyeEnabled", default=False)  # pyright: ignore
+    welcome_channel_id: int = Column(BigInteger, name="WelcomeChannelId", default=0)  # pyright: ignore
+    goodbye_channel_id: int = Column(BigInteger, name="GoodbyeChannelId", default=0)  # pyright: ignore
+    welcome_message: str = Column(UnicodeText, name="WelcomeMessage", default="")  # pyright: ignore
+    goodbye_message: str = Column(UnicodeText, name="GoodbyeMessage", default="")  # pyright: ignore
     radio_start_time: datetime.datetime = Column(
         DateTime,
         name="RadioStartTime",

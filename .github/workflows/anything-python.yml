@@ -2,24 +2,14 @@ name: anything python
 
 on:
   push:
-    tags-ignore:
-      - "*.*"
-    branches:
-      - dev
   pull_request:
-    tags-ignore:
-      - "*.*"
-    branches:
-      - main
-      - dev
-  # Should be triggered manually when this is on main branch
   workflow_dispatch:
 
 jobs:
-  dev-run:
-    if: ${{ github.ref == 'refs/heads/dev' }}
+  all-the-things:
+    if: ${{ github.repository == 'nameless-on-discord/nameless' }}
     runs-on: ubuntu-latest
-    name: Dev instance test, lint and publish
+    name: Test, lint and publish
     steps:
       - uses: actions/checkout@v3
 
@@ -39,38 +29,39 @@ jobs:
         run: |
           cp NamelessConfig_example.py NamelessConfig.py
 
-      - name: Run Pyright
-        run: |
-          pyright
-
-      - name: Run flake8
-        run: |
-          flake8 --select=E
-
-      - name: Run pylint
-        run: |
-          pylint **/*.py --disable=W,R,C
-
-      - name: Run black
+      - name: Code format checking (black)
         run: |
           black . --check --diff
 
-      - name: Run tests and return coverages
+      - name: Code format checking (isort)
+        run: |
+          isort . --check --diff
+
+      - name: Type annotation checking (pyright)
+        run: |
+          pyright
+
+      - name: Linting (flake8)
+        run: |
+          flake8 --select=E
+
+      - name: Linting (pylint)
+        run: |
+          pylint **/*.py --disable=W,R,C
+
+      - name: Run tests and return coverages (pytest & friends)
         run: |
           pytest --cov-report term-missing --cov=nameless.database --cov=nameless.commons.Utility tests/
 
       - name: Deploy to server (dev)
+        if: ${{ github.ref == 'refs/heads/dev' }}
         run: |
           sudo apt install sshpass -y
           echo pm2 restart ${{ secrets.INSTANCE_NAME }} > script.sh
           sshpass -p ${{ secrets.SSH_PASSWORD }} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" < script.sh > /dev/null
 
-  stable-publish:
-    runs-on: ubuntu-latest
-    name: Stable instance publish
-    if: ${{ github.ref == 'refs/heads/main' }}
-    steps:
-      - name: Deploy to server (stable)
+      - name: Deploy to server (main)
+        if: ${{ github.ref == 'refs/heads/main' }}
         run: |
           sudo apt install sshpass -y
           echo pm2 restart ${{ secrets.STABLE_INSTANCE_NAME }} > script.sh

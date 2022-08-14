@@ -20,9 +20,6 @@ class DiscordWaiter:
         """
 
         def message_checker(message: discord.Message) -> bool:
-            return (
-                message.author.id == ctx.author.id
-                and ctx.channel.id == message.channel.id
-            )
+            return message.author.id == ctx.author.id and ctx.channel.id == message.channel.id
 
         return message_checker

@@ -52,10 +52,7 @@ class TestUtility:
             port,
             db_name,
         ) = Utility.get_db_url(FakeConfig)
-        assert (
-            url
-            == "postgresql+psycopg2://nameless:NamelessOutOfBetaWhen@localhost:12345/dame_dane"
-        )
+        assert url == "postgresql+psycopg2://nameless:NamelessOutOfBetaWhen@localhost:12345/dame_dane"
         assert dialect == "postgresql"
         assert driver == "psycopg2"
         assert username == "nameless"

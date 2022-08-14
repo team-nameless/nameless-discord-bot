@@ -5,11 +5,11 @@ from typing import Union
 import discord
 from discord import app_commands
 from discord.ext import commands
+from NamelessConfig import NamelessConfig
 
 import nameless
 from nameless.cogs.checks import BaseCheck
 from nameless.shared_vars import crud_database
-from NamelessConfig import NamelessConfig
 
 __all__ = ["ConfigCog"]
 
@@ -44,9 +44,7 @@ class ConfigCog(commands.Cog):
                 name="Welcome message delivery channel",
                 value=wc_chn.mention if wc_chn else "Unset",
             )
-            .add_field(
-                name="Welcome message delivery allowance", value=dbg.is_welcome_enabled
-            )
+            .add_field(name="Welcome message delivery allowance", value=dbg.is_welcome_enabled)
             .add_field(
                 name="Goodbye message",
                 value=dbg.goodbye_message if dbg.goodbye_message else "Unset",
@@ -55,9 +53,7 @@ class ConfigCog(commands.Cog):
                 name="Welcome message delivery channel",
                 value=gb_chn.mention if gb_chn else "Unset",
             )
-            .add_field(
-                name="Welcome message delivery allowance", value=dbg.is_goodbye_enabled
-            )
+            .add_field(name="Welcome message delivery allowance", value=dbg.is_goodbye_enabled)
         )
         await ctx.send(embeds=[embed])
 
@@ -144,9 +140,7 @@ class ConfigCog(commands.Cog):
         dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.is_welcome_enabled = not dbg.is_welcome_enabled
         crud_database.save_changes()
-        await ctx.send(
-            f"Welcome message delivery: {'on' if dbg.is_welcome_enabled else 'off'}"
-        )
+        await ctx.send(f"Welcome message delivery: {'on' if dbg.is_welcome_enabled else 'off'}")
 
     @config.command()
     @commands.guild_only()
@@ -159,9 +153,7 @@ class ConfigCog(commands.Cog):
         dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.is_goodbye_enabled = not dbg.is_goodbye_enabled
         crud_database.save_changes()
-        await ctx.send(
-            f"Goodbye message delivery: {'on' if dbg.is_welcome_enabled else 'off'}"
-        )
+        await ctx.send(f"Goodbye message delivery: {'on' if dbg.is_welcome_enabled else 'off'}")
 
     @config.command()
     @commands.guild_only()
@@ -177,9 +169,7 @@ class ConfigCog(commands.Cog):
             "{tag}": "The 4-digit after #.\nAvailability: Welcome+Goodbye.",
         }
 
-        await ctx.send(
-            "\n".join(f"**{key}**\n{value}\n" for key, value in placeholders.items())
-        )
+        await ctx.send("\n".join(f"**{key}**\n{value}\n" for key, value in placeholders.items()))
 
 
 async def setup(bot: nameless.Nameless):

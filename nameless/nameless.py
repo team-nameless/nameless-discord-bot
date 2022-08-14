@@ -70,9 +70,7 @@ class Nameless(commands.AutoShardedBot):
             elif nameless_version == upstream_version:
                 self.global_logger.info("You are using latest version!")
             else:
-                self.global_logger.warning(
-                    "You are using a version NEWER than original code!"
-                )
+                self.global_logger.warning("You are using a version NEWER than original code!")
 
         # Write current version in case I forgot
         with open("../version.txt", "w", encoding="utf-8") as f:
@@ -81,9 +79,7 @@ class Nameless(commands.AutoShardedBot):
 
     async def __register_all_cogs(self):
         if cogs := getattr(self.config_cls, "COGS", []):
-            allowed_cogs = list(
-                filter(shared_vars.cogs_regex.match, os.listdir("cogs"))
-            )
+            allowed_cogs = list(filter(shared_vars.cogs_regex.match, os.listdir("cogs")))
 
             for cog_name in cogs:
                 fail_reason = ""
@@ -122,25 +118,22 @@ class Nameless(commands.AutoShardedBot):
         else:
             logging.info("Syncing commands globally")
             await self.tree.sync()
-            logging.warning(
-                "Please wait at least one hour before using global commands"
-            )
+            logging.warning("Please wait at least one hour before using global commands")
 
         if status := getattr(self.config_cls, "STATUS", {}):
             logging.info("Setting presence")
+            url = status.get("url", None)
 
             await self.change_presence(
                 status=status.get("user_status", discord.Status.online),
                 activity=discord.Activity(
                     type=status.get("type", discord.ActivityType.playing),
                     name=status.get("name", "something"),
-                    url=status.get("url", ""),
+                    url=url if url else None,
                 ),
             )
         else:
-            logging.warning(
-                "Presence is not set since you did not provide values properly"
-            )
+            logging.warning("Presence is not set since you did not provide values properly")
 
         logging.info("Logged in as %s (ID: %s)", str(self.user), self.user.id)
 
@@ -159,13 +152,9 @@ class Nameless(commands.AutoShardedBot):
 
         if db_guild.is_welcome_enabled:
             if db_guild.welcome_message != "":
-                if the_channel := member.guild.get_channel_or_thread(
-                    db_guild.welcome_channel_id
-                ):
+                if the_channel := member.guild.get_channel_or_thread(db_guild.welcome_channel_id):
                     await the_channel.send(  # pyright: ignore
-                        content=db_guild.welcome_message.replace(
-                            "{guild}", member.guild.name
-                        )
+                        content=db_guild.welcome_message.replace("{guild}", member.guild.name)
                         .replace("{name}", member.display_name)
                         .replace("{tag}", member.discriminator)
                         .replace("{@user}", member.mention)
@@ -176,20 +165,14 @@ class Nameless(commands.AutoShardedBot):
 
         if db_guild.is_goodbye_enabled:
             if db_guild.goodbye_message != "":
-                if the_channel := member.guild.get_channel_or_thread(
-                    db_guild.goodbye_channel_id
-                ):
+                if the_channel := member.guild.get_channel_or_thread(db_guild.goodbye_channel_id):
                     await the_channel.send(  # pyright: ignore
-                        content=db_guild.goodbye_message.replace(
-                            "{guild}", member.guild.name
-                        )
+                        content=db_guild.goodbye_message.replace("{guild}", member.guild.name)
                         .replace("{name}", member.display_name)
                         .replace("{tag}", member.discriminator)
                     )
 
-    async def on_command_error(
-        self, ctx: commands.Context, err: errors.CommandError, /
-    ) -> None:
+    async def on_command_error(self, ctx: commands.Context, err: errors.CommandError, /) -> None:
         if not isinstance(err, errors.CommandNotFound):
             await ctx.send(f"Something went wrong when executing the command: {err}")
 
@@ -206,14 +189,8 @@ class Nameless(commands.AutoShardedBot):
 
     def patch_loggers(self) -> None:
         if getattr(self.config_cls, "LAB", False):
-            file_handler = logging.FileHandler(
-                filename="nameless.log", mode="w", delay=True
-            )
-            file_handler.setFormatter(
-                logging.Formatter(
-                    "%(asctime)s - [%(levelname)s] [%(name)s] %(message)s"
-                )
-            )
+            file_handler = logging.FileHandler(filename="nameless.log", mode="w", delay=True)
+            file_handler.setFormatter(logging.Formatter("%(asctime)s - [%(levelname)s] [%(name)s] %(message)s"))
             shared_vars.additional_handlers.append(file_handler)
 
         for logger in self.loggers:
@@ -240,9 +217,7 @@ class Nameless(commands.AutoShardedBot):
         can_cont = Utility.is_valid_config_class(self.config_cls)
 
         if not isinstance(can_cont, bool):
-            logging.warning(
-                "This bot might run into errors because not all fields are presented"
-            )
+            logging.warning("This bot might run into errors because not all fields are presented")
         else:
             if not can_cont:
                 logging.error("Fields validation failed, the bot will exit")

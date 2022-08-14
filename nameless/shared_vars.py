@@ -21,12 +21,10 @@ stdout_handler.setFormatter(customs.ColoredFormatter())
 cogs_regex = re.compile(r"^(?!_.).*Cog.py")
 
 # Meta
-upstream_version_txt_url = (
-    "https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt"
-)
+upstream_version_txt_url = "https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt"
 start_time: datetime = datetime.min
 additional_handlers: List = []
-__nameless_current_version__ = "1.2.0"
+__nameless_current_version__ = "1.2.2"
 __nameless_upstream_version__ = requests.get(upstream_version_txt_url).text
 
 # Perms

@@ -9,6 +9,7 @@ from nameless.commons import Utility
 
 from .models import Base, DbGuild, DbUser
 
+
 __all__ = ["CRUD"]
 
 

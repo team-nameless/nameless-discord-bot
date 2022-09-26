@@ -4,6 +4,7 @@ from urllib.parse import quote_plus as qp, urlparse
 
 import NamelessConfig_example
 
+
 __all__ = ["Utility"]
 
 

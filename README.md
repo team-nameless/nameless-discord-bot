@@ -3,7 +3,7 @@
 A rewrite of [original nameless*](https://github.com/FoxeiZ/nameless), now with collaborations.
 
 [![Last Commit](https://badgen.net/github/last-commit/nameless-on-discord/nameless/main)]()
-[![Python](https://badgen.net/badge/Python/3.8%2B/)](https://python.org)
+[![Python](https://badgen.net/badge/Python/3.10%2B/)](https://python.org)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Latest tag](https://badgen.net/github/tag/nameless-on-discord/nameless?label=Latest%20Stable%20Version)]()
 
@@ -23,7 +23,7 @@ A rewrite of [original nameless*](https://github.com/FoxeiZ/nameless), now with 
 
 ## How to run this bot?
 
-- First, install `python3` - minimum version `3.8`, latest version preferred.
+- First, install `python3` - minimum version `3.10`, latest version preferred.
 - Second, create a virtual environment so your global "python" won't be badly affected and activate it (most IDEs
   automatically activate it for you)
 

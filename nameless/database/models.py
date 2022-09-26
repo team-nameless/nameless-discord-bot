@@ -3,6 +3,7 @@ import datetime
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, SmallInteger, Text, UnicodeText
 from sqlalchemy.orm import declarative_base
 
+
 __all__ = ["Base", "DbUser", "DbGuild"]
 
 Base = declarative_base()

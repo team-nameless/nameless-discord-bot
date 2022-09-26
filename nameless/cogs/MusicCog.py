@@ -14,12 +14,13 @@ from discord.app_commands import Choice
 from discord.ext import commands
 from discord.ext.commands import Range
 from discord.utils import escape_markdown
-from NamelessConfig import NamelessConfig
 from wavelink.ext import spotify
 
 from nameless import Nameless, shared_vars
 from nameless.cogs.checks import MusicCogCheck
 from nameless.commons import Utility
+from NamelessConfig import NamelessConfig
+
 
 __all__ = ["MusicCog"]
 
@@ -695,7 +696,7 @@ class MusicCog(commands.Cog):
 
         deleted_track: wavelink.Track = q[idx - 1]
 
-        vc.queue._queue = collections.deque([t for t in q if t])
+        vc.queue._queue = collections.deque([t for t in q if t])  # pyright: ignore
         await ctx.send(f"Deleted track at position #{idx}: **{deleted_track.title}** from **{deleted_track.author}**")
 
     @queue.command()
@@ -888,7 +889,7 @@ class MusicCog(commands.Cog):
 
         vc: wavelink.Player = ctx.voice_client  # pyright: ignore
 
-        random.shuffle(vc.queue._queue)
+        random.shuffle(vc.queue._queue)  # pyright: ignore
         await ctx.send("Shuffled the queue")
 
     @queue.command()

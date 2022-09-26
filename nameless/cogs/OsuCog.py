@@ -7,11 +7,12 @@ from discord import Color, app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
 from DiscordUtils import Pagination
-from NamelessConfig import NamelessConfig
 from ossapi import GameMode, OssapiV2, Score, ScoreType, User, UserLookupKey
 
 from nameless import Nameless, shared_vars
 from nameless.customs.DiscordWaiter import DiscordWaiter
+from NamelessConfig import NamelessConfig
+
 
 __all__ = ["OsuCog"]
 

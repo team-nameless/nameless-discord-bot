@@ -3,6 +3,7 @@ import pytest
 
 from nameless import database
 
+
 _crud = database.CRUD(None)
 
 

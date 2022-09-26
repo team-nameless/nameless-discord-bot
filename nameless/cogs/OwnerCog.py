@@ -13,9 +13,10 @@ import discord.ui
 from discord import app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
-from NamelessConfig import NamelessConfig
 
 from nameless import Nameless, shared_vars
+from NamelessConfig import NamelessConfig
+
 
 __all__ = ["OwnerCog"]
 
@@ -103,33 +104,43 @@ class OwnerCog(commands.Cog):
     async def _eval(self, ctx: commands.Context, *, code: str):
         """Evaluate some pieces of python code"""
         await ctx.defer()
-        code = re.sub("```python|```py|```|`", "", code)
+
+        groups = re.search(r"```(?:python|py)?\n([\w\W\r\n]*)\n?```", code)
+
+        if not groups:
+            groups = re.search(r"`*([\w\W]*[^`])`*", code)
+
+        code = groups.group(1)
         returns = ""
 
         try:
             with contextlib.redirect_stdout((out := io.StringIO())):
-                exec(
-                    f"async def func():\n{textwrap.indent(code, '    ')}",
-                    (
-                        t := {
-                            "discord": discord,
-                            "commands": commands,
-                            "bot": self.bot,
-                            "ctx": ctx,
-                            "channel": ctx.channel,
-                            "author": ctx.author,
-                            "guild": ctx.guild,
-                            "message": ctx.message,
-                        }
-                    ),
-                )
+                with contextlib.redirect_stderr((err := io.StringIO())):
+                    exec(
+                        f"async def func():\n{textwrap.indent(code, '    ')}",
+                        (
+                            t := {
+                                "discord": discord,
+                                "commands": commands,
+                                "bot": self.bot,
+                                "ctx": ctx,
+                                "channel": ctx.channel,
+                                "author": ctx.author,
+                                "guild": ctx.guild,
+                                "message": ctx.message,
+                            }
+                        ),
+                    )
 
-                returns = await t["func"]()
-                result = f"{out.getvalue()}"
+                    returns = await t["func"]()
+                    stdout_result = f"{out.getvalue()}"
+                    stderr_result = f"{err.getvalue()}"
         except RuntimeError as e:
-            result = e
+            stdout_result = ""
+            stderr_result = e
 
-        result = str(result if result else "No Result")[:1024]
+        stdout_result = str(stdout_result if stdout_result else "No result in stdout")[:1024]
+        stderr_result = str(stderr_result if stderr_result else "No result in stderr")[:1024]
         returns = str(returns)[:1024]
 
         embed = (
@@ -139,7 +150,8 @@ class OwnerCog(commands.Cog):
                 timestamp=datetime.datetime.now(),
                 color=discord.Color.orange(),
             )
-            .add_field(name="Result", value=result, inline=False)
+            .add_field(name="stdout", value=stdout_result, inline=False)
+            .add_field(name="stderr", value=stderr_result, inline=False)
             .add_field(name="Return value", value=returns, inline=False)
         )
 

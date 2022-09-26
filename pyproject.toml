@@ -16,7 +16,7 @@ reportOptionalMemberAccess = "warning"
 reportOptionalSubscript = "warning"
 reportUnusedImport = "error"
 useLibraryCodeForTypes = true
-pythonVersion = "3.8"
+pythonVersion = "3.10"
 typeCheckingMode = "basic"
 
 [tool.isort]
@@ -24,10 +24,10 @@ profile = "black"
 combine_as_imports = true
 combine_star = true
 line_length = 120
-skip_gitignore = true
-atomic = true
+lines_after_imports = 2
+multi_line_output = 3
 
 [tool.black]
 line-length = 120
-target-version = ['py38', 'py39']
+target-version = ['py310']
 include = '\.pyi?$'

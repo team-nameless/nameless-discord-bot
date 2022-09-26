@@ -1,7 +1,9 @@
 import logging
 
 from discord.ext import commands
+
 from NamelessConfig import NamelessConfig
+
 
 __all__ = ["ExperimentalCog"]
 

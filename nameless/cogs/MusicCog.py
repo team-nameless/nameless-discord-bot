@@ -696,7 +696,7 @@ class MusicCog(commands.Cog):
 
         deleted_track: wavelink.Track = q[idx - 1]
 
-        vc.queue._queue = collections.deque([t for t in q if t])
+        vc.queue._queue = collections.deque([t for t in q if t]) # pyright: ignore
         await ctx.send(f"Deleted track at position #{idx}: **{deleted_track.title}** from **{deleted_track.author}**")
 
     @queue.command()
@@ -889,7 +889,7 @@ class MusicCog(commands.Cog):
 
         vc: wavelink.Player = ctx.voice_client  # pyright: ignore
 
-        random.shuffle(vc.queue._queue)
+        random.shuffle(vc.queue._queue)  # pyright: ignore
         await ctx.send("Shuffled the queue")
 
     @queue.command()

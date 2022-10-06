@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 import discord
 from typing_extensions import LiteralString
 
+
 __all__ = ["NamelessConfig"]
 
 

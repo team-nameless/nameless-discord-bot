@@ -20,9 +20,7 @@ def main(args: List[str]):
             cfg = __import__(cls_arg[0][len(f"{CONFIG_CLASS_FLAG}=") :]).NamelessConfig
         except (ValueError, ModuleNotFoundError):
             cfg = NamelessConfig.NamelessConfig
-            logging.warning(
-                "Invalid value for config class flag, NamelessConfig.NamelessConfig will be used"
-            )
+            logging.warning("Invalid value for config class flag, NamelessConfig.NamelessConfig will be used")
     else:
         cfg = NamelessConfig.NamelessConfig
 
@@ -37,9 +35,7 @@ def main(args: List[str]):
     nameless = Nameless(
         config_cls=cfg,
         intents=intents,
-        command_prefix=commands.when_mentioned_or(*prefixes)
-        if allow_mention
-        else prefixes,
+        command_prefix=commands.when_mentioned_or(*prefixes) if allow_mention else prefixes,
         allow_updates_check=UPDATE_CHECK_FLAG in args,
         description=getattr(cfg, "META", {}).get("bot_description", ""),
     )

@@ -10,6 +10,7 @@ from nameless import shared_vars
 from nameless.customs.DiscordWaiter import DiscordWaiter
 from nameless.shared_vars import crud_database
 
+
 __all__ = ["ModeratorCog"]
 
 
@@ -36,9 +37,7 @@ class ModeratorCog(commands.Cog):
 
         await ctx.send(f"Mention members you want to {action} with reason {reason}")
 
-        msg: discord.Message = await client.wait_for(
-            "message", check=DiscordWaiter.message_waiter(ctx), timeout=30
-        )
+        msg: discord.Message = await client.wait_for("message", check=DiscordWaiter.message_waiter(ctx), timeout=30)
         mentioned_members = msg.mentions
         responses = []
 
@@ -73,9 +72,7 @@ class ModeratorCog(commands.Cog):
         val: int,
         zero_fn: Callable[[commands.Context, discord.Member, str], Awaitable[None]],
         three_fn: Callable[[commands.Context, discord.Member, str], Awaitable[None]],
-        diff_fn: Callable[
-            [commands.Context, discord.Member, str, int, int], Awaitable[None]
-        ],
+        diff_fn: Callable[[commands.Context, discord.Member, str, int, int], Awaitable[None]],
     ):
         await ctx.defer()
 
@@ -120,9 +117,7 @@ class ModeratorCog(commands.Cog):
                 await ctx.send("Already muted")
         else:
             if mute:
-                await member.timeout(
-                    discord.utils.utcnow().replace(day=7), reason=reason
-                )
+                await member.timeout(discord.utils.utcnow().replace(day=7), reason=reason)
                 await ctx.send("Muted")
             else:
                 await ctx.send("Already unmuted")
@@ -133,9 +128,7 @@ class ModeratorCog(commands.Cog):
     @commands.bot_has_guild_permissions(ban_members=True)
     @app_commands.checks.has_permissions(ban_members=True)
     @app_commands.checks.bot_has_permissions(ban_members=True)
-    @app_commands.describe(
-        delete_message_days="Past message days to delete", reason="Ban reason"
-    )
+    @app_commands.describe(delete_message_days="Past message days to delete", reason="Ban reason")
     async def ban(
         self,
         ctx: commands.Context,
@@ -144,9 +137,7 @@ class ModeratorCog(commands.Cog):
     ):
         """Ban members, in batch"""
         if not 0 <= delete_message_days <= 7:
-            await ctx.send(
-                "delete_message_days must satisfy 0 <= delete_message_days <= 7"
-            )
+            await ctx.send("delete_message_days must satisfy 0 <= delete_message_days <= 7")
         else:
             await self.__generic_ban_kick(
                 ctx,
@@ -169,9 +160,7 @@ class ModeratorCog(commands.Cog):
         reason: str = "Rule violation",
     ):
         """Kick members, in batch"""
-        await self.__generic_ban_kick(
-            ctx, reason, "kick", ctx.guild.kick  # pyright: ignore
-        )
+        await self.__generic_ban_kick(ctx, reason, "kick", ctx.guild.kick)  # pyright: ignore
 
     @mod.command()
     @commands.guild_only()
@@ -189,17 +178,13 @@ class ModeratorCog(commands.Cog):
         async def zero_fn(_ctx: commands.Context, m: discord.Member, r: str):
             pass
 
-        async def diff_fn(
-            _ctx: commands.Context, m: discord.Member, r: str, curr: int, prev: int
-        ):
+        async def diff_fn(_ctx: commands.Context, m: discord.Member, r: str, curr: int, prev: int):
             pass
 
         async def three_fn(_ctx: commands.Context, m: discord.Member, r: str):
             await m.timeout(discord.utils.utcnow().replace(day=7), reason=r)
 
-        await ModeratorCog.__generic_warn(
-            ctx, member, reason, 1, zero_fn, three_fn, diff_fn
-        )
+        await ModeratorCog.__generic_warn(ctx, member, reason, 1, zero_fn, three_fn, diff_fn)
 
     @mod.command()
     @commands.guild_only()
@@ -217,18 +202,14 @@ class ModeratorCog(commands.Cog):
         async def zero_fn(_ctx: commands.Context, m: discord.Member, r: str):
             pass
 
-        async def diff_fn(
-            _ctx: commands.Context, m: discord.Member, r: str, current: int, prev: int
-        ):
+        async def diff_fn(_ctx: commands.Context, m: discord.Member, r: str, current: int, prev: int):
             if prev == 3:
                 await m.timeout(None, reason=r)
 
         async def three_fn(_ctx: commands.Context, m: discord.Member, r: str):
             pass
 
-        await ModeratorCog.__generic_warn(
-            ctx, member, reason, -1, zero_fn, three_fn, diff_fn
-        )
+        await ModeratorCog.__generic_warn(ctx, member, reason, -1, zero_fn, three_fn, diff_fn)
 
     @mod.command()
     @commands.guild_only()

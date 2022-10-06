@@ -15,6 +15,7 @@ from nameless import shared_vars
 from nameless.database import CRUD
 from nameless.shared_vars import stdout_handler
 
+
 __all__ = ["Nameless"]
 
 os.chdir(Path(__file__).resolve().parent)
@@ -53,9 +54,7 @@ class Nameless(commands.AutoShardedBot):
 
     def check_for_updates(self):
         if not self.allow_updates_check:
-            logging.warning(
-                "Your bot might fall behind updates, consider setting allow_updates_check to True"
-            )
+            logging.warning("Your bot might fall behind updates, consider setting allow_updates_check to True")
         else:
             nameless_version = version.parse(shared_vars.__nameless_current_version__)
             upstream_version = version.parse(shared_vars.__nameless_upstream_version__)
@@ -80,9 +79,7 @@ class Nameless(commands.AutoShardedBot):
 
     async def __register_all_cogs(self):
         if cogs := getattr(self.bot_config, "COGS", []):
-            allowed_cogs = list(
-                filter(shared_vars.cogs_regex.match, os.listdir("cogs"))
-            )
+            allowed_cogs = list(filter(shared_vars.cogs_regex.match, os.listdir("cogs")))
 
             for cog_name in cogs:
                 fail_reason = ""
@@ -124,9 +121,7 @@ class Nameless(commands.AutoShardedBot):
         else:
             logging.info("Syncing commands globally")
             await self.tree.sync()
-            logging.warning(
-                "Please wait at least one hour before using global commands"
-            )
+            logging.warning("Please wait at least one hour before using global commands")
 
     async def on_ready(self):
         if status := getattr(self.bot_config, "STATUS", {}):
@@ -142,9 +137,7 @@ class Nameless(commands.AutoShardedBot):
                 ),
             )
         else:
-            logging.warning(
-                "Presence is not set since you did not provide values properly"
-            )
+            logging.warning("Presence is not set since you did not provide values properly")
 
         logging.info("Logged in as %s (ID: %s)", str(self.user), self.user.id)
 
@@ -163,13 +156,9 @@ class Nameless(commands.AutoShardedBot):
 
         if db_guild.is_welcome_enabled:
             if db_guild.welcome_message != "":
-                if the_channel := member.guild.get_channel_or_thread(
-                    db_guild.welcome_channel_id
-                ):
+                if the_channel := member.guild.get_channel_or_thread(db_guild.welcome_channel_id):
                     await the_channel.send(  # pyright: ignore
-                        content=db_guild.welcome_message.replace(
-                            "{guild}", member.guild.name
-                        )
+                        content=db_guild.welcome_message.replace("{guild}", member.guild.name)
                         .replace("{name}", member.display_name)
                         .replace("{tag}", member.discriminator)
                         .replace("{@user}", member.mention)
@@ -180,20 +169,14 @@ class Nameless(commands.AutoShardedBot):
 
         if db_guild.is_goodbye_enabled:
             if db_guild.goodbye_message != "":
-                if the_channel := member.guild.get_channel_or_thread(
-                    db_guild.goodbye_channel_id
-                ):
+                if the_channel := member.guild.get_channel_or_thread(db_guild.goodbye_channel_id):
                     await the_channel.send(  # pyright: ignore
-                        content=db_guild.goodbye_message.replace(
-                            "{guild}", member.guild.name
-                        )
+                        content=db_guild.goodbye_message.replace("{guild}", member.guild.name)
                         .replace("{name}", member.display_name)
                         .replace("{tag}", member.discriminator)
                     )
 
-    async def on_command_error(
-        self, ctx: commands.Context, err: errors.CommandError, /
-    ) -> None:
+    async def on_command_error(self, ctx: commands.Context, err: errors.CommandError, /) -> None:
         if not isinstance(err, errors.CommandNotFound):
             await ctx.send(f"Something went wrong when executing the command: {err}")
 
@@ -210,14 +193,8 @@ class Nameless(commands.AutoShardedBot):
 
     def patch_loggers(self) -> None:
         if getattr(self.bot_config, "LAB", False):
-            file_handler = logging.FileHandler(
-                filename="nameless.log", mode="w", delay=True
-            )
-            file_handler.setFormatter(
-                logging.Formatter(
-                    "%(asctime)s - [%(levelname)s] [%(name)s] %(message)s"
-                )
-            )
+            file_handler = logging.FileHandler(filename="nameless.log", mode="w", delay=True)
+            file_handler.setFormatter(logging.Formatter("%(asctime)s - [%(levelname)s] [%(name)s] %(message)s"))
             shared_vars.additional_handlers.append(file_handler)
 
         for logger in self.loggers:
@@ -248,9 +225,7 @@ class Nameless(commands.AutoShardedBot):
         shared_vars.crud_database = CRUD(self.bot_config)
 
         meta = getattr(self.bot_config, "META", {})
-        shared_vars.__nameless_current_version__ = (
-            meta.get("version", None) or shared_vars.__nameless_current_version__
-        )
+        shared_vars.__nameless_current_version__ = meta.get("version", None) or shared_vars.__nameless_current_version__
         shared_vars.upstream_version_txt_url = (
             meta.get("version_txt", None)
             or "https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt"
@@ -261,9 +236,7 @@ class Nameless(commands.AutoShardedBot):
                 if 200 <= response.status <= 299:
                     shared_vars.__nameless_upstream_version__ = await response.text()
                 else:
-                    logging.warning(
-                        "Upstream version fetching error, using 0.0.0 as upstream version"
-                    )
+                    logging.warning("Upstream version fetching error, using 0.0.0 as upstream version")
                     shared_vars.__nameless_upstream_version__ = "0.0.0"
 
     def start_bot(self):

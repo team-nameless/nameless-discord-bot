@@ -5,11 +5,12 @@ from typing import Union
 import discord
 from discord import app_commands
 from discord.ext import commands
-from NamelessConfig import NamelessConfig
 
 import nameless
+from nameless import shared_vars
 from nameless.cogs.checks import BaseCheck
 from nameless.shared_vars import crud_database
+
 
 __all__ = ["ConfigCog"]
 
@@ -22,7 +23,7 @@ class ConfigCog(commands.Cog):
     @commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
     @commands.has_guild_permissions(manage_guild=True)
-    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
+    @app_commands.guilds(*getattr(shared_vars.config_cls, "GUILD_IDs", []))
     async def config(self, ctx: commands.Context):
         """View configured properties"""
         await ctx.defer()

@@ -1,10 +1,11 @@
 sqlalchemy
 ossapi
 discord-together
-git+https://github.com/Rapptz/discord.py
-git+https://github.com/Rapptz/discord.py#egg=discord.py[speed]
+discord.py
+discord.py[speed]
 DiscordUtils
-yt-dlp
+wavelink
 alembic
 packaging
-requests
+aiohttp
+typing_extensions

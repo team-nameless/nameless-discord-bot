@@ -1,5 +1,4 @@
 from nameless.commons import Utility
-from NamelessConfig_example import NamelessConfig
 
 
 class FakeConfig:
@@ -71,11 +70,3 @@ class TestUtility:
         assert not Utility.is_an_url("bao.moe")
         assert not Utility.is_an_url("discord.com")
         assert not Utility.is_an_url("m.me")
-
-    def test_invalid_conf(self):
-        assert Utility.is_valid_config_class(None) is False
-        assert Utility.is_valid_config_class(FakeConfig) is False
-
-    def test_valid_conf(self):
-        assert Utility.is_valid_config_class(NamelessConfig)
-        assert Utility.is_valid_config_class(PartialConfig) is None

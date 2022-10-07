@@ -1,11 +1,12 @@
 import logging
 
 from discord.ext import commands
-from NamelessConfig import NamelessConfig
-
-__all__ = ["ExperimentalCog"]
 
 import nameless
+from nameless import shared_vars
+
+
+__all__ = ["ExperimentalCog"]
 
 
 class ExperimentalCog(commands.Cog):
@@ -13,7 +14,7 @@ class ExperimentalCog(commands.Cog):
 
 
 async def setup(bot: nameless.Nameless):
-    if getattr(NamelessConfig, "LAB", False):
+    if getattr(shared_vars.config_cls, "LAB", False):
         await bot.add_cog(ExperimentalCog(bot))
         logging.info("Cog of %s added!", __name__)
     else:

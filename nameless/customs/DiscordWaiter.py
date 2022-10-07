@@ -3,6 +3,7 @@ from typing import Callable
 import discord
 from discord.ext import commands
 
+
 __all__ = ["DiscordWaiter"]
 
 

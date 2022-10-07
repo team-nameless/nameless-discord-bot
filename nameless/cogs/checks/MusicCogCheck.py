@@ -3,6 +3,7 @@ from discord.ext import commands
 
 from .BaseCheck import BaseCheck
 
+
 __all__ = ["MusicCogCheck"]
 
 

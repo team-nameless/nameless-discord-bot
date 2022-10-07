@@ -1,10 +1,10 @@
 import logging
 import os
-import sys
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Type
+from typing import List, Type
 
+import aiohttp
 import discord
 from discord.ext import commands
 from discord.ext.commands import ExtensionFailed, errors
@@ -12,9 +12,9 @@ from packaging import version
 from sqlalchemy.orm import close_all_sessions
 
 from nameless import shared_vars
-from nameless.commons import Utility
 from nameless.database import CRUD
 from nameless.shared_vars import stdout_handler
+
 
 __all__ = ["Nameless"]
 
@@ -23,22 +23,24 @@ logging.getLogger().handlers[:] = [shared_vars.stdout_handler]
 
 
 class Nameless(commands.AutoShardedBot):
+    """Customized Discord sharded bot"""
+
     def __init__(
         self,
         *args,
         command_prefix,
-        config_cls: Optional[Type] = None,
+        config_cls: Type,
         **kwargs,
     ):
         super().__init__(command_prefix, *args, **kwargs)
 
-        self.config_cls = config_cls
+        self.bot_config = config_cls
+
         self.log_level: int = kwargs.get(
             "log_level",
-            logging.DEBUG if getattr(self.config_cls, "LAB", False) else logging.INFO,
+            logging.DEBUG if getattr(self.bot_config, "LAB", False) else logging.INFO,
         )
         self.allow_updates_check: bool = kwargs.get("allow_updates_check", False)
-        self.global_logger = logging.getLogger()
 
         self.loggers: List[logging.Logger] = [
             logging.getLogger(),
@@ -48,37 +50,35 @@ class Nameless(commands.AutoShardedBot):
             logging.getLogger("sqlalchemy.pool"),
             logging.getLogger("ossapi.ossapiv2"),
         ]
-        self.description = getattr(self.config_cls, "BOT_DESCRIPTION", "")
+        self.description = getattr(self.bot_config, "BOT_DESCRIPTION", "")
 
     def check_for_updates(self):
         if not self.allow_updates_check:
-            self.global_logger.warning(
-                "Your bot might fall behind updates, consider setting allow_updates_check to True"
-            )
+            logging.warning("Your bot might fall behind updates, consider setting allow_updates_check to True")
         else:
             nameless_version = version.parse(shared_vars.__nameless_current_version__)
             upstream_version = version.parse(shared_vars.__nameless_upstream_version__)
 
-            self.global_logger.info(
+            logging.info(
                 "Current version: %s - Upstream version: %s",
                 nameless_version,
                 upstream_version,
             )
 
             if nameless_version < upstream_version:
-                self.global_logger.warning("You need to update your code!")
+                logging.warning("You need to update your code!")
             elif nameless_version == upstream_version:
-                self.global_logger.info("You are using latest version!")
+                logging.info("You are using latest version!")
             else:
-                self.global_logger.warning("You are using a version NEWER than original code!")
+                logging.warning("You are using a version NEWER than original code!")
 
         # Write current version in case I forgot
-        with open("../version.txt", "w", encoding="utf-8") as f:
+        with open("version.txt", "w", encoding="utf-8") as f:
             logging.info("Writing current version into version.txt")
             f.write(shared_vars.__nameless_current_version__)
 
     async def __register_all_cogs(self):
-        if cogs := getattr(self.config_cls, "COGS", []):
+        if cogs := getattr(self.bot_config, "COGS", []):
             allowed_cogs = list(filter(shared_vars.cogs_regex.match, os.listdir("cogs")))
 
             for cog_name in cogs:
@@ -99,18 +99,21 @@ class Nameless(commands.AutoShardedBot):
                     logging.error("Unable to load %s! %s", cog_name, fail_reason)
         else:
             logging.warning(
-                "config_cls.COGS is None or non-existence, nothing will be loaded (config_cls=%s)",
-                self.config_cls.__name__,
+                "bot_config.COGS is None or non-existence, nothing will be loaded (bot_config=%s)",
+                self.bot_config.__name__,
             )
 
     async def on_shard_ready(self, shard_id: int):
         logging.info("Shard #%s is ready", shard_id)
 
-    async def on_ready(self):
+    async def setup_hook(self) -> None:
+        await self.construct_shared_vars()
+        self.check_for_updates()
+
         logging.info("Registering commands")
         await self.__register_all_cogs()
 
-        if ids := getattr(self.config_cls, "GUILD_IDs", []):
+        if ids := getattr(self.bot_config, "GUILD_IDs", []):
             for _id in ids:
                 logging.info("Syncing commands with guild ID %d", _id)
                 sf = discord.Object(_id)
@@ -120,7 +123,8 @@ class Nameless(commands.AutoShardedBot):
             await self.tree.sync()
             logging.warning("Please wait at least one hour before using global commands")
 
-        if status := getattr(self.config_cls, "STATUS", {}):
+    async def on_ready(self):
+        if status := getattr(self.bot_config, "STATUS", {}):
             logging.info("Setting presence")
             url = status.get("url", None)
 
@@ -188,7 +192,7 @@ class Nameless(commands.AutoShardedBot):
         await super().close()
 
     def patch_loggers(self) -> None:
-        if getattr(self.config_cls, "LAB", False):
+        if getattr(self.bot_config, "LAB", False):
             file_handler = logging.FileHandler(filename="nameless.log", mode="w", delay=True)
             file_handler.setFormatter(logging.Formatter("%(asctime)s - [%(levelname)s] [%(name)s] %(message)s"))
             shared_vars.additional_handlers.append(file_handler)
@@ -210,19 +214,37 @@ class Nameless(commands.AutoShardedBot):
                     logger.parent.handlers.append(handler)
                 logger.parent.propagate = False
 
+    async def construct_shared_vars(self):
+        """
+        Constructs variables to shared_vars.py.
+        """
+        logging.info("Populating nameless/shared_vars.py")
+
+        shared_vars.config_cls = self.bot_config
+        shared_vars.start_time = datetime.now()
+        shared_vars.crud_database = CRUD(self.bot_config)
+
+        meta = getattr(self.bot_config, "META", {})
+        shared_vars.__nameless_current_version__ = meta.get("version", None) or shared_vars.__nameless_current_version__
+        shared_vars.upstream_version_txt_url = (
+            meta.get("version_txt", None)
+            or "https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt"
+        )
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(shared_vars.upstream_version_txt_url) as response:
+                if 200 <= response.status <= 299:
+                    shared_vars.__nameless_upstream_version__ = await response.text()
+                else:
+                    logging.warning("Upstream version fetching error, using 0.0.0 as upstream version")
+                    shared_vars.__nameless_upstream_version__ = "0.0.0"
+
     def start_bot(self):
         self.patch_loggers()
-        self.check_for_updates()
 
-        can_cont = Utility.is_valid_config_class(self.config_cls)
+        logging.info(
+            "Using %s as config class",
+            f"{shared_vars.config_cls.__module__}.{shared_vars.config_cls.__name__}",
+        )
 
-        if not isinstance(can_cont, bool):
-            logging.warning("This bot might run into errors because not all fields are presented")
-        else:
-            if not can_cont:
-                logging.error("Fields validation failed, the bot will exit")
-                sys.exit()
-
-        shared_vars.start_time = datetime.now()
-        shared_vars.crud_database = CRUD(self.config_cls)
-        self.run(getattr(self.config_cls, "TOKEN", ""), log_handler=None)
+        self.run(getattr(self.bot_config, "TOKEN", ""), log_handler=None)

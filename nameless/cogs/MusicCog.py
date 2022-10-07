@@ -14,12 +14,12 @@ from discord.app_commands import Choice
 from discord.ext import commands
 from discord.ext.commands import Range
 from discord.utils import escape_markdown
-from NamelessConfig import NamelessConfig
 from wavelink.ext import spotify
 
 from nameless import Nameless, shared_vars
 from nameless.cogs.checks import MusicCogCheck
 from nameless.commons import Utility
+
 
 __all__ = ["MusicCog"]
 
@@ -165,7 +165,7 @@ class MusicCog(commands.Cog):
     def __init__(self, bot: Nameless):
         self.bot = bot
         self.can_use_spotify = bool(
-            (sp := NamelessConfig.LAVALINK.get("spotify")) and sp.get("client_id") and sp.get("client_secret")
+            (sp := shared_vars.config_cls.LAVALINK.get("spotify")) and sp.get("client_id") and sp.get("client_secret")
         )
 
         if not self.can_use_spotify:
@@ -277,7 +277,7 @@ class MusicCog(commands.Cog):
 
     async def connect_nodes(self):
         await self.bot.wait_until_ready()
-        for node in NamelessConfig.LAVALINK["nodes"]:
+        for node in shared_vars.config_cls.LAVALINK["nodes"]:
             await wavelink.NodePool.create_node(
                 bot=self.bot,
                 host=node["host"],
@@ -285,8 +285,8 @@ class MusicCog(commands.Cog):
                 password=node["password"],
                 https=node["is_secure"],
                 spotify_client=spotify.SpotifyClient(
-                    client_id=NamelessConfig.LAVALINK["spotify"]["client_id"],
-                    client_secret=NamelessConfig.LAVALINK["spotify"]["client_secret"],
+                    client_id=shared_vars.config_cls.LAVALINK["spotify"]["client_id"],
+                    client_secret=shared_vars.config_cls.LAVALINK["spotify"]["client_secret"],
                 )
                 if self.can_use_spotify
                 else None,
@@ -385,7 +385,7 @@ class MusicCog(commands.Cog):
             raise commands.CommandError(f"No tracks found for {url}")
 
     @commands.hybrid_group(fallback="radio")
-    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
+    @app_commands.guilds(*getattr(shared_vars.config_cls, "GUILD_IDs", []))
     @commands.guild_only()
     @app_commands.describe(url="Radio url")
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
@@ -695,7 +695,7 @@ class MusicCog(commands.Cog):
 
         deleted_track: wavelink.Track = q[idx - 1]
 
-        vc.queue._queue = collections.deque([t for t in q if t])
+        vc.queue._queue = collections.deque([t for t in q if t])  # pyright: ignore
         await ctx.send(f"Deleted track at position #{idx}: **{deleted_track.title}** from **{deleted_track.author}**")
 
     @queue.command()
@@ -888,7 +888,7 @@ class MusicCog(commands.Cog):
 
         vc: wavelink.Player = ctx.voice_client  # pyright: ignore
 
-        random.shuffle(vc.queue._queue)
+        random.shuffle(vc.queue._queue)  # pyright: ignore
         await ctx.send("Shuffled the queue")
 
     @queue.command()
@@ -929,7 +929,7 @@ class MusicCog(commands.Cog):
 
 
 async def setup(bot: Nameless):
-    if (lvl := getattr(NamelessConfig, "LAVALINK", None)) and lvl.get("nodes", []):
+    if (lvl := getattr(shared_vars.config_cls, "LAVALINK", None)) and lvl.get("nodes", []):
         await bot.add_cog(MusicCog(bot))
         logging.info("Cog of %s added!", __name__)
     else:

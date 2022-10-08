@@ -2,7 +2,20 @@ name: anything python
 
 on:
   push:
+    branches:
+      - 'feat/**'
+      - 'fix/**'
+      - 'dev'
+    tags-ignore:
+      - '*'
   pull_request:
+    branches:
+      - 'feat/**'
+      - 'fix/**'
+      - 'dev'
+      - 'main'
+    tags-ignore:
+      - '*'
   workflow_dispatch:
 
 jobs:
@@ -26,7 +39,7 @@ jobs:
           pip install -U -r requirements_dev.txt
 
       - name: Create dummy config file
-        if: ${{ github.ref != 'refs/heads/feat/v2' }}
+        if: ${{ github.ref_name ! 'feat/v2' }}
         run: |
           cp NamelessConfig_example.py NamelessConfig.py
 
@@ -55,14 +68,14 @@ jobs:
           pytest --cov-report term-missing --cov=nameless.database --cov=nameless.commons.Utility tests/
 
       - name: Deploy to server (dev)
-        if: ${{ github.ref == 'refs/heads/dev' }}
+        if: ${{ github.ref_name == 'dev' }}
         run: |
           sudo apt install sshpass -y
           echo pm2 restart ${{ secrets.INSTANCE_NAME }} > script.sh
           sshpass -p ${{ secrets.SSH_PASSWORD }} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" < script.sh > /dev/null
 
       - name: Deploy to server (main)
-        if: ${{ github.ref == 'refs/heads/main' }}
+        if: ${{ github.ref_name == 'main' }}
         run: |
           sudo apt install sshpass -y
           echo pm2 restart ${{ secrets.STABLE_INSTANCE_NAME }} > script.sh

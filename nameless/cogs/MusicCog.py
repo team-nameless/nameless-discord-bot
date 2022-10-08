@@ -147,6 +147,9 @@ class VoteMenu:
 
 
 class TrackPickDropdown(discord.ui.Select):
+
+    __slots__ = "options"
+
     def __init__(self, tracks: List):
         options = [
             discord.SelectOption(
@@ -180,7 +183,8 @@ class TrackPickDropdown(discord.ui.Select):
 
 class YTDLSource(discord.PCMVolumeTransformer):
 
-    # __slots__ = ('source', 'requester', 'webpage_url', 'title', 'duration', 'thumbnail')
+    __slots__ = ('requester', 'title', 'author', 'lenght', 'extractor',
+                 'direct', 'webpage_url', 'thumbnail')
 
     def __init__(self, data, requester, source=None):
 
@@ -242,8 +246,15 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
         return cls(source=discord.FFmpegPCMAudio(ret["url"], **ffmpegopts), data=ret, requester=requester)
 
+    def cleanup(self) -> None:
+        del self
+
 
 class MainPlayer:
+
+    __slots__ = ("client", "_guild", "_channel", "_cog", "queue", "next",
+                 "track", "volume", "duration", "position", "_loop", "task")
+
     def __init__(self, ctx: commands.Context, cog) -> None:
         self.client = ctx.bot
         self._guild = ctx.guild
@@ -337,18 +348,19 @@ class MusicCog(commands.Cog):
         self.players = {}
 
     async def cleanup(self, guild):
-        try:
-            await guild.voice_client.disconnect()
-        except AttributeError:
-            pass
+        print("Remove guild process...")
+        print("Disconnecting...")
+        await guild.voice_client.disconnect()
 
         try:
+            print("Cancel all running task...")
             player = self.players[guild.id]
             player.task.cancel()
         except asyncio.CancelledError:
             pass
 
         try:
+            print("Delete guild in self.players")
             del self.players[guild.id]
         except KeyError:
             pass
@@ -571,7 +583,7 @@ class MusicCog(commands.Cog):
         await ctx.defer()
 
         try:
-            await ctx.voice_client.disconnect(force=True)  # pyright: ignore
+            await self.cleanup(ctx.guild)
             await ctx.send("Disconnected from my own voice channel")
         except AttributeError:
             await ctx.send("Already disconnected")

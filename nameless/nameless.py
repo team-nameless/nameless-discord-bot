@@ -54,7 +54,7 @@ class Nameless(commands.AutoShardedBot):
     def check_for_updates(self):
         if not self.allow_updates_check:
             self.global_logger.warning(
-                "Your bot might fall behind updates, consider setting allow_updates_check to True"
+                "Your bot might fall behind updates, consider using flag '--allow-updates-check'"
             )
         else:
             nameless_version = version.parse(shared_vars.__nameless_current_version__)

@@ -4,11 +4,11 @@ from typing import Awaitable, Callable
 import discord
 from discord import Forbidden, HTTPException, app_commands
 from discord.ext import commands
-from NamelessConfig import NamelessConfig
 
 import nameless
 from nameless.customs.DiscordWaiter import DiscordWaiter
 from nameless.shared_vars import crud_database
+from NamelessConfig import NamelessConfig
 
 
 __all__ = ["ModeratorCog"]

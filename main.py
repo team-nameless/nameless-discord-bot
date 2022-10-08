@@ -8,6 +8,7 @@ from discord.ext import commands
 import NamelessConfig
 from nameless import Nameless, shared_vars
 
+
 UPDATE_CHECK_FLAG = "--allow-updates-check"
 CONFIG_CLASS_FLAG = "--config-class"
 
@@ -17,7 +18,7 @@ def main(args: List[str]):
 
     if cls_arg:
         try:
-            cfg = __import__(cls_arg[0][len(f"{CONFIG_CLASS_FLAG}="):]).NamelessConfig
+            cfg = __import__(cls_arg[0][len(f"{CONFIG_CLASS_FLAG}=") :]).NamelessConfig
         except (ValueError, ModuleNotFoundError):
             cfg = NamelessConfig.NamelessConfig
             logging.warning("Invalid value for config class flag, NamelessConfig.NamelessConfig will be used")

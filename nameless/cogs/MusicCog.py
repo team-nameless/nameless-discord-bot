@@ -1,15 +1,16 @@
+import asyncio
 import collections
 import datetime
 import logging
 import math
 import random
-import asyncio
 from functools import partial
 from typing import Any, AsyncIterable, Dict, List, Optional, Tuple, Union
 
 import discord
 import DiscordUtils
-from discord import ClientException, app_commands, VoiceClient
+from discord import ClientException, VoiceClient, app_commands
+
 # from discord.app_commands import Choice
 from discord.ext import commands
 from discord.ext.commands import Range
@@ -24,23 +25,20 @@ from nameless.commons import Utility
 __all__ = ["MusicCog"]
 
 ytdlopts = {
-    'format': 'bestaudio/93/best',
-    'outtmpl': 'downloads/%(extractor)s-%(id)s-%(title)s.%(ext)s',
-    'restrictfilenames': True,
-    'nocheckcertificate': True,
-    'ignoreerrors': False,
-    'logtostderr': False,
-    'quiet': True,
-    'extract_flat': 'in_playlist',
-    'no_warnings': True,
-    'default_search': 'ytsearch5',
-    'source_address': '0.0.0.0'
+    "format": "bestaudio/93/best",
+    "outtmpl": "downloads/%(extractor)s-%(id)s-%(title)s.%(ext)s",
+    "restrictfilenames": True,
+    "nocheckcertificate": True,
+    "ignoreerrors": False,
+    "logtostderr": False,
+    "quiet": True,
+    "extract_flat": "in_playlist",
+    "no_warnings": True,
+    "default_search": "ytsearch5",
+    "source_address": "0.0.0.0",
 }
 
-ffmpegopts = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-    'options': '-vn'
-}
+ffmpegopts = {"before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5", "options": "-vn"}
 
 ytdl = YoutubeDL(ytdlopts)
 
@@ -189,15 +187,15 @@ class YTDLSource(discord.PCMVolumeTransformer):
         if source:
             self.source = source
             super().__init__(source)
-            
+
         self.requester: discord.Member = requester
-        self.title = data.get('title', 'None')
-        self.author = data.get('author', 'None')
-        self.lenght = data.get('duration', 'None')
-        self.extractor = data.get('extractor', 'None')
-        self.direct = data.get('direct', False)
-        self.webpage_url = data.get('webpage_url', data.get('url'))
-        self.thumbnail = data.get('thumbnail', None)
+        self.title = data.get("title", "None")
+        self.author = data.get("author", "None")
+        self.lenght = data.get("duration", "None")
+        self.extractor = data.get("extractor", "None")
+        self.direct = data.get("direct", False)
+        self.webpage_url = data.get("webpage_url", data.get("url"))
+        self.thumbnail = data.get("thumbnail", None)
 
     @staticmethod
     def custom_ytdl_search(default_search):
@@ -214,8 +212,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
         if data.get("entries"):
             if range == 1:
-                return data.get("extractor"), data['entries'][0]  # type: ignore
-            return data.get("extractor"), data['entries'][:range]  # type: ignore
+                return data.get("extractor"), data["entries"][0]  # type: ignore
+            return data.get("extractor"), data["entries"][:range]  # type: ignore
         return data.get("extractor"), data  # type: ignore
 
     def is_stream(self):
@@ -233,7 +231,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         for item in data:
             item.update({"extractor": extractor})
             yield cls(item, ctx.author)
-    
+
     @classmethod
     async def generate_stream(cls, data, loop=None):
         loop = loop or asyncio.get_event_loop()
@@ -242,11 +240,10 @@ class YTDLSource(discord.PCMVolumeTransformer):
         to_run = partial(ytdl.extract_info, url=data.webpage_url, download=False)
         ret: dict = await loop.run_in_executor(None, to_run)  # type: ignore
 
-        return cls(source=discord.FFmpegPCMAudio(ret['url'], **ffmpegopts), data=ret, requester=requester)
+        return cls(source=discord.FFmpegPCMAudio(ret["url"], **ffmpegopts), data=ret, requester=requester)
 
 
 class MainPlayer:
-
     def __init__(self, ctx: commands.Context, cog) -> None:
         self.client = ctx.bot
         self._guild = ctx.guild
@@ -266,25 +263,27 @@ class MainPlayer:
 
     @staticmethod
     def _build_np_embed(track: YTDLSource):
-        return discord.Embed(timestamp=datetime.datetime.now(), color=discord.Color.orange()) \
+        return (
+            discord.Embed(timestamp=datetime.datetime.now(), color=discord.Color.orange())
             .set_author(
                 name="Now playing track",
                 icon_url=track.requester.avatar.url,  # pyright: ignore
-            ) \
+            )
             .add_field(
                 name="Title",
                 value=escape_markdown(track.title),
                 inline=False,
-            ) \
+            )
             .add_field(
                 name="Author",
                 value=escape_markdown(track.author) if track.author else "N/A",
-            ) \
+            )
             .add_field(
                 name="Source",
                 value=escape_markdown(track.webpage_url) if track.webpage_url else "N/A",
             )
-            
+        )
+
     def clear_queue(self):
         while not self.queue.empty():
             try:
@@ -308,19 +307,17 @@ class MainPlayer:
                 self.track.volume = self.volume
 
                 self._guild.voice_client.play(  # type: ignore
-                    self.track,
-                    after=lambda _: self.client.loop.call_soon_threadsafe(self.next.set)
+                    self.track, after=lambda _: self.client.loop.call_soon_threadsafe(self.next.set)
                 )
 
                 self.duration -= self.track.lenght
 
             except AttributeError as e:
-                print(self._guild.id, str(e))  
+                print(self._guild.id, str(e))
                 return self.destroy(self._guild)
 
             except Exception as e:
-                return await self._channel.send(f'There was an error processing your song.\n'
-                                                f'```css\n[{e}]\n```')
+                return await self._channel.send(f"There was an error processing your song.\n" f"```css\n[{e}]\n```")
 
             finally:
                 await self.next.wait()
@@ -328,7 +325,7 @@ class MainPlayer:
                 # Make sure the FFmpeg process is cleaned up.
                 self.track.cleanup()
                 self.track = None  # type: ignore
-                
+
     def destroy(self, guild):
         """Disconnect and cleanup the player."""
         return self.client.loop.create_task(self._cog.cleanup(guild))
@@ -338,7 +335,7 @@ class MusicCog(commands.Cog):
     def __init__(self, bot: Nameless):
         self.bot = bot
         self.players = {}
-        
+
     async def cleanup(self, guild):
         try:
             await guild.voice_client.disconnect()
@@ -602,10 +599,10 @@ class MusicCog(commands.Cog):
 
         if vc.is_paused():
             vc.resume()
-            action = 'Resumed'
+            action = "Resumed"
         else:
             vc.pause()
-            action = 'Paused'
+            action = "Paused"
 
         await ctx.send(action)
 
@@ -837,7 +834,7 @@ class MusicCog(commands.Cog):
 
         vc: VoiceClient = ctx.voice_client  # pyright: ignore
         player: MainPlayer = self.get_player(ctx)
-        q = player.queue._queue   # pyright: ignore
+        q = player.queue._queue  # pyright: ignore
 
         deleted_track: YTDLSource = q[idx - 1]
 
@@ -854,7 +851,7 @@ class MusicCog(commands.Cog):
         await ctx.defer()
 
         player: MainPlayer = self.get_player(ctx)
-        
+
         track = await YTDLSource.get_track(ctx, search)
         if track.is_stream():
             await ctx.send("This is a stream, cannot add to queue")
@@ -1055,7 +1052,7 @@ class MusicCog(commands.Cog):
         """Clear the queue"""
         await ctx.defer()
         player: MainPlayer = self.get_player(ctx)
-        
+
         try:
             player.clear_queue()
         except Exception as e:

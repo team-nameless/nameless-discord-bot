@@ -5,7 +5,7 @@ import logging
 import math
 import random
 from functools import partial
-from typing import Any, AsyncIterable, Dict, List, Optional, Tuple, Union
+from typing import Any, AsyncIterable, Dict, List, Optional, Union
 
 import discord
 import DiscordUtils
@@ -148,7 +148,7 @@ class VoteMenu:
 
 class TrackPickDropdown(discord.ui.Select):
 
-    __slots__ = "options"
+    __slots__ = ("options",)
 
     def __init__(self, tracks: List):
         options = [
@@ -183,8 +183,7 @@ class TrackPickDropdown(discord.ui.Select):
 
 class YTDLSource(discord.PCMVolumeTransformer):
 
-    __slots__ = ('requester', 'title', 'author', 'lenght', 'extractor',
-                 'direct', 'webpage_url', 'thumbnail')
+    __slots__ = ("requester", "title", "author", "lenght", "extractor", "direct", "webpage_url", "thumbnail")
 
     def __init__(self, data, requester, source=None):
 
@@ -193,13 +192,26 @@ class YTDLSource(discord.PCMVolumeTransformer):
             super().__init__(source)
 
         self.requester: discord.Member = requester
-        self.title = data.get("title", "None")
-        self.author = data.get("author", "None")
-        self.lenght = data.get("duration", "None")
-        self.extractor = data.get("extractor", "None")
+        self.title = data.get("title")
+        self.author = data.get("uploader")
+        self.lenght = data.get("duration", 0)
         self.direct = data.get("direct", False)
-        self.webpage_url = data.get("webpage_url", data.get("url"))
         self.thumbnail = data.get("thumbnail", None)
+        self.extractor = data.get("extractor", "None")
+
+        if "search" in self.extractor:
+            self.webpage_url = data.get("url")
+        else:
+            self.webpage_url = data.get("webpage_url")
+
+    @staticmethod
+    async def _get_raw_data(search, loop=None) -> Dict:
+        loop = loop or asyncio.get_event_loop()
+
+        to_run = partial(ytdl.extract_info, url=search, download=False)
+        data: Dict = await loop.run_in_executor(None, to_run)  # type: ignore
+
+        return data
 
     @staticmethod
     def custom_ytdl_search(default_search):
@@ -207,34 +219,26 @@ class YTDLSource(discord.PCMVolumeTransformer):
         config["default_search"] = default_search
         return YoutubeDL(config)
 
-    @staticmethod
-    async def _get_raw_data(search, loop=None, range=1) -> Tuple[str, Union[list, dict]]:
-        loop = loop or asyncio.get_event_loop()
-
-        to_run = partial(ytdl.extract_info, url=search, download=False)
-        data: Dict = await loop.run_in_executor(None, to_run)  # type: ignore
-
-        if data.get("entries"):
-            if range == 1:
-                return data.get("extractor"), data["entries"][0]  # type: ignore
-            return data.get("extractor"), data["entries"][:range]  # type: ignore
-        return data.get("extractor"), data  # type: ignore
-
     def is_stream(self):
         return self.direct
 
     @classmethod
     async def get_track(cls, ctx: commands.Context, search, loop=None):
-        extractor, data = await cls._get_raw_data(search, loop)
-        data.update({"extractor": extractor})  # type: ignore
+        data = await cls._get_raw_data(search, loop)
+        if tracks := data.get("entries", None):
+            track: Dict = tracks[0]
+            del data["entries"]
+            data.update(track)
         return cls(data, ctx.author)
 
     @classmethod
-    async def get_tracks(cls, ctx: commands.Context, search, range, loop=None) -> AsyncIterable:
-        extractor, data = await cls._get_raw_data(search, loop, range)
-        for item in data:
-            item.update({"extractor": extractor})
-            yield cls(item, ctx.author)
+    async def get_tracks(cls, ctx: commands.Context, search, range=5, loop=None) -> AsyncIterable:
+        data = await cls._get_raw_data(search, loop)
+        for track in data.get("entries", data)[:range]:
+            track.update(
+                {"extractor": data.get("extractor"), "direct": data.get("direct")},
+            )
+            yield cls(track, ctx.author)
 
     @classmethod
     async def generate_stream(cls, data, loop=None):
@@ -252,8 +256,20 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
 class MainPlayer:
 
-    __slots__ = ("client", "_guild", "_channel", "_cog", "queue", "next",
-                 "track", "volume", "duration", "position", "_loop", "task")
+    __slots__ = (
+        "client",
+        "_guild",
+        "_channel",
+        "_cog",
+        "queue",
+        "next",
+        "track",
+        "volume",
+        "duration",
+        "position",
+        "_loop",
+        "task",
+    )
 
     def __init__(self, ctx: commands.Context, cog) -> None:
         self.client = ctx.bot

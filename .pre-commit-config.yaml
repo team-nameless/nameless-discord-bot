@@ -14,3 +14,17 @@ repos:
             "--check",
             "--diff",
           ]
+
+      - id: isort
+        name: isort
+        entry: isort
+        always_run: true
+        language: system
+        pass_filenames: false
+        fail_fast: true
+        args:
+          [
+            ".",
+            "--check",
+            "--diff",
+          ]

@@ -310,7 +310,6 @@ class MainPlayer:
                 self.next.clear()
                 if not self._loop or self.track is None:
                     self.track = await self.queue.get()
-                    print(f"Get {self.track.title}!!!")
 
                     await self._channel.send(embed=self._build_np_embed(self.track))
 
@@ -348,19 +347,15 @@ class MusicCog(commands.Cog):
         self.players = {}
 
     async def cleanup(self, guild):
-        print("Remove guild process...")
-        print("Disconnecting...")
         await guild.voice_client.disconnect()
 
         try:
-            print("Cancel all running task...")
             player = self.players[guild.id]
             player.task.cancel()
         except asyncio.CancelledError:
             pass
 
         try:
-            print("Delete guild in self.players")
             del self.players[guild.id]
         except KeyError:
             pass

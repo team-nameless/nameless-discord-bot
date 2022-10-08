@@ -3,6 +3,7 @@ ossapi
 discord-together
 discord.py
 discord.py[speed]
+discord.py[voice]
 DiscordUtils
 yt-dlp
 alembic

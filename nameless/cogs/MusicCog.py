@@ -3,18 +3,18 @@ import datetime
 import logging
 import math
 import random
-from typing import Any, Dict, List, Optional, Type, Union
-from urllib import parse
+import asyncio
+from functools import partial
+from typing import Any, AsyncIterable, Dict, List, Optional, Tuple, Union
 
 import discord
 import DiscordUtils
-import wavelink
-from discord import ClientException, app_commands
-from discord.app_commands import Choice
+from discord import ClientException, app_commands, VoiceClient
+# from discord.app_commands import Choice
 from discord.ext import commands
 from discord.ext.commands import Range
 from discord.utils import escape_markdown
-from wavelink.ext import spotify
+from yt_dlp import YoutubeDL
 
 from nameless import Nameless, shared_vars
 from nameless.cogs.checks import MusicCogCheck
@@ -23,7 +23,26 @@ from nameless.commons import Utility
 
 __all__ = ["MusicCog"]
 
-music_default_sources: List[str] = ["youtube", "soundcloud", "ytmusic"]
+ytdlopts = {
+    'format': 'bestaudio/93/best',
+    'outtmpl': 'downloads/%(extractor)s-%(id)s-%(title)s.%(ext)s',
+    'restrictfilenames': True,
+    'nocheckcertificate': True,
+    'ignoreerrors': False,
+    'logtostderr': False,
+    'quiet': True,
+    'extract_flat': 'in_playlist',
+    'no_warnings': True,
+    'default_search': 'ytsearch5',
+    'source_address': '0.0.0.0'
+}
+
+ffmpegopts = {
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+    'options': '-vn'
+}
+
+ytdl = YoutubeDL(ytdlopts)
 
 
 class VoteMenuView(discord.ui.View):
@@ -69,7 +88,7 @@ class VoteMenu:
         action: str,
         content: str,
         ctx: commands.Context,
-        voice_client: wavelink.Player,
+        voice_client: VoiceClient,
     ):
         self.action = action
         self.content = f"{content[:50]}..."
@@ -130,7 +149,7 @@ class VoteMenu:
 
 
 class TrackPickDropdown(discord.ui.Select):
-    def __init__(self, tracks: List[wavelink.SearchableTrack]):
+    def __init__(self, tracks: List):
         options = [
             discord.SelectOption(
                 label="I don't see my results here",
@@ -161,25 +180,185 @@ class TrackPickDropdown(discord.ui.Select):
             v.stop()
 
 
+class YTDLSource(discord.PCMVolumeTransformer):
+
+    # __slots__ = ('source', 'requester', 'webpage_url', 'title', 'duration', 'thumbnail')
+
+    def __init__(self, data, requester, source=None):
+
+        if source:
+            self.source = source
+            super().__init__(source)
+            
+        self.requester: discord.Member = requester
+        self.title = data.get('title', 'None')
+        self.author = data.get('author', 'None')
+        self.lenght = data.get('duration', 'None')
+        self.extractor = data.get('extractor', 'None')
+        self.direct = data.get('direct', False)
+        self.webpage_url = data.get('webpage_url', data.get('url'))
+        self.thumbnail = data.get('thumbnail', None)
+
+    @staticmethod
+    def custom_ytdl_search(default_search):
+        config = ytdlopts.copy()
+        config["default_search"] = default_search
+        return YoutubeDL(config)
+
+    @staticmethod
+    async def _get_raw_data(search, loop=None, range=1) -> Tuple[str, Union[list, dict]]:
+        loop = loop or asyncio.get_event_loop()
+
+        to_run = partial(ytdl.extract_info, url=search, download=False)
+        data: Dict = await loop.run_in_executor(None, to_run)  # type: ignore
+
+        if data.get("entries"):
+            if range == 1:
+                return data.get("extractor"), data['entries'][0]  # type: ignore
+            return data.get("extractor"), data['entries'][:range]  # type: ignore
+        return data.get("extractor"), data  # type: ignore
+
+    def is_stream(self):
+        return self.direct
+
+    @classmethod
+    async def get_track(cls, ctx: commands.Context, search, loop=None):
+        extractor, data = await cls._get_raw_data(search, loop)
+        data.update({"extractor": extractor})  # type: ignore
+        return cls(data, ctx.author)
+
+    @classmethod
+    async def get_tracks(cls, ctx: commands.Context, search, range, loop=None) -> AsyncIterable:
+        extractor, data = await cls._get_raw_data(search, loop, range)
+        for item in data:
+            item.update({"extractor": extractor})
+            yield cls(item, ctx.author)
+    
+    @classmethod
+    async def generate_stream(cls, data, loop=None):
+        loop = loop or asyncio.get_event_loop()
+        requester = data.requester
+
+        to_run = partial(ytdl.extract_info, url=data.webpage_url, download=False)
+        ret: dict = await loop.run_in_executor(None, to_run)  # type: ignore
+
+        return cls(source=discord.FFmpegPCMAudio(ret['url'], **ffmpegopts), data=ret, requester=requester)
+
+
+class MainPlayer:
+
+    def __init__(self, ctx: commands.Context, cog) -> None:
+        self.client = ctx.bot
+        self._guild = ctx.guild
+        self._channel = ctx.channel
+        self._cog = cog
+
+        self.queue = asyncio.Queue()
+        self.next = asyncio.Event()
+
+        self.track: YTDLSource = None  # pyright: ignore
+        self.volume = 0.5
+        self.duration = 0
+        self.position = 0
+        self._loop = False
+
+        self.task = ctx.bot.loop.create_task(self.create())
+
+    @staticmethod
+    def _build_np_embed(track: YTDLSource):
+        return discord.Embed(timestamp=datetime.datetime.now(), color=discord.Color.orange()) \
+            .set_author(
+                name="Now playing track",
+                icon_url=track.requester.avatar.url,  # pyright: ignore
+            ) \
+            .add_field(
+                name="Title",
+                value=escape_markdown(track.title),
+                inline=False,
+            ) \
+            .add_field(
+                name="Author",
+                value=escape_markdown(track.author) if track.author else "N/A",
+            ) \
+            .add_field(
+                name="Source",
+                value=escape_markdown(track.webpage_url) if track.webpage_url else "N/A",
+            )
+            
+    def clear_queue(self):
+        while not self.queue.empty():
+            try:
+                self.queue.get_nowait()
+            except asyncio.QueueEmpty:
+                continue
+
+    async def create(self):
+        await self.client.wait_until_ready()
+
+        while not self.client.is_closed():
+            try:
+                self.next.clear()
+                if not self._loop or self.track is None:
+                    self.track = await self.queue.get()
+                    print(f"Get {self.track.title}!!!")
+
+                    await self._channel.send(embed=self._build_np_embed(self.track))
+
+                self.track = await YTDLSource.generate_stream(self.track)
+                self.track.volume = self.volume
+
+                self._guild.voice_client.play(  # type: ignore
+                    self.track,
+                    after=lambda _: self.client.loop.call_soon_threadsafe(self.next.set)
+                )
+
+                self.duration -= self.track.lenght
+
+            except AttributeError as e:
+                print(self._guild.id, str(e))  
+                return self.destroy(self._guild)
+
+            except Exception as e:
+                return await self._channel.send(f'There was an error processing your song.\n'
+                                                f'```css\n[{e}]\n```')
+
+            finally:
+                await self.next.wait()
+
+                # Make sure the FFmpeg process is cleaned up.
+                self.track.cleanup()
+                self.track = None  # type: ignore
+                
+    def destroy(self, guild):
+        """Disconnect and cleanup the player."""
+        return self.client.loop.create_task(self._cog.cleanup(guild))
+
+
 class MusicCog(commands.Cog):
     def __init__(self, bot: Nameless):
         self.bot = bot
-        self.can_use_spotify = bool(
-            (sp := shared_vars.config_cls.LAVALINK.get("spotify")) and sp.get("client_id") and sp.get("client_secret")
-        )
+        self.players = {}
+        
+    async def cleanup(self, guild):
+        try:
+            await guild.voice_client.disconnect()
+        except AttributeError:
+            pass
 
-        if not self.can_use_spotify:
-            logging.warning("Spotify command option will be removed since you did not provide enough credentials.")
-        else:
-            # I know, bad design
-            global music_default_sources  # pylint: disable=global-statement
-            music_default_sources += ["spotify"]
+        try:
+            player = self.players[guild.id]
+            player.task.cancel()
+        except asyncio.CancelledError:
+            pass
 
-        bot.loop.create_task(self.connect_nodes())
+        try:
+            del self.players[guild.id]
+        except KeyError:
+            pass
 
     @staticmethod
     def generate_embeds_from_tracks(
-        tracks: List[wavelink.SearchableTrack],
+        tracks: List,
     ) -> List[discord.Embed]:
         embeds: List[discord.Embed] = []
         txt = ""
@@ -187,7 +366,7 @@ class MusicCog(commands.Cog):
         for idx, track in enumerate(tracks):
             upcoming = (
                 f"{idx + 1} - "
-                f"[{escape_markdown(track.title)} by {escape_markdown(track.author)}]"  # pyright: ignore
+                f"[{escape_markdown(track.title)} by {escape_markdown(track.author)}]"
                 f"({track.uri})\n"
             )
 
@@ -213,19 +392,19 @@ class MusicCog(commands.Cog):
         return embeds
 
     @staticmethod
-    def generate_embeds_from_queue(q: wavelink.Queue) -> List[discord.Embed]:
-        # Just in case the user passes the original queue
-        copycat = q.copy()
+    def generate_embeds_from_queue(q: asyncio.Queue) -> List[discord.Embed]:
+        # Some workaround to get list from asyncio.Queue
+        copycat: List = q._queue.copy()  # pyright: ignore
         idx = 0
         txt = ""
         embeds: List[discord.Embed] = []
 
         try:
-            while track := copycat.get():
+            while track := copycat.pop():
                 upcoming = (
                     f"{idx + 1} - "
-                    f"[{escape_markdown(track.title)} by {escape_markdown(track.author)}]"  # pyright: ignore
-                    f"({track.uri})\n"  # pyright: ignore
+                    f"[{escape_markdown(track.title)} by {escape_markdown(track.author)}]"
+                    f"({track.uri})\n"
                 )
 
                 if len(txt) + len(upcoming) > 2048:
@@ -240,7 +419,7 @@ class MusicCog(commands.Cog):
                     txt += upcoming
 
                 idx += 1
-        except wavelink.QueueEmpty:
+        except IndexError:
             # Nothing else in queue
             pass
         finally:
@@ -260,42 +439,6 @@ class MusicCog(commands.Cog):
         p = DiscordUtils.Pagination.AutoEmbedPaginator(ctx)
         await p.run(embeds)
 
-    @staticmethod
-    def resolve_direct_url(search: str) -> Optional[Type[wavelink.SearchableTrack]]:
-        locations: Dict[str, Type[wavelink.SearchableTrack]] = {
-            "soundcloud.com": wavelink.SoundCloudTrack,
-            "open.spotify.com": spotify.SpotifyTrack,
-            "music.youtube.com": wavelink.YouTubeMusicTrack,
-            "youtube.com": wavelink.YouTubeTrack,
-            "youtu.be": wavelink.YouTubeTrack,
-        }
-
-        if domain := parse.urlparse(search).netloc:
-            return locations.get(domain, wavelink.SearchableTrack)
-
-        return None
-
-    async def connect_nodes(self):
-        await self.bot.wait_until_ready()
-        for node in shared_vars.config_cls.LAVALINK["nodes"]:
-            await wavelink.NodePool.create_node(
-                bot=self.bot,
-                host=node["host"],
-                port=node["port"],
-                password=node["password"],
-                https=node["is_secure"],
-                spotify_client=spotify.SpotifyClient(
-                    client_id=shared_vars.config_cls.LAVALINK["spotify"]["client_id"],
-                    client_secret=shared_vars.config_cls.LAVALINK["spotify"]["client_secret"],
-                )
-                if self.can_use_spotify
-                else None,
-            )
-
-    @commands.Cog.listener()
-    async def on_wavelink_node_ready(self, node: wavelink.Node):
-        logging.info("Node {%s} (%s) is ready!", node.identifier, node.host)
-
     @commands.Cog.listener()
     async def on_voice_state_update(
         self,
@@ -303,84 +446,93 @@ class MusicCog(commands.Cog):
         before: discord.VoiceState,
         after: discord.VoiceState,
     ):
-        # Technically auto disconnect the bot from lavalink
-        # Sometimes on manual disconnection
-        if member.id == self.bot.user.id:
-            before_was_in_voice = before.channel is not None
-            after_not_in_noice = after.channel is None
+        # # Technically auto disconnect the bot from lavalink
+        # # Sometimes on manual disconnection
+        # if member.id == self.bot.user.id:
+        #     before_was_in_voice = before.channel is not None
+        #     after_not_in_noice = after.channel is None
 
-            if before_was_in_voice and after_not_in_noice:
-                node_dict = wavelink.NodePool._nodes.items()
-                guilds_players = [p for (_, node) in node_dict if (p := node.get_player(member.guild))]
-                if guilds_players:
-                    bot_player = [player for player in guilds_players if player.client.user.id == self.bot.user.id]
-                    if bot_player:
-                        logging.debug(
-                            "Guild player %s still connected even if it is removed from voice, disconnecting",
-                            bot_player[0].guild.id,
-                        )
-                        await bot_player[0].disconnect()
+        #     if before_was_in_voice and after_not_in_noice:
+        #         node_dict = wavelink.NodePool._nodes.items()
+        #         guilds_players = [p for (_, node) in node_dict if (p := node.get_player(member.guild))]
+        #         if guilds_players:
+        #             bot_player = [player for player in guilds_players if player.client.user.id == self.bot.user.id]
+        #             if bot_player:
+        #                 logging.debug(
+        #                     "Guild player %s still connected even if it is removed from voice, disconnecting",
+        #                     bot_player[0].guild.id,
+        #                 )
+        #                 await bot_player[0].disconnect()
+        pass
 
-    @commands.Cog.listener()
-    async def on_wavelink_track_start(self, player: wavelink.Player, track: wavelink.Track):
-        chn = player.guild.get_channel(getattr(player, "trigger_channel_id"))
+    # @commands.Cog.listener()
+    # async def on_wavelink_track_start(self, player: wavelink.Player, track: wavelink.Track):
+    #     chn = player.guild.get_channel(getattr(player, "trigger_channel_id"))
 
-        if getattr(player, "play_now_allowed") and (
-            (chn is not None and not getattr(player, "loop_sent")) or (getattr(player, "should_send_play_now"))
-        ):
-            setattr(player, "should_send_play_now", False)
+    #     if getattr(player, "play_now_allowed") and (
+    #         (chn is not None and not getattr(player, "loop_sent")) or (getattr(player, "should_send_play_now"))
+    #     ):
+    #         setattr(player, "should_send_play_now", False)
 
-            if track.is_stream():
-                await chn.send(f"Streaming music from {track.uri}")  # pyright: ignore
-            else:
-                await chn.send(f"Playing: **{track.title}** from **{track.author}** ({track.uri})")  # pyright: ignore
+    #         if track.is_stream():
+    #             await chn.send(f"Streaming music from {track.uri}")  # pyright: ignore
+    #         else:
+    #             await chn.send(f"Playing: **{track.title}** from **{track.author}** ({track.uri})")  # pyright: ignore
 
-    @commands.Cog.listener()
-    async def on_wavelink_track_end(self, player: wavelink.Player, track: wavelink.Track, reason: str):
-        if getattr(player, "stop_sent"):
-            setattr(player, "stop_sent", False)
-            return
+    # @commands.Cog.listener()
+    # async def on_wavelink_track_end(self, player: wavelink.Player, track: wavelink.Track, reason: str):
+    #     if getattr(player, "stop_sent"):
+    #         setattr(player, "stop_sent", False)
+    #         return
 
-        chn = player.guild.get_channel(getattr(player, "trigger_channel_id"))
+    #     chn = player.guild.get_channel(getattr(player, "trigger_channel_id"))
 
-        is_loop = getattr(player, "loop_sent")
-        is_skip = getattr(player, "skip_sent")
+    #     is_loop = getattr(player, "loop_sent")
+    #     is_skip = getattr(player, "skip_sent")
 
+    #     try:
+    #         if is_loop and not is_skip:
+    #             setattr(player, "loop_play_count", getattr(player, "loop_play_count") + 1)
+    #         elif is_loop and is_skip:
+    #             setattr(player, "loop_play_count", 0)
+    #             setattr(player, "skip_sent", False)
+    #             track = await player.queue.get_wait()  # pyright: ignore
+    #         elif is_skip and not is_loop:
+    #             track = await player.queue.get_wait()  # pyright: ignore
+    #         elif not is_skip and not is_loop:
+    #             track = await player.queue.get_wait()  # pyright: ignore
+
+    #         await self.__internal_play2(player, track.uri)  # pyright: ignore
+    #     except wavelink.QueueEmpty:
+    #         if chn:
+    #             await chn.send("The queue is empty now")  # pyright: ignore
+
+    def get_player(self, ctx: commands.Context):
+        """Retrieve the guild player, or generate one."""
         try:
-            if is_loop and not is_skip:
-                setattr(player, "loop_play_count", getattr(player, "loop_play_count") + 1)
-            elif is_loop and is_skip:
-                setattr(player, "loop_play_count", 0)
-                setattr(player, "skip_sent", False)
-                track = await player.queue.get_wait()  # pyright: ignore
-            elif is_skip and not is_loop:
-                track = await player.queue.get_wait()  # pyright: ignore
-            elif not is_skip and not is_loop:
-                track = await player.queue.get_wait()  # pyright: ignore
+            player = self.players[ctx.guild.id]
+        except KeyError:
+            player = MainPlayer(ctx, self)
+            self.players[ctx.guild.id] = player
 
-            await self.__internal_play2(player, track.uri)  # pyright: ignore
-        except wavelink.QueueEmpty:
-            if chn:
-                await chn.send("The queue is empty now")  # pyright: ignore
+        return player
 
     async def __internal_play(self, ctx: commands.Context, url: str, is_radio: bool = False):
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-
         if is_radio:
             dbg, _ = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
             dbg.radio_start_time = discord.utils.utcnow()
             shared_vars.crud_database.save_changes()
 
-        await self.__internal_play2(vc, url, is_radio)
+        await self.__internal_play2(ctx, url, is_radio)
 
-    async def __internal_play2(self, vc: wavelink.Player, url: str, is_radio: bool = False):
-        tracks = await vc.node.get_tracks(wavelink.SearchableTrack, url)
+    async def __internal_play2(self, ctx: commands.Context, url: str, is_radio: bool = False):
+        player = self.get_player(ctx)
+        track = await YTDLSource.get_track(ctx, url)
 
-        if tracks:
-            track = tracks[0]
+        if track:
             if is_radio and not track.is_stream():
                 raise commands.CommandError("Radio track must be a stream")
-            await vc.play(track)
+            player.queue.put(track)
         else:
             raise commands.CommandError(f"No tracks found for {url}")
 
@@ -408,17 +560,9 @@ class MusicCog(commands.Cog):
         await ctx.defer()
 
         try:
-            await ctx.author.voice.channel.connect(cls=wavelink.Player, self_deaf=True)  # pyright: ignore
+            await ctx.author.voice.channel.connect(self_deaf=True)  # pyright: ignore
             await ctx.send("Connected to your current voice channel")
-
-            vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-            setattr(vc, "skip_sent", False)
-            setattr(vc, "stop_sent", False)
-            setattr(vc, "loop_sent", False)
-            setattr(vc, "should_send_play_now", False)
-            setattr(vc, "play_now_allowed", True)
-            setattr(vc, "trigger_channel_id", ctx.channel.id)
-            setattr(vc, "loop_play_count", 0)
+            self.get_player(ctx)
         except ClientException:
             await ctx.send("Already connected")
 
@@ -435,17 +579,35 @@ class MusicCog(commands.Cog):
         except AttributeError:
             await ctx.send("Already disconnected")
 
+    # TODO: change how loop work
+    # @music.command()
+    # @commands.guild_only()
+    # @commands.check(MusicCogCheck.user_and_bot_in_voice)
+    # @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
+    # async def loop(self, ctx: commands.Context):
+    #     """Toggle loop playback of current track"""
+    #     await ctx.defer()
+
+    #     vc: VoiceClient = ctx.voice_client  # pyright: ignore
+    #     setattr(vc, "loop_sent", not getattr(vc, "loop_sent"))
+    #     await ctx.send(f"Loop set to {'on' if getattr(vc, 'loop_sent') else 'off'}")
+
     @music.command()
     @commands.guild_only()
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
-    async def loop(self, ctx: commands.Context):
-        """Toggle loop playback of current track"""
-        await ctx.defer()
+    @commands.check(MusicCogCheck.bot_must_play_something)
+    async def toggle(self, ctx: commands.Context):
+        """Toggle for current playback."""
+        vc: VoiceClient = ctx.voice_client  # pyright: ignore
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-        setattr(vc, "loop_sent", not getattr(vc, "loop_sent"))
-        await ctx.send(f"Loop set to {'on' if getattr(vc, 'loop_sent') else 'off'}")
+        if vc.is_paused():
+            vc.resume()
+            action = 'Resumed'
+        else:
+            vc.pause()
+            action = 'Paused'
+
+        await ctx.send(action)
 
     @music.command()
     @commands.guild_only()
@@ -455,13 +617,13 @@ class MusicCog(commands.Cog):
         """Pause current playback"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: VoiceClient = ctx.voice_client  # pyright: ignore
 
         if vc.is_paused():
             await ctx.send("Already paused")
             return
 
-        await vc.pause()
+        vc.pause()
         await ctx.send("Paused")
 
     @music.command()
@@ -472,13 +634,13 @@ class MusicCog(commands.Cog):
         """Resume current playback, if paused"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: VoiceClient = ctx.voice_client  # pyright: ignore
 
         if not vc.is_paused():
             await ctx.send("Already resuming")
             return
 
-        await vc.resume()
+        vc.resume()
         await ctx.send("Resumed")
 
     @music.command()
@@ -489,29 +651,10 @@ class MusicCog(commands.Cog):
         """Stop current playback."""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-        setattr(vc, "stop_sent", True)
+        vc: VoiceClient = ctx.voice_client  # pyright: ignore
 
-        await vc.stop()
+        vc.stop()
         await ctx.send("Stopped")
-
-    @music.command()
-    @commands.guild_only()
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.bot_must_silent)
-    @commands.check(MusicCogCheck.queue_has_element)
-    async def play_queue(self, ctx: commands.Context):
-        """Play entire queue. Normally the queue should autoplay, but who knows?"""
-        await ctx.defer()
-
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-
-        if vc.queue.is_empty:
-            await ctx.send("Queue is empty")
-            return
-
-        track = vc.queue.get()
-        await self.__internal_play(ctx, track.uri)  # pyright: ignore
 
     @music.command()
     @commands.guild_only()
@@ -522,81 +665,82 @@ class MusicCog(commands.Cog):
         """Skip a song."""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-        track: wavelink.Track = vc.track  # pyright: ignore
+        vc: VoiceClient = ctx.voice_client  # pyright: ignore
+        player: MainPlayer = self.get_player(ctx)
+        track: YTDLSource = player.track
 
         if await VoteMenu("skip", track.title, ctx, vc).start():
-            setattr(vc, "should_send_play_now", True)
-
-            setattr(vc, "skip_sent", True)
-            await vc.stop()
+            vc.stop()
             await ctx.send("Next track should be played now")
         else:
             await ctx.send("Not skipping because not enough votes!")
 
-    @music.command()
-    @commands.guild_only()
-    @app_commands.describe(pos="Position to seek to in milliseconds, defaults to run from start")
-    @commands.has_guild_permissions(manage_guild=True)
-    @app_commands.checks.has_permissions(manage_guild=True)
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
-    async def seek(self, ctx: commands.Context, pos: Range[int, 0] = 0):
-        """Seek to a position in a track"""
-        await ctx.defer()
+    # TODO: Implement seek (I still don't know how to do this, send help)
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-        track: wavelink.Track = vc.track  # pyright: ignore
+    # @music.command()
+    # @commands.guild_only()
+    # @app_commands.describe(pos="Position to seek to in milliseconds, defaults to run from start")
+    # @commands.has_guild_permissions(manage_guild=True)
+    # @app_commands.checks.has_permissions(manage_guild=True)
+    # @commands.check(MusicCogCheck.user_and_bot_in_voice)
+    # @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
+    # async def seek(self, ctx: commands.Context, pos: Range[int, 0] = 0):
+    #     """Seek to a position in a track"""
+    #     await ctx.defer()
 
-        pos = pos if pos else 0
+    #     vc: VoiceClient = ctx.voice_client  # pyright: ignore
+    #     track: wavelink.Track = vc.track  # pyright: ignore
 
-        if not 0 <= pos / 1000 <= track.length:
-            await ctx.send("Invalid position to seek")
-            return
+    #     pos = pos if pos else 0
 
-        if await VoteMenu("seek", track.title, ctx, vc).start():
-            await vc.seek(pos)
-            delta_pos = datetime.timedelta(milliseconds=pos)
-            await ctx.send(f"Seek to position {delta_pos}")
+    #     if not 0 <= pos / 1000 <= track.length:
+    #         await ctx.send("Invalid position to seek")
+    #         return
 
-    @music.command()
-    @commands.guild_only()
-    @app_commands.describe(segment="Segment to seek (from 0 to 10, respecting to 0%, 10%, ..., 100%)")
-    @commands.has_guild_permissions(manage_guild=True)
-    @app_commands.checks.has_permissions(manage_guild=True)
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
-    async def seek_segment(self, ctx: commands.Context, segment: Range[int, 0, 10] = 0):
-        """Seek to a segment in a track"""
-        await ctx.defer()
+    #     if await VoteMenu("seek", track.title, ctx, vc).start():
+    #         await vc.seek(pos)
+    #         delta_pos = datetime.timedelta(milliseconds=pos)
+    #         await ctx.send(f"Seek to position {delta_pos}")
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-        track: wavelink.Track = vc.track  # pyright: ignore
+    # @music.command()
+    # @commands.guild_only()
+    # @app_commands.describe(segment="Segment to seek (from 0 to 10, respecting to 0%, 10%, ..., 100%)")
+    # @commands.has_guild_permissions(manage_guild=True)
+    # @app_commands.checks.has_permissions(manage_guild=True)
+    # @commands.check(MusicCogCheck.user_and_bot_in_voice)
+    # @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
+    # async def seek_segment(self, ctx: commands.Context, segment: Range[int, 0, 10] = 0):
+    #     """Seek to a segment in a track"""
+    #     await ctx.defer()
 
-        if not 0 <= segment <= 10:
-            await ctx.send("Invalid segment")
-            return
+    #     vc: VoiceClient = ctx.voice_client  # pyright: ignore
+    #     track: wavelink.Track = vc.track  # pyright: ignore
 
-        if await VoteMenu("seek_segment", track.title, ctx, vc).start():
-            pos = int(float(track.length * (segment * 10) / 100) * 1000)
-            await vc.seek(pos)
-            delta_pos = datetime.timedelta(milliseconds=pos)
-            await ctx.send(f"Seek to segment #{segment}: {delta_pos}")
+    #     if not 0 <= segment <= 10:
+    #         await ctx.send("Invalid segment")
+    #         return
 
-    @music.command()
-    @commands.guild_only()
-    @commands.has_guild_permissions(manage_guild=True)
-    @app_commands.checks.has_permissions(manage_guild=True)
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
-    async def toggle_play_now(self, ctx: commands.Context):
-        """Toggle 'Now playing' message delivery"""
-        await ctx.defer()
+    #     if await VoteMenu("seek_segment", track.title, ctx, vc).start():
+    #         pos = int(float(track.length * (segment * 10) / 100) * 1000)
+    #         await vc.seek(pos)
+    #         delta_pos = datetime.timedelta(milliseconds=pos)
+    #         await ctx.send(f"Seek to segment #{segment}: {delta_pos}")
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-        setattr(vc, "play_now_allowed", not getattr(vc, "play_now_allowed"))
+    # I don't know if I'm going to remove this function or reimplement it.
+    # @music.command()
+    # @commands.guild_only()
+    # @commands.has_guild_permissions(manage_guild=True)
+    # @app_commands.checks.has_permissions(manage_guild=True)
+    # @commands.check(MusicCogCheck.user_and_bot_in_voice)
+    # @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
+    # async def toggle_play_now(self, ctx: commands.Context):
+    #     """Toggle 'Now playing' message delivery"""
+    #     await ctx.defer()
 
-        await ctx.send(f"'Now playing' delivery is now {'on' if getattr(vc, 'play_now_allowed') else 'off'}")
+    #     vc: VoiceClient = ctx.voice_client  # pyright: ignore
+    #     setattr(vc, "play_now_allowed", not getattr(vc, "play_now_allowed"))
+
+    #     await ctx.send(f"'Now playing' delivery is now {'on' if getattr(vc, 'play_now_allowed') else 'off'}")
 
     @music.command()
     @commands.guild_only()
@@ -606,16 +750,17 @@ class MusicCog(commands.Cog):
         """Check now playing song"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-        track: wavelink.Track = vc.track  # pyright: ignore
+        vc: VoiceClient = ctx.voice_client  # pyright: ignore
+        player: MainPlayer = self.get_player(ctx)
+        track: YTDLSource = player.track
 
         is_stream = track.is_stream()
         dbg, _ = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
         # next_tr: Optional[Union[Type[wavelink.Track], wavelink.tracks.Playable]]
 
         try:
-            next_tr = vc.queue.copy().get()
-        except wavelink.QueueEmpty:
+            next_tr = player.queue._queue.copy().pop()  # type: ignore
+        except IndexError:
             next_tr = None
 
         await ctx.send(
@@ -636,14 +781,14 @@ class MusicCog(commands.Cog):
                 )
                 .add_field(
                     name="Source",
-                    value=escape_markdown(track.uri) if track.uri else "N/A",
+                    value=escape_markdown(track.webpage_url) if track.webpage_url else "N/A",
                 )
                 .add_field(
                     name="Playtime" if is_stream else "Position",
                     value=str(
                         datetime.datetime.now() - dbg.radio_start_time
                         if is_stream
-                        else f"{datetime.timedelta(seconds=vc.position)}/{datetime.timedelta(seconds=track.length)}"
+                        else f"{datetime.timedelta(seconds=player.position)}/{datetime.timedelta(seconds=track.lenght)}"
                     ),
                 )
                 .add_field(
@@ -657,9 +802,9 @@ class MusicCog(commands.Cog):
                 .add_field(name="Paused", value=vc.is_paused())
                 .add_field(
                     name="Next track",
-                    value=f"[{escape_markdown(next_tr.title) if next_tr.title else 'Unknown title'} "  # pyright: ignore
-                    f"by {escape_markdown(next_tr.author)}]"  # pyright: ignore
-                    f"({next_tr.uri})"  # pyright: ignore
+                    value=f"[{escape_markdown(next_tr.title) if next_tr.title else 'Unknown title'} "
+                    f"by {escape_markdown(next_tr.author)}]"
+                    f"({next_tr.uri})"
                     if next_tr
                     else None,
                 )
@@ -674,9 +819,9 @@ class MusicCog(commands.Cog):
         """View current queue"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        player: MainPlayer = self.get_player(ctx)
 
-        embeds = self.generate_embeds_from_queue(vc.queue)
+        embeds = self.generate_embeds_from_queue(player.queue)
         self.bot.loop.create_task(self.show_paginated_tracks(ctx, embeds))
 
     @queue.command()
@@ -690,10 +835,11 @@ class MusicCog(commands.Cog):
         """Remove track from queue"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-        q = vc.queue._queue
+        vc: VoiceClient = ctx.voice_client  # pyright: ignore
+        player: MainPlayer = self.get_player(ctx)
+        q = player.queue._queue   # pyright: ignore
 
-        deleted_track: wavelink.Track = q[idx - 1]
+        deleted_track: YTDLSource = q[idx - 1]
 
         vc.queue._queue = collections.deque([t for t in q if t])  # pyright: ignore
         await ctx.send(f"Deleted track at position #{idx}: **{deleted_track.title}** from **{deleted_track.author}**")
@@ -701,34 +847,25 @@ class MusicCog(commands.Cog):
     @queue.command()
     @commands.guild_only()
     @app_commands.describe(search="Search query", source="Source to search")
-    @app_commands.choices(source=[Choice(name=k, value=k) for k in music_default_sources])
+    # @app_commands.choices(source=[Choice(name=k, value=k) for k in music_default_sources])
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
     async def add(self, ctx: commands.Context, search: str, source: str = "youtube"):
         """Add selected track(s) to queue"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        player: MainPlayer = self.get_player(ctx)
+        
+        track = await YTDLSource.get_track(ctx, search)
+        if track.is_stream():
+            await ctx.send("This is a stream, cannot add to queue")
+            return
 
-        if search_cls := self.resolve_direct_url(search):
-            track = (await vc.node.get_tracks(search_cls, search))[0]
-
-            if track.is_stream():
-                await ctx.send("This is a stream, cannot add to queue")
-                return
-
-            vc.queue.put(track)
+        if "search" in track.extractor:
+            await player.queue.put(track)
             await ctx.send(content=f"Added `{track.title}` into the queue")
             return
 
-        sources: Dict[str, Any] = {
-            "youtube": wavelink.YouTubeTrack,
-            "ytmusic": wavelink.YouTubeMusicTrack,
-            "spotify": spotify.SpotifyTrack,
-            "soundcloud": wavelink.SoundCloudTrack,
-        }
-
-        search_cls = sources[source]
-        tracks = await search_cls.search(search)
+        tracks: List[YTDLSource] = await YTDLSource.get_tracks(ctx, search, range=5)  # pyright: ignore
 
         if not tracks:
             await ctx.send(f"No tracks found for '{search}' on '{source}'.")
@@ -753,62 +890,64 @@ class MusicCog(commands.Cog):
             await m.edit(content="All choices cleared", view=None)
             return
 
-        soon_to_add_queue: List[wavelink.SearchableTrack] = []
+        soon_to_add_queue: List[YTDLSource] = []
 
         for val in vals:
             idx = int(val)
-            soon_to_add_queue.append(tracks[idx])
+            await player.queue.put(tracks[idx])
 
-        vc.queue.extend(soon_to_add_queue)
         await m.edit(content=f"Added {len(vals)} tracks into the queue", view=None)
 
         embeds = self.generate_embeds_from_tracks(soon_to_add_queue)
         self.bot.loop.create_task(self.show_paginated_tracks(ctx, embeds))
 
-    @queue.command()
-    @commands.guild_only()
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @app_commands.describe(url="Playlist URL", source="Source to get playlist")
-    @app_commands.choices(source=[Choice(name=k, value=k) for k in music_default_sources])
-    async def add_playlist(self, ctx: commands.Context, url: str, source: str = "youtube"):
-        """Add track(s) from playlist to queue"""
-        await ctx.defer()
+    # No playlist for now
+    # TODO: Add playlist
 
-        tracks: Optional[
-            Union[
-                List[wavelink.YouTubeTrack],
-                List[wavelink.YouTubeMusicTrack],
-                List[spotify.SpotifyTrack],
-                List[wavelink.SoundCloudTrack],
-                List[Type[wavelink.tracks.Playable]],
-                List[Type[wavelink.SearchableTrack]],
-            ]
-        ] = []
+    # @queue.command()
+    # @commands.guild_only()
+    # @commands.check(MusicCogCheck.user_and_bot_in_voice)
+    # @app_commands.describe(url="Playlist URL", source="Source to get playlist")
+    # @app_commands.choices(source=[Choice(name=k, value=k) for k in music_default_sources])
+    # async def add_playlist(self, ctx: commands.Context, url: str, source: str = "youtube"):
+    #     """Add track(s) from playlist to queue"""
+    #     await ctx.defer()
 
-        if source == "youtube":
-            try:
-                pl = (await wavelink.YouTubePlaylist.search(url)).tracks  # pyright: ignore
-            except wavelink.LoadTrackError:
-                pl = await wavelink.YouTubeTrack.search(url)
-            tracks = pl
-        elif source == "ytmusic":
-            tracks = await wavelink.YouTubeMusicTrack.search(url)
-        elif source == "spotify":
-            tracks = await spotify.SpotifyTrack.search(url, type=spotify.SpotifySearchType.playlist)  # pyright: ignore
-        elif source == "soundcloud":
-            tracks = await wavelink.SoundCloudTrack.search(query=url)
+    #     tracks: Optional[
+    #         Union[
+    #             List[wavelink.YouTubeTrack],
+    #             List[wavelink.YouTubeMusicTrack],
+    #             List[spotify.SpotifyTrack],
+    #             List[wavelink.SoundCloudTrack],
+    #             List[Type[wavelink.tracks.Playable]],
+    #             List[Type[wavelink.SearchableTrack]],
+    #         ]
+    #     ] = []
 
-        if not tracks:
-            await ctx.send(f"No tracks found for {url} on {source}, have you checked your URL?")
-            return
+    #     if source == "youtube":
+    #         try:
+    #             pl = (await wavelink.YouTubePlaylist.search(url)).tracks  # pyright: ignore
+    #         except wavelink.LoadTrackError:
+    #             pl = await wavelink.YouTubeTrack.search(url)
+    #         tracks = pl
+    #     elif source == "ytmusic":
+    #         tracks = await wavelink.YouTubeMusicTrack.search(url)
+    #     elif source == "spotify":
+    #         tracks = await spotify.SpotifyTrack.search(url, type=spotify.SpotifySearchType.playlist)
+    #     elif source == "soundcloud":
+    #         tracks = await wavelink.SoundCloudTrack.search(query=url)
 
-        player: wavelink.Player = ctx.voice_client  # pyright: ignore
-        accepted_tracks = [track for track in tracks if not track.is_stream()]  # pyright: ignore
-        player.queue.extend(accepted_tracks)  # pyright: ignore
-        await ctx.send(f"Added {len(tracks)} track(s) from {url} to the queue")
+    #     if not tracks:
+    #         await ctx.send(f"No tracks found for {url} on {source}, have you checked your URL?")
+    #         return
 
-        embeds = self.generate_embeds_from_tracks(accepted_tracks)  # pyright: ignore
-        self.bot.loop.create_task(self.show_paginated_tracks(ctx, embeds))
+    #     player: wavelink.Player = ctx.voice_client  # pyright: ignore
+    #     accepted_tracks = [track for track in tracks if not track.is_stream()]  # pyright: ignore
+    #     player.queue.extend(accepted_tracks)  # pyright: ignore
+    #     await ctx.send(f"Added {len(tracks)} track(s) from {url} to the queue")
+
+    #     embeds = self.generate_embeds_from_tracks(accepted_tracks)  # pyright: ignore
+    #     self.bot.loop.create_task(self.show_paginated_tracks(ctx, embeds))
 
     @queue.command()
     @commands.guild_only()
@@ -821,9 +960,8 @@ class MusicCog(commands.Cog):
         """Move track to new position"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-
-        int_queue = vc.queue._queue
+        player: MainPlayer = self.get_player(ctx)
+        int_queue = player.queue._queue  # pyright: ignore
         queue_length = len(int_queue)
 
         if not (before != after and 1 <= before <= queue_length and 1 <= after <= queue_length):
@@ -861,8 +999,9 @@ class MusicCog(commands.Cog):
         """Swap two tracks."""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-        q = vc.queue._queue
+        player: MainPlayer = self.get_player(ctx)
+
+        q = player.queue._queue  # pyright: ignore
         q_length = len(q)
 
         if not (1 <= pos1 <= q_length and 1 <= pos2 <= q_length):
@@ -886,7 +1025,7 @@ class MusicCog(commands.Cog):
         """Shuffle the queue"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: VoiceClient = ctx.voice_client  # pyright: ignore
 
         random.shuffle(vc.queue._queue)  # pyright: ignore
         await ctx.send("Shuffled the queue")
@@ -899,10 +1038,11 @@ class MusicCog(commands.Cog):
         """Clear the queue"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: VoiceClient = ctx.voice_client  # pyright: ignore
+        player: MainPlayer = self.get_player(ctx)
 
         if await VoteMenu("clear", "queue", ctx, vc).start():
-            vc.queue.clear()
+            player.clear_queue()
             await ctx.send("Cleared the queue")
 
     @queue.command()
@@ -914,26 +1054,19 @@ class MusicCog(commands.Cog):
     async def force_clear(self, ctx: commands.Context):
         """Clear the queue"""
         await ctx.defer()
+        player: MainPlayer = self.get_player(ctx)
+        
+        try:
+            player.clear_queue()
+        except Exception as e:
+            print(e)
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-
-        vc.queue.clear()
         await ctx.send("Cleared the queue")
-
-    @add.after_invoke
-    @add_playlist.after_invoke
-    async def autoplay_queue(self, ctx: commands.Context):
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-        if not vc.is_playing():
-            await vc.play(vc.queue.get())
 
 
 async def setup(bot: Nameless):
-    if (lvl := getattr(shared_vars.config_cls, "LAVALINK", None)) and lvl.get("nodes", []):
-        await bot.add_cog(MusicCog(bot))
-        logging.info("Cog of %s added!", __name__)
-    else:
-        raise commands.ExtensionFailed(__name__, ValueError("Lavalink options are not properly provided"))
+    await bot.add_cog(MusicCog(bot))
+    logging.info("Cog of %s added!", __name__)
 
 
 async def teardown(bot: Nameless):

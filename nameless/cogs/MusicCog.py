@@ -287,6 +287,7 @@ class MainPlayer:
         self._loop = False
 
         self.task = ctx.bot.loop.create_task(self.create())
+        setattr(self._guild.voice_client, "is_queue_empty", self.queue.empty)
 
     @staticmethod
     def _build_np_embed(track: YTDLSource):

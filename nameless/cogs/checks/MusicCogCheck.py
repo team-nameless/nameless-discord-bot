@@ -1,4 +1,4 @@
-import wavelink
+from discord import VoiceClient
 from discord.ext import commands
 
 from .BaseCheck import BaseCheck
@@ -37,7 +37,7 @@ class MusicCogCheck(BaseCheck):
     @staticmethod
     @BaseCheck.allow_help_message
     def bot_must_silent(ctx: commands.Context):
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: VoiceClient = ctx.voice_client  # pyright: ignore
         if vc and vc.is_playing():
             raise commands.CheckFailure("I must be silenced.")
 
@@ -46,7 +46,7 @@ class MusicCogCheck(BaseCheck):
     @staticmethod
     @BaseCheck.allow_help_message
     def bot_must_play_something(ctx: commands.Context):
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: VoiceClient = ctx.voice_client  # pyright: ignore
         if vc and not vc.is_playing():
             raise commands.CheckFailure("I need to play something.")
 
@@ -55,18 +55,14 @@ class MusicCogCheck(BaseCheck):
     @staticmethod
     @BaseCheck.allow_help_message
     def must_not_be_a_stream(ctx: commands.Context):
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-        if vc and vc.track and vc.track.is_stream():  # pyright: ignore
-            raise commands.CheckFailure("I can't use this command on streams.")
-
         return True
 
     @staticmethod
     @BaseCheck.allow_help_message
     def queue_has_element(ctx: commands.Context):
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: VoiceClient = ctx.voice_client  # pyright: ignore
 
-        if vc and vc.queue.is_empty:
+        if vc and vc.is_queue_empty():  # pyright: ignore
             raise commands.CheckFailure("I need to have something in the queue.")
 
         return True

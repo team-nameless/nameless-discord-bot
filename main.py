@@ -5,7 +5,7 @@ from typing import List
 import discord
 from discord.ext import commands
 
-import NamelessConfig
+import NamelessConfig_example
 from nameless import Nameless, shared_vars
 
 UPDATE_CHECK_FLAG = "--allow-updates-check"

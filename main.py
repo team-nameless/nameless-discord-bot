@@ -19,10 +19,10 @@ def main(args: List[str]):
         try:
             cfg = __import__(cls_arg[0][len(f"{CONFIG_CLASS_FLAG}=") :]).NamelessConfig
         except (ValueError, ModuleNotFoundError):
-            cfg = NamelessConfig.NamelessConfig
-            logging.warning("Invalid value for config class flag, NamelessConfig.NamelessConfig will be used")
+            cfg = NamelessConfig_example.NamelessConfig
+            logging.warning("Invalid value for config class flag, NamelessConfig_example.NamelessConfig will be used")
     else:
-        cfg = NamelessConfig.NamelessConfig
+        cfg = NamelessConfig_example.NamelessConfig
 
     shared_vars.config_cls = cfg
     prefixes = getattr(cfg, "PREFIXES", [])

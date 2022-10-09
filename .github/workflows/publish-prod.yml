@@ -1,0 +1,24 @@
+name: Publish to production
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    if: ${{ github.repository == 'nameless-on-discord/nameless' }}
+    runs-on: ubuntu-latest
+    name: Publish bots
+    steps:
+      - name: Deploy to server (dev)
+        if: ${{ github.ref_name == 'dev' && (github.event_name == 'push' || github.event_name == 'workflow-dispatch') }}
+        run: |
+          sudo apt install sshpass -y
+          echo pm2 restart ${{ secrets.INSTANCE_NAME }} > script.sh
+          sshpass -p ${{ secrets.SSH_PASSWORD }} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" < script.sh > /dev/null
+
+      - name: Deploy to server (main)
+        if: ${{ github.ref_name == 'main' && (github.event_name == 'push' || github.event_name == 'workflow-dispatch') }}
+        run: |
+          sudo apt install sshpass -y
+          echo pm2 restart ${{ secrets.STABLE_INSTANCE_NAME }} > script.sh
+          sshpass -p ${{ secrets.SSH_PASSWORD }} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" < script.sh > /dev/null

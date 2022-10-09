@@ -39,6 +39,7 @@ jobs:
           pip install -U -r requirements_dev.txt
 
       - name: Create dummy config file
+        if: ${{ github.ref_name != 'feat/v2' }}
         run: |
           cp NamelessConfig_example.py NamelessConfig.py
 

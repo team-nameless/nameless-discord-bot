@@ -35,11 +35,9 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install --upgrade setuptools wheel
-          pip install -U -r requirements_core.txt
-          pip install -U -r requirements_dev.txt
+          pip install -U -r requirements_core.txt -r requirements_dev.txt
 
       - name: Create dummy config file
-        if: ${{ github.ref_name != 'feat/v2' }}
         run: |
           cp NamelessConfig_example.py NamelessConfig.py
 

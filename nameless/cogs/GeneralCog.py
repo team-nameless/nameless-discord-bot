@@ -9,9 +9,9 @@ from discord import NotFound, app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
 from discord_together.discordTogetherMain import defaultApplications
+from NamelessConfig import NamelessConfig
 
 from nameless import Nameless, shared_vars
-from NamelessConfig import NamelessConfig
 
 
 __all__ = ["GeneralCog"]

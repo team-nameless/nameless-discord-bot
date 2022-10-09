@@ -2,9 +2,9 @@ import os
 import sys
 from logging.config import fileConfig
 
+import NamelessConfig
 from sqlalchemy import engine_from_config, pool
 
-import NamelessConfig
 from alembic import context
 from nameless.commons import Utility
 from nameless.database import Base

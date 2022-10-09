@@ -2,6 +2,7 @@ import logging
 from typing import Optional, Tuple, Type
 from urllib.parse import quote_plus as qp, urlparse
 
+
 __all__ = ["Utility"]
 
 

@@ -8,6 +8,7 @@ from discord.ext import commands
 import NamelessConfig_example
 from nameless import Nameless, shared_vars
 
+
 UPDATE_CHECK_FLAG = "--allow-updates-check"
 CONFIG_CLASS_FLAG = "--config-class"
 

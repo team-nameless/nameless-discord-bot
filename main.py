@@ -10,7 +10,7 @@ from nameless import Nameless, shared_vars
 
 
 UPDATE_CHECK_FLAG = "--allow-updates-check"
-CONFIG_CLASS_FLAG = "--config-class"
+CONFIG_CLASS_FLAG = "--config"
 
 
 def main(args: List[str]):
@@ -21,7 +21,9 @@ def main(args: List[str]):
             cfg = __import__(cls_arg[0][len(f"{CONFIG_CLASS_FLAG}=") :]).NamelessConfig  # noqa: E203
         except (ValueError, ModuleNotFoundError):
             cfg = NamelessConfig_example.NamelessConfig
-            logging.warning("Invalid value for config class flag, NamelessConfig_example.NamelessConfig will be used")
+            logging.warning(f"Invalid value for '--config' flag: {cfg.__module__.__name__}")
+            logging.warning("Maybe an invalid module name, or NamelessConfig class in not in it?")
+            logging.warning("NamelessConfig_example.NamelessConfig will be used as fallback option")
     else:
         cfg = NamelessConfig_example.NamelessConfig
 

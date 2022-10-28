@@ -145,7 +145,7 @@ class OwnerCog(commands.Cog):
 
         embed = (
             discord.Embed(
-                title=f"Python code evaluation result for {ctx.author.mention}",
+                title=f"Python code evaluation result for {ctx.author}",
                 description=f"**Source code**\n```python\n{code}\n```",
                 timestamp=datetime.datetime.now(),
                 color=discord.Color.orange(),

@@ -1,5 +1,4 @@
-NamelessConfig_*.py
-!NamelessConfig_example.py
+NamelessConfig.py
 *.db
 *.db-journal
 

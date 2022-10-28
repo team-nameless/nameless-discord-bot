@@ -73,7 +73,7 @@ class Nameless(commands.AutoShardedBot):
                 logging.warning("You are using a version NEWER than original code!")
 
         # Write current version in case I forgot
-        with open("version.txt", "w", encoding="utf-8") as f:
+        with open("../version.txt", "w", encoding="utf-8") as f:
             logging.info("Writing current version into version.txt")
             f.write(shared_vars.__nameless_current_version__)
 

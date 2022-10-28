@@ -55,7 +55,7 @@ class NamelessConfig:
         "version": None,
         # Bot description
         # Placeholders: {source_code} - META[source_code], or "original nameless repo" if META[source_code] is ""
-        #                               If it was set to None, set to literal "{github_link}"
+        #                               If it was set to None, set to literal "{source_code}"
         "bot_description": "Just a bot",
     }
 
@@ -65,8 +65,6 @@ class NamelessConfig:
 
     # Choose which cog(s) to load
     # Available options:    Config,
-    #                       Experimental (requires `LAB` set as True),
-    #                       General,
     #                       Moderator,
     #                       Music (requires `LAVALINK` to be properly provided),
     #                       Osu (requires `OSU` to be properly provided),

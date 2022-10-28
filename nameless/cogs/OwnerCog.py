@@ -139,8 +139,8 @@ class OwnerCog(commands.Cog):
             stdout_result = ""
             stderr_result = e
 
-        stdout_result = stdout_result[:1000] if stdout_result else "Nothing in stdout"
-        stderr_result = stderr_result[:1000] if stderr_result else "Nothing in stderr"
+        stdout_result = str(stdout_result)[:1000] if stdout_result else "Nothing in stdout"
+        stderr_result = str(stderr_result)[:1000] if stderr_result else "Nothing in stderr"
         returns = returns[:1000]
 
         embed = (

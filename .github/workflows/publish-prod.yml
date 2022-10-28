@@ -14,6 +14,7 @@ jobs:
           sudo apt install sshpass -y
 
       - name: Deploy to server (dev)
+        if: ${{ github.ref == 'refs/heads/main' }}
         run: |
           echo pm2 restart ${{ secrets.INSTANCE_NAME }} > script.sh
           sshpass -p ${{ secrets.SSH_PASSWORD }} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" < script.sh > /dev/null

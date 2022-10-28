@@ -19,13 +19,13 @@ jobs:
           sshpass -p ${{ secrets.SSH_PASSWORD }} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" < script.sh > /dev/null
 
       - name: Deploy to server (stable)
-        if: ${{ startsWith(github.ref, "refs/tags") }}
+        if: ${{ startsWith(github.ref, 'refs/tags') }}
         run: |
           echo pm2 restart ${{ secrets.STABLE_INSTANCE_NAME }} > script.sh
           sshpass -p ${{ secrets.SSH_PASSWORD }} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" < script.sh > /dev/null
 
-      - name: Deploy to server (next)
-        if: ${{ github.ref == "refs/heads/feat/v2" }}
+      - name: Deploy to server (v2)
+        if: ${{ github.ref == 'refs/heads/feat/v2' }}
         run: |
           echo pm2 restart ${{ secrets.NEXT_INSTANCE_NAME }} > script.sh
           sshpass -p ${{ secrets.SSH_PASSWORD }} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" < script.sh > /dev/null

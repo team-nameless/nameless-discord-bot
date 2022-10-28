@@ -140,7 +140,7 @@ class OwnerCog(commands.Cog):
 
         stdout_result = str(stdout_result)[:1000] if stdout_result else "Nothing in stdout"
         stderr_result = str(stderr_result)[:1000] if stderr_result else "Nothing in stderr"
-        returns = returns[:1000]
+        returns = str(returns)[:1000] if returns else "No returned value"
 
         embed = (
             discord.Embed(

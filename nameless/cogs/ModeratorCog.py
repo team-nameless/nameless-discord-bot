@@ -92,10 +92,8 @@ class ModeratorCog(commands.Cog):
         else:
             await diff_fn(ctx, member, reason, u.warn_count, u.warn_count - val)
 
-        # await member.send()
         await ctx.send(
-            f"{'Removed' if val < 0 else 'Added'} {abs(val)} warn to {member.mention}"
-            "with reason: {reason}\n"
+            f"{'Removed' if val < 0 else 'Added'} {abs(val)} warn to {member.mention} with reason: {reason}\n"
             f"Now they have {u.warn_count} warn(s)"
         )
 

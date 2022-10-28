@@ -5,18 +5,16 @@ on:
     branches:
       - 'feat/**'
       - 'fix/**'
-      - 'dev'
+      - 'main'
     tags-ignore:
       - '*'
   pull_request:
     branches:
       - 'feat/**'
       - 'fix/**'
-      - 'dev'
       - 'main'
     tags-ignore:
       - '*'
-  workflow_dispatch:
 
 jobs:
   all-the-things:

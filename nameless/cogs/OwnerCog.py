@@ -94,7 +94,7 @@ class OwnerCog(commands.Cog):
         """Restart the bot"""
         await ctx.defer()
         await ctx.send("See you soon!")
-        logging.warning("Restarting using [%s %s]", sys.executable, " ".join(sys.argv))
+        logging.warning("Restarting using `%s %s`", sys.executable, " ".join(sys.argv))
         subprocess.run([sys.executable, *sys.argv], check=False)
 
     @commands.is_owner()
@@ -138,14 +138,14 @@ class OwnerCog(commands.Cog):
             stdout_result = ""
             stderr_result = e
 
-        stdout_result = str(stdout_result if stdout_result else "No result in stdout")[:1024]
-        stderr_result = str(stderr_result if stderr_result else "No result in stderr")[:1024]
-        returns = str(returns)[:1024]
+        stdout_result = stdout_result[:1000] if stdout_result else "Nothing in stdout"
+        stderr_result = stderr_result[:1000] if stderr_result else "Nothing in stderr"
+        returns = returns[:1000]
 
         embed = (
             discord.Embed(
-                title=f"Code result for {ctx.author}",
-                description=f"```\n{code}\n```",
+                title=f"Python code evaluation result for {ctx.author.mention}",
+                description=f"**Source code**\n```python\n{code}\n```",
                 timestamp=datetime.datetime.now(),
                 color=discord.Color.orange(),
             )

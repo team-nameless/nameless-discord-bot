@@ -7,7 +7,7 @@ __all__ = ["NamelessConfig"]
 
 
 class NamelessConfig:
-    # Enable experimental stuffs
+    # Enable stuffs for debugging
     # Set to True if you know what you are doing
     LAB: bool = False
 
@@ -21,7 +21,7 @@ class NamelessConfig:
     # - Receive text commands
     # - Receive response from prompts (will use default values)
     # (Requires "MESSAGE CONTENT" intent to be enabled on bot dashboard if this sets to True)
-    # (Might require verification if the bot is over 100 guilds)
+    # (Might require verification if the bot is over 75 guilds)
     RECEIVE_TEXTS: bool = False
 
     # Choose when to receive member events
@@ -29,7 +29,7 @@ class NamelessConfig:
     # This will decide whether the bot should:
     # - Receive guild member event (for welcome/goodbye notifications)
     # (Requires "GUILD MEMBERS" intent to be enabled on bot dashboard if this sets to True)
-    # (Might require verification if the bot is over 100 guilds)
+    # (Might require verification if the bot is over 75 guilds)
     RECEIVE_MEMBER_EVENTS: bool = True
 
     # Choose when to receive mention prefix
@@ -53,13 +53,11 @@ class NamelessConfig:
     SUPPORT_SERVER_URL: str = "https://example.com"
 
     # Guild IDs to register commands
-    # Leave empty array for global (slash commands takes one hour to mitigate, text takes immediately)
+    # Leave empty array for global (slash commands should not take long, text takes immediately)
     GUILD_IDs = []
 
     # Choose which cog(s) to load
     # Available options:    Config,
-    #                       Experimental (requires `LAB` set as True),
-    #                       General,
     #                       Moderator,
     #                       Music (requires `LAVALINK` to be properly provided),
     #                       Osu (requires `OSU` to be properly provided),
@@ -82,9 +80,9 @@ class NamelessConfig:
     }
 
     # Database configuration
-    # It is recommended that you set a simple database such as SQLite
+    # It is recommended that you set a simple one such as SQLite because Nameless does NOT use complicated DB actions.
     # Please note: Install driver BY YOURSELF if NOT using SQLite.
-    # For example with PostgreSQL: pip install psycopg2-binary, then use "psycopg2" as "driver" below.
+    # Here is the link for your reference: https://docs.sqlalchemy.org/en/14/dialects/
     # If you are too lazy to set this, leave this as default.
     DATABASE: Optional[Dict[str, Any]] = {
         "dialect": "sqlite",
@@ -93,7 +91,6 @@ class NamelessConfig:
         "password": "",
         "host": "",
         "port": None,
-        # ${instance_name} will be replaced by the instance name if running multiple instances
         "db_name": "nameless.db",
     }
 

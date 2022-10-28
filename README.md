@@ -14,18 +14,15 @@ A rewrite of [original nameless*](https://github.com/FoxeiZ/nameless), now with 
 ----------------------------------------
 
 ## CI Status
-
-| Stable (main)                                                                                             | Development (dev)                                                                                      |
-|-----------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------|
-| [![MAIN CI](https://badgen.net/github/checks/nameless-on-discord/nameless/main?label=main&icon=github)]() | [![DEV CI](https://badgen.net/github/checks/nameless-on-discord/nameless/dev?label=dev&icon=github)]() |
+ 
+[![MAIN CI](https://badgen.net/github/checks/nameless-on-discord/nameless/main?label=main&icon=github)]()
 
 ----------------------------------------
 
 ## How to run this bot?
 
 - First, install `python3` - minimum version `3.10`, latest version preferred.
-- Second, create a virtual environment so your global "python" won't be badly affected and activate it (most IDEs
-  automatically activate it for you)
+- Second, create a virtual environment so your global `python` won't be badly polluted by packages and activate it.
 
 ```shell
 python3 -m venv venv
@@ -61,9 +58,8 @@ See [CONTRIBUTING.md](https://github.com/Lilia-Workshop/nameless/blob/main/CONTR
 ## Oh look, there are branches!
 
 - [main](https://github.com/nameless-on-discord/nameless/tree/main): Stable codes that is production-ready.
-- [dev](https://github.com/nameless-on-discord/nameless/tree/dev): Most up-to-date features will be pushed to here.
-- `feat/{name}`: New features that will be pushed to `main`
-- `fix/{#}` or `fix/{name}`: Bug fixes that will be pushed after passing checks.
+- `feat/{name}`: New features that will be pushed directly or through PRs to `main`
+- `fix/{#}` or `fix/{name}`: Bug fixes that will be pushed to `main` after passing checks.
 
 ## Hey! I want to throw money at you!
 

@@ -25,7 +25,7 @@ cogs_regex = re.compile(r"^(?!_.).*Cog.py")
 upstream_version_txt_url = "https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt"
 start_time: datetime = datetime.min
 additional_handlers: List = []
-__nameless_current_version__ = "1.3.1"
+__nameless_current_version__ = "1.4.0"
 __nameless_upstream_version__ = requests.get(upstream_version_txt_url).text
 
 # Perms
@@ -43,12 +43,9 @@ needed_permissions.manage_messages = True
 needed_permissions.embed_links = True
 needed_permissions.attach_files = True
 needed_permissions.read_message_history = True
-needed_permissions.read_message_history = True
 needed_permissions.use_external_stickers = True
 needed_permissions.use_external_emojis = True
 needed_permissions.add_reactions = True
-needed_permissions.use_application_commands = True
 needed_permissions.connect = True
 needed_permissions.speak = True
 needed_permissions.use_voice_activation = True
-needed_permissions.create_instant_invite = True

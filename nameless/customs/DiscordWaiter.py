@@ -12,6 +12,7 @@ class DiscordWaiter:
     def message_waiter(ctx: commands.Context) -> Callable[[discord.Message], bool]:
         """
         Message waiter to use with Client.wait_for("message", ...).
+        I made this because I love static typing :D
 
         Usages:
             message: discord.Message = await bot.wait_for("message", check=wait_for)

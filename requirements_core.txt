@@ -1,6 +1,5 @@
 sqlalchemy
 ossapi
-discord-together
 discord.py
 discord.py[speed]
 DiscordUtils

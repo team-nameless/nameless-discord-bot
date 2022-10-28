@@ -15,7 +15,7 @@ A rewrite of [original nameless*](https://github.com/FoxeiZ/nameless), now with 
 
 ## CI Status
  
-[![MAIN CI](https://badgen.net/github/checks/nameless-on-discord/nameless/main?label=main&icon=github)]()
+[![MAIN CI](https://badgen.net/github/checks/nameless-on-discord/nameless/main?label=main&icon=github)](https://github.com/nameless-on-discord/nameless/actions)
 
 ----------------------------------------
 

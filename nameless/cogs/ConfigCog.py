@@ -154,7 +154,7 @@ class ConfigCog(commands.Cog):
         dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.is_goodbye_enabled = not dbg.is_goodbye_enabled
         crud_database.save_changes()
-        await ctx.send(f"Goodbye message delivery: {'on' if dbg.is_welcome_enabled else 'off'}")
+        await ctx.send(f"Goodbye message delivery: {'on' if dbg.is_goodbye_enabled else 'off'}")
 
     @config.command()
     @commands.guild_only()

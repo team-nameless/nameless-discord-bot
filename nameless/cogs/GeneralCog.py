@@ -8,7 +8,6 @@ from discord import NotFound, app_commands
 from discord.ext import commands
 
 from nameless import Nameless, shared_vars
-from NamelessConfig import NamelessConfig
 
 
 __all__ = ["GeneralCog"]
@@ -19,7 +18,7 @@ class GeneralCog(commands.Cog):
         self.bot = bot
 
     @commands.hybrid_command()
-    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
+    @app_commands.guilds(*getattr(shared_vars.config_cls, "GUILD_IDs", []))
     @app_commands.describe(member="Target member, you by default")
     async def user(
         self,
@@ -71,7 +70,7 @@ class GeneralCog(commands.Cog):
 
     @commands.hybrid_command()
     @commands.guild_only()
-    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
+    @app_commands.guilds(*getattr(shared_vars.config_cls, "GUILD_IDs", []))
     async def guild(self, ctx: commands.Context):
         """View this guild's information"""
         await ctx.defer()
@@ -126,7 +125,7 @@ class GeneralCog(commands.Cog):
 
     @commands.hybrid_command()
     @commands.guild_only()
-    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
+    @app_commands.guilds(*getattr(shared_vars.config_cls, "GUILD_IDs", []))
     async def the_bot(self, ctx: commands.Context):
         """View my information"""
         await ctx.defer()

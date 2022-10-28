@@ -46,7 +46,6 @@ class ConfigCog(commands.Cog):
                 value=wc_chn.mention if wc_chn else "Unset",
             )
             .add_field(name="Welcome message delivery allowance", value=dbg.is_welcome_enabled)
-
             .add_field(
                 name="Goodbye message",
                 value=dbg.goodbye_message if dbg.goodbye_message else "Unset",

@@ -267,7 +267,7 @@ class MainPlayer:
         "volume",
         "duration",
         "position",
-        "_loop",
+        "repeat",
         "task",
     )
 
@@ -284,13 +284,13 @@ class MainPlayer:
         self.volume = 0.5
         self.duration = 0
         self.position = 0
-        self._loop = False
+        self.repeat = False
 
         self.task = ctx.bot.loop.create_task(self.create())
         setattr(self._guild.voice_client, "is_queue_empty", self.queue.empty)
 
     @staticmethod
-    def _build_np_embed(track: YTDLSource):
+    def __build_np_embed(track: YTDLSource):
         return (
             discord.Embed(timestamp=datetime.datetime.now(), color=discord.Color.orange())
             .set_author(
@@ -325,10 +325,10 @@ class MainPlayer:
         while not self.client.is_closed():
             try:
                 self.next.clear()
-                if not self._loop or self.track is None:
+                if not self.repeat or self.track is None:
                     self.track = await self.queue.get()
 
-                    await self._channel.send(embed=self._build_np_embed(self.track))
+                    await self._channel.send(embed=self.__build_np_embed(self.track))
 
                 self.track = await YTDLSource.generate_stream(self.track)
                 self.track.volume = self.volume
@@ -351,7 +351,8 @@ class MainPlayer:
 
                 # Make sure the FFmpeg process is cleaned up.
                 self.track.cleanup()
-                self.track = None  # type: ignore
+                if not self.repeat:
+                    self.track = None  # type: ignore
 
     def destroy(self, guild):
         """Disconnect and cleanup the player."""
@@ -483,7 +484,7 @@ class MusicCog(commands.Cog):
                             player._guild.id,
                         )
                         await self.cleanup(player._guild)
-            except AttributeError:  # Handle things like: bot got kicked, move to another channel,...
+            except AttributeError:  # Handle things like bot got kicked or move to another channel, etc.
                 await self.cleanup(player._guild)
 
     # @commands.Cog.listener()
@@ -600,18 +601,17 @@ class MusicCog(commands.Cog):
         except AttributeError:
             await ctx.send("Already disconnected")
 
-    # TODO: change how loop work
-    # @music.command()
-    # @commands.guild_only()
-    # @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    # @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
-    # async def loop(self, ctx: commands.Context):
-    #     """Toggle loop playback of current track"""
-    #     await ctx.defer()
+    @music.command()
+    @commands.guild_only()
+    @commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
+    async def loop(self, ctx: commands.Context):
+        """Toggle loop playback of current track"""
+        await ctx.defer()
 
-    #     vc: VoiceClient = ctx.voice_client  # pyright: ignore
-    #     setattr(vc, "loop_sent", not getattr(vc, "loop_sent"))
-    #     await ctx.send(f"Loop set to {'on' if getattr(vc, 'loop_sent') else 'off'}")
+        player = self.get_player(ctx)
+        player.repeat = not player.repeat
+        await ctx.send(f"Loop set to {'on' if player.repeat else 'off'}")
 
     @music.command()
     @commands.guild_only()

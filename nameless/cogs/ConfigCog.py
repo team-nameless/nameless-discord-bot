@@ -51,10 +51,10 @@ class ConfigCog(commands.Cog):
                 value=dbg.goodbye_message if dbg.goodbye_message else "Unset",
             )
             .add_field(
-                name="Welcome message delivery channel",
+                name="Goodbye message delivery channel",
                 value=gb_chn.mention if gb_chn else "Unset",
             )
-            .add_field(name="Welcome message delivery allowance", value=dbg.is_goodbye_enabled)
+            .add_field(name="Goodbye message delivery allowance", value=dbg.is_goodbye_enabled)
         )
         await ctx.send(embeds=[embed])
 
@@ -62,7 +62,7 @@ class ConfigCog(commands.Cog):
     @commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
     @commands.has_guild_permissions(manage_guild=True)
-    @app_commands.describe(message="New welcome message")
+    @app_commands.describe(message="New welcome message, max. 500 characters")
     @commands.check(BaseCheck.require_intents([discord.Intents.members]))
     async def set_welcome_message(
         self,
@@ -71,6 +71,11 @@ class ConfigCog(commands.Cog):
     ):
         """Change welcome message"""
         await ctx.defer()
+
+        if len(message) > 500:
+            await ctx.send("You can not use more than 500 characters for it!")
+            return
+
         dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.welcome_message = message
         crud_database.save_changes()
@@ -80,7 +85,7 @@ class ConfigCog(commands.Cog):
     @commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
     @commands.has_guild_permissions(manage_guild=True)
-    @app_commands.describe(message="New goodbye message")
+    @app_commands.describe(message="New goodbye message, max. 500 characters")
     @commands.check(BaseCheck.require_intents([discord.Intents.members]))
     async def set_goodbye_message(
         self,
@@ -89,6 +94,11 @@ class ConfigCog(commands.Cog):
     ):
         """Change goodbye message"""
         await ctx.defer()
+
+        if len(message) > 500:
+            await ctx.send("You can not use more than 500 characters for it!")
+            return
+
         dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.goodbye_message = message
         crud_database.save_changes()
@@ -154,7 +164,7 @@ class ConfigCog(commands.Cog):
         dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
         dbg.is_goodbye_enabled = not dbg.is_goodbye_enabled
         crud_database.save_changes()
-        await ctx.send(f"Goodbye message delivery: {'on' if dbg.is_welcome_enabled else 'off'}")
+        await ctx.send(f"Goodbye message delivery: {'on' if dbg.is_goodbye_enabled else 'off'}")
 
     @config.command()
     @commands.guild_only()

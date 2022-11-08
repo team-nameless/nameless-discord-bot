@@ -4,11 +4,8 @@ from platform import python_implementation, python_version
 from typing import List, Optional, Union
 
 import discord
-import discord_together
 from discord import NotFound, app_commands
-from discord.app_commands import Choice
 from discord.ext import commands
-from discord_together.discordTogetherMain import defaultApplications
 
 from nameless import Nameless, shared_vars
 
@@ -19,37 +16,6 @@ __all__ = ["GeneralCog"]
 class GeneralCog(commands.Cog):
     def __init__(self, bot: Nameless) -> None:
         self.bot = bot
-
-    @commands.hybrid_command()
-    @app_commands.guilds(*getattr(shared_vars.config_cls, "GUILD_IDs", []))
-    @app_commands.describe(target="Your desired activity", voice_channel="Target voice channel")
-    @app_commands.choices(target=[Choice(name=k, value=k) for k, _ in defaultApplications.items()])
-    @commands.guild_only()
-    async def create_activity(
-        self,
-        ctx: commands.Context,
-        voice_channel: Optional[discord.VoiceChannel],
-        target: str = "youtube",
-    ):
-        """Generate an embedded activity link"""
-        await ctx.defer()
-        if not voice_channel and ctx.author.voice:  # pyright: ignore
-            voice_channel = ctx.author.voice.channel  # pyright: ignore
-
-        if not voice_channel:
-            await ctx.send("You need to be in a voice channel, or provide a voice channel for me")
-            return
-
-        msg = await ctx.send("Generating link")
-
-        inv = await (
-            await discord_together.DiscordTogether(  # pyright: ignore
-                shared_vars.config_cls.TOKEN,
-                debug=getattr(shared_vars.config_cls, "LAB", False),
-            )
-        ).create_link(voice_channel.id, target)
-
-        await msg.edit(content=f"Here is your link of {target} for {voice_channel.mention}: {inv}")
 
     @commands.hybrid_command()
     @app_commands.guilds(*getattr(shared_vars.config_cls, "GUILD_IDs", []))
@@ -164,12 +130,6 @@ class GeneralCog(commands.Cog):
         """View my information"""
         await ctx.defer()
 
-        nameless_meta = getattr(shared_vars.config_cls, "META", {})
-
-        source_code = nameless_meta.get("source_code", None) or "https://github.com/nameless-on-discord/nameless"
-        support_inv = nameless_meta.get("support_server_url", "")
-        nameless_version = shared_vars.__nameless_current_version__
-
         servers_count = len(ctx.bot.guilds)
         total_members_count = sum(len(guild.members) for guild in ctx.bot.guilds)
         uptime = int(shared_vars.start_time.timestamp())
@@ -180,8 +140,19 @@ class GeneralCog(commands.Cog):
             f"&scope=bot%20applications.commands"
         )
 
+        nameless_meta = getattr(NamelessConfig, "META", {})
+        github_link = nameless_meta.get("github", None)
+        github_link = (
+            github_link
+            if github_link
+            else "https://github.com/nameless-on-discord/nameless"
+            if isinstance(github_link, str)
+            else "{github_link}"
+        )
+        support_inv = ""
+
         try:
-            if sp_url := getattr(shared_vars.config_cls, "SUPPORT_SERVER_URL", ""):
+            if sp_url := getattr(NamelessConfig, "SUPPORT_SERVER_URL", ""):
                 inv = await self.bot.fetch_invite(sp_url)
                 support_inv = inv.url
         except NotFound:
@@ -193,11 +164,11 @@ class GeneralCog(commands.Cog):
                 color=discord.Color.orange(),
                 timestamp=datetime.datetime.now(),
                 description=getattr(
-                    shared_vars.config_cls,
+                    NamelessConfig,
                     "BOT_DESCRIPTION",
                     "I am a bot created from [nameless*]({github_link}) code "
                     "made by Swyrin#7193 and [FoxeiZ](https://github.com/FoxeiZ)",
-                ).replace("{github_link}", source_code),
+                ).replace("{github_link}", github_link),
             )
             .set_thumbnail(url=ctx.bot.user.avatar.url)
             .add_field(name="Servers count", value=f"{servers_count}")
@@ -205,7 +176,7 @@ class GeneralCog(commands.Cog):
             .add_field(name="Last launch/Uptime", value=f"<t:{uptime}:R>")
             .add_field(
                 name="Bot version",
-                value=nameless_version,
+                value=shared_vars.__nameless_current_version__,
             )
             .add_field(name="Library version", value=f"discord.py v{discord.__version__}")
             .add_field(

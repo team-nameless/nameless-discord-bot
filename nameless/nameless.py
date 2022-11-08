@@ -55,9 +55,7 @@ class Nameless(commands.AutoShardedBot):
 
     def check_for_updates(self):
         if not self.allow_updates_check:
-            self.global_logger.warning(
-                "Your bot might fall behind updates, consider using flag '--allow-updates-check'"
-            )
+            logging.warning("Your bot might fall behind updates, consider using flag '--allow-updates-check'")
         else:
             nameless_version = version.parse(shared_vars.__nameless_current_version__)
             upstream_version = version.parse(shared_vars.__nameless_upstream_version__)
@@ -76,7 +74,7 @@ class Nameless(commands.AutoShardedBot):
                 logging.warning("You are using a version NEWER than original code!")
 
         # Write current version in case I forgot
-        with open("version.txt", "w", encoding="utf-8") as f:
+        with open("../version.txt", "w", encoding="utf-8") as f:
             logging.info("Writing current version into version.txt")
             f.write(shared_vars.__nameless_current_version__)
 

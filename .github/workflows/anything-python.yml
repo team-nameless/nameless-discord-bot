@@ -1,28 +1,26 @@
-name: anything python
+name: Lint and test code
 
 on:
   push:
     branches:
       - 'feat/**'
       - 'fix/**'
-      - 'dev'
+      - 'main'
     tags-ignore:
       - '*'
   pull_request:
     branches:
       - 'feat/**'
       - 'fix/**'
-      - 'dev'
       - 'main'
     tags-ignore:
       - '*'
-  workflow_dispatch:
 
 jobs:
   all-the-things:
     if: ${{ github.repository == 'nameless-on-discord/nameless' }}
     runs-on: ubuntu-latest
-    name: Test, lint and publish
+    name: Test and lint
     steps:
       - uses: actions/checkout@v3
 
@@ -35,11 +33,9 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install --upgrade setuptools wheel
-          pip install -U -r requirements_core.txt
-          pip install -U -r requirements_dev.txt
+          pip install -U -r requirements_core.txt -r requirements_dev.txt
 
       - name: Create dummy config file
-        if: ${{ github.ref_name != 'feat/v2' }}
         run: |
           cp NamelessConfig_example.py NamelessConfig.py
 
@@ -66,17 +62,3 @@ jobs:
       - name: Run tests and return coverages (pytest & friends)
         run: |
           pytest --cov-report term-missing --cov=nameless.database --cov=nameless.commons.Utility tests/
-
-      - name: Deploy to server (dev)
-        if: ${{ github.ref_name == 'dev' && (github.event_name == 'push' || github.event_name == 'workflow-dispatch') }}
-        run: |
-          sudo apt install sshpass -y
-          echo pm2 restart ${{ secrets.INSTANCE_NAME }} > script.sh
-          sshpass -p ${{ secrets.SSH_PASSWORD }} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" < script.sh > /dev/null
-
-      - name: Deploy to server (main)
-        if: ${{ github.ref_name == 'main' && (github.event_name == 'push' || github.event_name == 'workflow-dispatch') }}
-        run: |
-          sudo apt install sshpass -y
-          echo pm2 restart ${{ secrets.STABLE_INSTANCE_NAME }} > script.sh
-          sshpass -p ${{ secrets.SSH_PASSWORD }} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" < script.sh > /dev/null

@@ -4,7 +4,7 @@ from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
 
-import NamelessConfig
+import NamelessConfig_example
 from alembic import context
 from nameless.commons import Utility
 from nameless.database import Base

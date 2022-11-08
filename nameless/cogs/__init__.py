@@ -1,5 +1,4 @@
 from .ConfigCog import *
-from .ExperimentalCog import *
 from .GeneralCog import *
 from .ModeratorCog import *
 from .MusicCog import *

@@ -352,7 +352,7 @@ class OsuCog(commands.Cog):
         username="osu! username",
         request="Request type",
         mode="osu! mode",
-        include_fail="Whether to include fail records (only in 'recents')",
+        include_fail="Whether to include fail records (defaults to True, only in 'recents')",
         count="Records count (only in records queries)",
     )
     @app_commands.choices(

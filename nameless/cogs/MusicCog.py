@@ -1075,10 +1075,14 @@ class MusicCog(commands.Cog):
 
         try:
             player.clear_queue()
+            await ctx.send("Cleared the queue")
         except Exception as e:
-            print(e)
-
-        await ctx.send("Cleared the queue")
+            logging.error(
+                "User %s try to force clear the queue in %s but we run into some trouble.",
+                ctx.author.id,
+                player._guild.id,
+            )
+            logging.debug("MusicCog.force_clear raise an error: [%s] %s", e.__class__.__name__, str(e))
 
 
 async def setup(bot: Nameless):

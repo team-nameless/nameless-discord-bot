@@ -1078,7 +1078,7 @@ class MusicCog(commands.Cog):
             await ctx.send("Cleared the queue")
         except Exception as e:
             logging.error(
-                "User %s try to force clear the queue in %s but we run into some trouble.",
+                "User %s try to forcely clear the queue in %s, but we encounter some trouble.",
                 ctx.author.id,
                 player._guild.id,
             )

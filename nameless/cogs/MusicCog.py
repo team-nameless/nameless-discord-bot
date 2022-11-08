@@ -777,7 +777,6 @@ class MusicCog(commands.Cog):
 
         is_stream = track.is_stream()
         dbg, _ = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
-        # next_tr: Optional[Union[Type[wavelink.Track], wavelink.tracks.Playable]]
 
         try:
             next_tr = player.queue._queue.copy().pop()  # type: ignore
@@ -856,13 +855,14 @@ class MusicCog(commands.Cog):
         """Remove track from queue"""
         await ctx.defer()
 
-        vc: VoiceClient = ctx.voice_client  # pyright: ignore
+        idx -= 1
         player: MainPlayer = self.get_player(ctx)
-        q = player.queue._queue  # pyright: ignore
+        queue: List = player.queue._queue  # pyright: ignore
 
-        deleted_track: YTDLSource = q[idx - 1]
+        if idx > player.queue.qsize() or idx < 0:
+            return await ctx.send("The track number you just entered is not available. Check again")
 
-        vc.queue._queue = collections.deque([t for t in q if t])  # pyright: ignore
+        deleted_track: YTDLSource = queue.pop(idx)
         await ctx.send(f"Deleted track at position #{idx}: **{deleted_track.title}** from **{deleted_track.author}**")
 
     @queue.command()
@@ -1029,11 +1029,7 @@ class MusicCog(commands.Cog):
             await ctx.send(f"Invalid position(s): ({pos1}, {pos2})")
             return
 
-        q[pos1 - 1], q[pos2 - 1] = (
-            q[pos2 - 1],
-            q[pos1 - 1],
-        )
-
+        q[pos1 - 1], q[pos2 - 1] = q[pos2 - 1], q[pos1 - 1]
         await ctx.send(f"Swapped track #{pos1} and #{pos2}")
 
     @queue.command()

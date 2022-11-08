@@ -467,24 +467,24 @@ class MusicCog(commands.Cog):
         before: discord.VoiceState,
         after: discord.VoiceState,
     ):
-        # # Technically auto disconnect the bot from lavalink
-        # # Sometimes on manual disconnection
-        # if member.id == self.bot.user.id:
-        #     before_was_in_voice = before.channel is not None
-        #     after_not_in_noice = after.channel is None
+        try:
+            player = self.players[member.guild.id]
+        except KeyError:
+            return
 
-        #     if before_was_in_voice and after_not_in_noice:
-        #         node_dict = wavelink.NodePool._nodes.items()
-        #         guilds_players = [p for (_, node) in node_dict if (p := node.get_player(member.guild))]
-        #         if guilds_players:
-        #             bot_player = [player for player in guilds_players if player.client.user.id == self.bot.user.id]
-        #             if bot_player:
-        #                 logging.debug(
-        #                     "Guild player %s still connected even if it is removed from voice, disconnecting",
-        #                     bot_player[0].guild.id,
-        #                 )
-        #                 await bot_player[0].disconnect()
-        pass
+        # Technically auto disconnect the bot from lavalink
+        # Sometimes on manual disconnection
+        if member.id == self.bot.user.id:
+            try:
+                if len(player._guild.voice_client.channel.members) == 1:  # If bot is alone
+                    if player._guild.voice_client.channel.members[0].id == self.bot.user.id:
+                        logging.debug(
+                            "Guild player %s still connected even if it is removed from voice, disconnecting",
+                            player._guild.id,
+                        )
+                        await self.cleanup(player._guild)
+            except AttributeError:  # Handle things like: bot got kicked, move to another channel,...
+                await self.cleanup(player._guild)
 
     # @commands.Cog.listener()
     # async def on_wavelink_track_start(self, player: wavelink.Player, track: wavelink.Track):

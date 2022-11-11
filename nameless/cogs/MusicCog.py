@@ -88,9 +88,10 @@ class VoteMenu:
         ctx: commands.Context,
         voice_client: VoiceClient,
     ):
+        self.ctx = ctx
         self.action = action
         self.content = f"{content[:50]}..."
-        self.ctx = ctx
+        
         self.max_vote_user = math.ceil(len(voice_client.channel.members) / 2)
         self.total_vote = 1
 
@@ -681,7 +682,6 @@ class MusicCog(commands.Cog):
     @commands.guild_only()
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
     @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
-    @commands.check(MusicCogCheck.queue_has_element)
     async def skip(self, ctx: commands.Context):
         """Skip a song."""
         await ctx.defer()
@@ -692,7 +692,6 @@ class MusicCog(commands.Cog):
 
         if await VoteMenu("skip", track.title, ctx, vc).start():
             vc.stop()
-            await ctx.send("Next track should be played now")
         else:
             await ctx.send("Not skipping because not enough votes!")
 
@@ -886,7 +885,7 @@ class MusicCog(commands.Cog):
             await ctx.send(content=f"Added `{track.title}` into the queue")
             return
 
-        tracks: List[YTDLSource] = await YTDLSource.get_tracks(ctx, search, range=5)  # pyright: ignore
+        tracks: List[YTDLSource] = list(t for t in await YTDLSource.get_tracks(ctx, search, range=5))
 
         if not tracks:
             await ctx.send(f"No tracks found for '{search}' on '{source}'.")

@@ -20,12 +20,12 @@ def main(args: List[str]):
         try:
             cfg = __import__(cls_arg[0][len(f"{CONFIG_CLASS_FLAG}=") :]).NamelessConfig  # noqa: E203
         except (ValueError, ModuleNotFoundError):
-            cfg = NamelessConfig_example.NamelessConfig
+            cfg = NamelessConfig.NamelessConfig
             logging.warning(f"Invalid value for '--config' flag: {cfg.__module__}")
             logging.warning("Maybe an invalid module name, or NamelessConfig class in not in it?")
-            logging.warning("NamelessConfig_example.NamelessConfig will be used as fallback option")
+            logging.warning("NamelessConfig.NamelessConfig will be used as fallback option")
     else:
-        cfg = NamelessConfig_example.NamelessConfig
+        cfg = NamelessConfig.NamelessConfig
 
     shared_vars.config_cls = cfg
     prefixes = getattr(cfg, "PREFIXES", [])

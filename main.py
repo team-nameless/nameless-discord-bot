@@ -5,7 +5,7 @@ from typing import List
 import discord
 from discord.ext import commands
 
-import NamelessConfig_example
+import NamelessConfig
 from nameless import Nameless, shared_vars
 
 

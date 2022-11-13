@@ -1,5 +1,4 @@
 import asyncio
-import collections
 import datetime
 import logging
 import math
@@ -165,7 +164,7 @@ class TrackPickDropdown(discord.ui.Select):
                 description=track.uri[:100] if track.uri else "No URI",
                 value=str(index),
             )
-            for index, track in enumerate(tracks[:25])
+            for index, track in enumerate(tracks)
         ]
 
         super().__init__(
@@ -241,17 +240,14 @@ class YTDLSource(discord.PCMVolumeTransformer):
         data = await cls._get_raw_data(search, loop)
 
         if entries := data.get("entries", None):
-            data = entries[:range]
+            for track in entries[:range]:
+                track.update(
+                    {"extractor": data.get("extractor"), "direct": data.get("direct")},
+                )
+                yield cls(track, ctx.author)
         else:
             data.update({"extractor": data.get("extractor"), "direct": data.get("direct")})
             yield cls(data, ctx.author)
-            return
-
-        for track in data:
-            track.update(
-                {"extractor": data.get("extractor"), "direct": data.get("direct")},
-            )
-            yield cls(track, ctx.author)
 
     @classmethod
     async def generate_stream(cls, data, loop=None):
@@ -911,7 +907,6 @@ class MusicCog(commands.Cog):
         soon_to_add_queue: List[YTDLSource] = []
         if len(tracks) > 1:
             view = discord.ui.View().add_item(TrackPickDropdown([track for track in tracks if not track.is_stream()]))
-
             await m.edit(content="Tracks found", view=view)
 
             if await view.wait():

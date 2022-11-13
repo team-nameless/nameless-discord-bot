@@ -91,7 +91,7 @@ class VoteMenu:
         self.ctx = ctx
         self.action = action
         self.content = f"{content[:50]}..."
-        
+
         self.max_vote_user = math.ceil(len(voice_client.channel.members) / 2)
         self.total_vote = 1
 
@@ -182,14 +182,18 @@ class TrackPickDropdown(discord.ui.Select):
             v.stop()
 
 
+class FFMPEGAudioClass(discord.FFmpegAudio):
+    pass
+
+
 class YTDLSource(discord.PCMVolumeTransformer):
 
-    __slots__ = ("requester", "title", "author", "lenght", "extractor", "direct", "webpage_url", "thumbnail")
+    __slots__ = ("requester", "title", "author", "lenght", "extractor", "direct", "uri", "thumbnail")
 
     def __init__(self, data, requester, source=None):
 
         if source:
-            self.source = source
+            self.source: discord.FFmpegPCMAudio = source
             super().__init__(source)
 
         self.requester: discord.Member = requester
@@ -201,9 +205,9 @@ class YTDLSource(discord.PCMVolumeTransformer):
         self.extractor = data.get("extractor", "None")
 
         if "search" in self.extractor:
-            self.webpage_url = data.get("url")
+            self.uri = data.get("url")
         else:
-            self.webpage_url = data.get("webpage_url")
+            self.uri = data.get("webpage_url")
 
     @staticmethod
     async def _get_raw_data(search, loop=None) -> Dict:
@@ -235,7 +239,15 @@ class YTDLSource(discord.PCMVolumeTransformer):
     @classmethod
     async def get_tracks(cls, ctx: commands.Context, search, range=5, loop=None) -> AsyncIterable:
         data = await cls._get_raw_data(search, loop)
-        for track in data.get("entries", data)[:range]:
+
+        if entries := data.get("entries", None):
+            data = entries[:range]
+        else:
+            data.update({"extractor": data.get("extractor"), "direct": data.get("direct")})
+            yield cls(data, ctx.author)
+            return
+
+        for track in data:
             track.update(
                 {"extractor": data.get("extractor"), "direct": data.get("direct")},
             )
@@ -246,12 +258,14 @@ class YTDLSource(discord.PCMVolumeTransformer):
         loop = loop or asyncio.get_event_loop()
         requester = data.requester
 
-        to_run = partial(ytdl.extract_info, url=data.webpage_url, download=False)
+        to_run = partial(ytdl.extract_info, url=data.uri, download=False)
         ret: dict = await loop.run_in_executor(None, to_run)  # type: ignore
 
         return cls(source=discord.FFmpegPCMAudio(ret["url"], **ffmpegopts), data=ret, requester=requester)
 
     def cleanup(self) -> None:
+        if source := getattr(self, "source", None):
+            source.cleanup()
         del self
 
 
@@ -291,11 +305,11 @@ class MainPlayer:
         setattr(self._guild.voice_client, "is_queue_empty", self.queue.empty)
 
     @staticmethod
-    def __build_np_embed(track: YTDLSource):
+    def _build_embed(track: YTDLSource, header: str):
         return (
             discord.Embed(timestamp=datetime.datetime.now(), color=discord.Color.orange())
             .set_author(
-                name="Now playing track",
+                name=header,
                 icon_url=track.requester.avatar.url,  # pyright: ignore
             )
             .add_field(
@@ -309,7 +323,7 @@ class MainPlayer:
             )
             .add_field(
                 name="Source",
-                value=escape_markdown(track.webpage_url) if track.webpage_url else "N/A",
+                value=escape_markdown(track.uri) if track.uri else "N/A",
             )
         )
 
@@ -329,7 +343,7 @@ class MainPlayer:
                 if not self.repeat or self.track is None:
                     self.track = await self.queue.get()
 
-                    await self._channel.send(embed=self.__build_np_embed(self.track))
+                    await self._channel.send(embed=self._build_embed(self.track, "Now playing track"))
 
                 self.track = await YTDLSource.generate_stream(self.track)
                 self.track.volume = self.volume
@@ -458,8 +472,8 @@ class MusicCog(commands.Cog):
         return embeds
 
     @staticmethod
-    async def show_paginated_tracks(ctx: commands.Context, embeds: List[discord.Embed]):
-        p = DiscordUtils.Pagination.AutoEmbedPaginator(ctx)
+    async def show_paginated_tracks(ctx: commands.Context, embeds: List[discord.Embed], **kwargs):
+        p = DiscordUtils.Pagination.AutoEmbedPaginator(ctx, **kwargs)
         await p.run(embeds)
 
     @commands.Cog.listener()
@@ -800,7 +814,7 @@ class MusicCog(commands.Cog):
                 )
                 .add_field(
                     name="Source",
-                    value=escape_markdown(track.webpage_url) if track.webpage_url else "N/A",
+                    value=escape_markdown(track.uri) if track.uri else "N/A",
                 )
                 .add_field(
                     name="Playtime" if is_stream else "Position",
@@ -866,60 +880,67 @@ class MusicCog(commands.Cog):
 
     @queue.command()
     @commands.guild_only()
-    @app_commands.describe(search="Search query", source="Source to search")
+    @app_commands.describe(search="Search query", source="Source to search", range="How much result to show")
     # @app_commands.choices(source=[Choice(name=k, value=k) for k in music_default_sources])
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    async def add(self, ctx: commands.Context, search: str, source: str = "youtube"):
+    async def add(self, ctx: commands.Context, search: str, source: str = "youtube", range: int = 1):
         """Add selected track(s) to queue"""
         await ctx.defer()
+        m = await ctx.send("Searching...")
 
         player: MainPlayer = self.get_player(ctx)
 
-        track = await YTDLSource.get_track(ctx, search)
-        if track.is_stream():
-            await ctx.send("This is a stream, cannot add to queue")
-            return
+        # track = await YTDLSource.get_track(ctx, search)
+        # if track.is_stream():
+        #     await ctx.send("This is a stream, cannot add to queue")
+        #     return
 
-        if "search" in track.extractor:
-            await player.queue.put(track)
-            await ctx.send(content=f"Added `{track.title}` into the queue")
-            return
+        # if "search" in track.extractor:
+        #     await player.queue.put(track)
+        #     await ctx.send(content=f"Added `{track.title}` into the queue")
+        #     return
 
-        tracks: List[YTDLSource] = list(t for t in await YTDLSource.get_tracks(ctx, search, range=5))
+        tracks: List[YTDLSource] = []
+        async for track in YTDLSource.get_tracks(ctx, search, range=range):
+            tracks.append(track)
 
         if not tracks:
             await ctx.send(f"No tracks found for '{search}' on '{source}'.")
             return
 
-        view = discord.ui.View().add_item(TrackPickDropdown([track for track in tracks if not track.is_stream()]))
-
-        m = await ctx.send("Tracks found", view=view)
-
-        if await view.wait():
-            await m.edit(content="Timed out!", view=None, delete_after=30)
-            return
-
-        drop: Union[discord.ui.Item[discord.ui.View], TrackPickDropdown] = view.children[0]
-        vals = drop.values  # pyright: ignore
-
-        if not vals:
-            await m.delete()
-            return
-
-        if "Nope" in vals:
-            await m.edit(content="All choices cleared", view=None)
-            return
-
         soon_to_add_queue: List[YTDLSource] = []
+        if len(tracks) > 1:
+            view = discord.ui.View().add_item(TrackPickDropdown([track for track in tracks if not track.is_stream()]))
 
-        for val in vals:
-            idx = int(val)
-            await player.queue.put(tracks[idx])
+            await m.edit(content="Tracks found", view=view)
 
-        await m.edit(content=f"Added {len(vals)} tracks into the queue", view=None)
+            if await view.wait():
+                await m.edit(content="Timed out!", view=None, delete_after=30)
+                return
 
-        embeds = self.generate_embeds_from_tracks(soon_to_add_queue)
-        self.bot.loop.create_task(self.show_paginated_tracks(ctx, embeds))
+            drop: Union[discord.ui.Item[discord.ui.View], TrackPickDropdown] = view.children[0]
+            vals = drop.values  # pyright: ignore
+
+            if not vals:
+                await m.delete()
+                return
+
+            if "Nope" in vals:
+                await m.edit(content="All choices cleared", view=None)
+                return
+
+            for val in vals:
+                idx = int(val)
+                soon_to_add_queue.append(tracks[idx])
+                await player.queue.put(tracks[idx])
+        else:
+            soon_to_add_queue = tracks
+            await player.queue.put(tracks[0])
+
+        await m.edit(content=f"Added {len(soon_to_add_queue)} tracks into the queue", view=None)
+
+        embeds = [player._build_embed(track, f"Requested by {track.requester}") for track in tracks]
+        self.bot.loop.create_task(self.show_paginated_tracks(ctx, embeds, timeout=15))
 
     # No playlist for now
     # TODO: Add playlist

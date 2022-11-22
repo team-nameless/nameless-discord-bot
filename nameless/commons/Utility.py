@@ -56,8 +56,6 @@ class Utility:
         vhost: str = "*" * len(host) if host else ""
 
         finish_url = f"{dialect}{pdriver}://{username}{ppassword}{at}{host}{pport}/{db_name}"
-        hidden_url = f"{dialect}{pdriver}://{username}{vpassword}{at}{vhost}{vport}/{db_name}"
-        logging.info("Using %s as database URL", hidden_url)
 
         return (
             finish_url,

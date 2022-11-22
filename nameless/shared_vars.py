@@ -2,8 +2,9 @@ import logging
 import re
 import sys
 from datetime import datetime
-from typing import Any, List
+from typing import List
 
+import requests
 from discord import Permissions
 
 from nameless import customs
@@ -23,10 +24,11 @@ additional_handlers: List = []
 cogs_regex = re.compile(r"^(?!_.).*Cog.py")
 
 # Meta
-upstream_version_txt_url: str
+upstream_version_txt_url = "https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt"
 start_time: datetime = datetime.min
+additional_handlers: List = []
 __nameless_current_version__ = "2.0.0"
-__nameless_upstream_version__: str
+__nameless_upstream_version__ = requests.get(upstream_version_txt_url, timeout=10).text
 
 # Perms
 needed_permissions = Permissions.none()
@@ -49,4 +51,3 @@ needed_permissions.add_reactions = True
 needed_permissions.connect = True
 needed_permissions.speak = True
 needed_permissions.use_voice_activation = True
-needed_permissions.create_instant_invite = True

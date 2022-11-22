@@ -109,8 +109,12 @@ class OwnerCog(commands.Cog):
         if not groups:
             groups = re.search(r"`*([\w\W]*[^`])`*", code)
 
-        code = groups.group(1)
+        code = groups.group(1) if groups else ""
         returns = ""
+
+        if not code:
+            await ctx.send("No code to run")
+            return
 
         try:
             with contextlib.redirect_stdout((out := io.StringIO())):

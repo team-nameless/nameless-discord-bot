@@ -6,7 +6,6 @@ A rewrite of [original nameless*](https://github.com/FoxeiZ/nameless), now with 
 [![Python](https://badgen.net/badge/Python/3.10%2B/)](https://python.org)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Latest tag](https://badgen.net/github/tag/nameless-on-discord/nameless?label=Latest%20Stable%20Version)]()
-
 [![CodeFactor](https://www.codefactor.io/repository/github/nameless-on-discord/nameless/badge/main)](https://www.codefactor.io/repository/github/nameless-on-discord/nameless/overview/main)
 
 
@@ -14,9 +13,9 @@ A rewrite of [original nameless*](https://github.com/FoxeiZ/nameless), now with 
 
 ## CI Status
 
-- Linting and testing - [![MAIN CI](https://badgen.net/github/checks/nameless-on-discord/nameless/main/all-the-things?icon=github)]()
+- Linting and testing - [![MAIN CI](https://badgen.net/github/checks/nameless-on-discord/nameless/main/test-and-lint?icon=github)]()
 - Code quality - [![CODE QUALITY](https://badgen.net/github/checks/nameless-on-discord/nameless/main/codeql?icon=github)]()
-- We do have a `publish` job, but the bots are not ready for wide use, sorry about that :(
+- We do have a `publish` job, but the bots are not ready for wide use, just for testing, sorry about that :(
 
 ----------------------------------------
 

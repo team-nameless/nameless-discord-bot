@@ -4,10 +4,9 @@ on:
   push:
 
 jobs:
-  publish:
+  publish-bots:
     if: ${{ github.repository == 'nameless-on-discord/nameless' }}
     runs-on: ubuntu-latest
-    name: Publish bots
     steps:
       - name: Install sshpass
         run: |

@@ -17,10 +17,9 @@ on:
       - '*'
 
 jobs:
-  all-the-things:
+  test-and-lint:
     if: ${{ github.repository == 'nameless-on-discord/nameless' }}
     runs-on: ubuntu-latest
-    name: Test and lint
     steps:
       - uses: actions/checkout@v3
 

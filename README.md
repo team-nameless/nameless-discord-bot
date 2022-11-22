@@ -8,16 +8,11 @@ A rewrite of [original nameless*](https://github.com/FoxeiZ/nameless), now with 
 [![Latest tag](https://badgen.net/github/tag/nameless-on-discord/nameless?label=Latest%20Stable%20Version)]()
 [![CodeFactor](https://www.codefactor.io/repository/github/nameless-on-discord/nameless/badge/main)](https://www.codefactor.io/repository/github/nameless-on-discord/nameless/overview/main)
 
-
-----------------------------------------
-
 ## CI Status
 
 - Linting and testing - [![MAIN CI](https://badgen.net/github/checks/nameless-on-discord/nameless/main/python?icon=github)]()
 - Code quality - [![CODE QUALITY](https://badgen.net/github/checks/nameless-on-discord/nameless/main/codeql?icon=github)]()
 - We do have a `publish` job, but the bots are not ready for wide use, just for testing, sorry about that :(
-
-----------------------------------------
 
 ## How to run this bot?
 
@@ -66,7 +61,6 @@ See [CONTRIBUTING.md](https://github.com/Lilia-Workshop/nameless/blob/main/CONTR
 - Oh, thank you for your generosity! You can look for the sponsor button or some link at the sidebar, any value is
   appreciated.
 
-----------------------------------------
 
 ## The team
 

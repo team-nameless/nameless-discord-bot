@@ -39,7 +39,6 @@ class Nameless(commands.AutoShardedBot):
             logging.DEBUG if getattr(self.config_cls, "LAB", False) else logging.INFO,
         )
         self.allow_updates_check: bool = kwargs.get("allow_updates_check", False)
-        self.global_logger = logging.getLogger()
 
         self.loggers: List[logging.Logger] = [
             logging.getLogger(),
@@ -53,25 +52,27 @@ class Nameless(commands.AutoShardedBot):
 
     def check_for_updates(self):
         if not self.allow_updates_check:
-            self.global_logger.warning(
-                "Your bot might fall behind updates, consider using flag '--allow-updates-check'"
-            )
+            logging.warning("Your bot might fall behind updates, consider using flag '--allow-updates-check'")
         else:
             nameless_version = version.parse(shared_vars.__nameless_current_version__)
             upstream_version = version.parse(shared_vars.__nameless_upstream_version__)
 
-            self.global_logger.info(
-                "Current version: %s - Upstream version: %s",
-                nameless_version,
-                upstream_version,
-            )
+            if upstream_version:
+                logging.info(
+                    "Current version: %s - Upstream version: %s",
+                    nameless_version,
+                    upstream_version,
+                )
 
-            if nameless_version < upstream_version:
-                self.global_logger.warning("You need to update your code!")
-            elif nameless_version == upstream_version:
-                self.global_logger.info("You are using latest version!")
+                if nameless_version < upstream_version:
+                    logging.warning("You need to update your code!")
+                elif nameless_version == upstream_version:
+                    logging.info("You are using latest version!")
+                else:
+                    logging.warning("You are using a version NEWER than original code!")
             else:
-                self.global_logger.warning("You are using a version NEWER than original code!")
+                logging.warning("Failed to fetch upstream version!!!")
+                logging.info("This is due to your internet failed to fetch in 10s timeout!")
 
         # Write current version in case I forgot
         with open("../version.txt", "w", encoding="utf-8") as f:
@@ -101,7 +102,7 @@ class Nameless(commands.AutoShardedBot):
         else:
             logging.warning(
                 "config_cls.COGS is None or non-existence, nothing will be loaded (config_cls=%s)",
-                self.config_cls.__name__,
+                self.config_cls.__name__ if self.config_cls else "None",
             )
 
     async def on_shard_ready(self, shard_id: int):
@@ -134,9 +135,13 @@ class Nameless(commands.AutoShardedBot):
                 ),
             )
         else:
-            logging.warning("Presence is not set since you did not provide values properly")
+            logging.warning("Presence is set to online with no activity since you did not provide values properly")
 
-        logging.info("Logged in as %s (ID: %s)", str(self.user), self.user.id)
+        if self.user:
+            logging.info("Logged in as %s (ID: %s)", str(self.user), self.user.id)
+        else:
+            logging.error("Normally this should NOT happen!!!")
+            sys.exit(64)
 
     async def on_error(self, event_method: str, *args, **kwargs) -> None:
         logging.error(

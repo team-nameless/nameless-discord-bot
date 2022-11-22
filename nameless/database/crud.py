@@ -71,19 +71,20 @@ class CRUD:
         self, discord_guild: Optional[Union[discord.Guild, discord.Object]]
     ) -> Tuple[Optional[DbGuild], bool]:
         """
+
         Get an existing guild record, create a new record if one doesn't exist
         :param discord_guild: Guild entity of discord
         :return: Guild record in database, True if the record is new
         """
-        if discord_guild:
-            g = self.get_guild_record(discord_guild)
+        if not discord_guild:
+            return None, True
 
-            if not g:
-                return self.create_guild_record(discord_guild), True
+        g = self.get_guild_record(discord_guild)
 
-            return g, False
+        if not g:
+            return self.create_guild_record(discord_guild), True
 
-        return None, True
+        return g, False
 
     def get_user_record(self, discord_user: Union[discord.Member, discord.User, discord.Object]) -> Optional[DbUser]:
         """Get user record in database"""

@@ -31,7 +31,7 @@ def main(args: List[str]):
     except ModuleNotFoundError:
         logging.error("You need to provide a NamelessConfig.py file in the same directory with this file!")
         logging.error("This program will now exit! (with code 128)")
-        exit(128)
+        sys.exit(128)
 
 
 if __name__ == "__main__":

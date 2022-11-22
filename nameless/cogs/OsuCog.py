@@ -259,12 +259,13 @@ class OsuCog(commands.Cog):
                         timestamp=datetime.datetime.now(),
                     )
                     .set_author(
-                        name=f"{beatmap_set.artist} - {beatmap_set.title} [{beatmap.version}] "
-                        f"+{score.mods.long_name().replace(' ', '')}",
-                        url=beatmap.url,
+                        name=f"{beatmap_set.artist} - {beatmap_set.title} [{beatmap.version if beatmap else '???'}] "
+                        if beatmap_set
+                        else "No map found online!" f"+{score.mods.long_name().replace(' ', '')}",
+                        url=beatmap.url if beatmap else "",
                         icon_url=sender.avatar_url,
                     )
-                    .set_thumbnail(url=beatmap_set.covers.cover_2x)
+                    .set_thumbnail(url=beatmap_set.covers.cover_2x if beatmap_set and beatmap_set.covers else "")
                     .add_field(
                         name="Score",
                         value=f"{sender.country_code} #{score.rank_country} - GLB #{score.rank_global}",
@@ -274,7 +275,7 @@ class OsuCog(commands.Cog):
                     .add_field(name="Accuracy", value=f"{round(score.accuracy * 100, 2)}%")
                     .add_field(
                         name="Max combo",
-                        value=f"{score.max_combo}x/{beatmap.max_combo}",
+                        value=f"{score.max_combo}x/{beatmap.max_combo if beatmap else '???'}x",
                     )
                     .add_field(
                         name="Hit count",

@@ -1,0 +1,37 @@
+
+name: "Code Scanning"
+
+on:
+  push:
+    branches:
+      - 'feat/**'
+      - 'fix/**'
+      - 'main'
+    tags-ignore:
+      - '*'
+  pull_request:
+    branches:
+      - 'feat/**'
+      - 'fix/**'
+      - 'main'
+    tags-ignore:
+      - '*'
+
+jobs:
+  codeql:
+    runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: python
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2

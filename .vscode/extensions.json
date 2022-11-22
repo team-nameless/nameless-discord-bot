@@ -5,8 +5,9 @@
 		"KevinRose.vsc-python-indent",
 		"tamasfe.even-better-toml",
 		"ms-python.python",
+		"Gruntfuggly.todo-tree",
 		"ms-python.vscode-pylance",
-		"DavidAnson.vscode-markdownlint",
+		"yzhang.markdown-all-in-one",
 		"littlefoxteam.vscode-python-test-adapter"
 	],
 }

@@ -8,21 +8,22 @@ A rewrite of [original nameless*](https://github.com/FoxeiZ/nameless), now with 
 [![Latest tag](https://badgen.net/github/tag/nameless-on-discord/nameless?label=Latest%20Stable%20Version)]()
 
 [![CodeFactor](https://www.codefactor.io/repository/github/nameless-on-discord/nameless/badge/main)](https://www.codefactor.io/repository/github/nameless-on-discord/nameless/overview/main)
-[![Total alerts](https://img.shields.io/lgtm/alerts/g/Lilia-Workshop/nameless.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/nameless-on-discord/nameless/alerts/)
-[![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/Lilia-Workshop/nameless.svg?logo=lgtm&logoWidth=18)]()
+
 
 ----------------------------------------
 
 ## CI Status
- 
-[![MAIN CI](https://badgen.net/github/checks/nameless-on-discord/nameless/main?label=main&icon=github)](https://github.com/nameless-on-discord/nameless/actions)
+
+- Linting and testing - [![MAIN CI](https://badgen.net/github/checks/nameless-on-discord/nameless/main/all-the-things?icon=github)]()
+- Code quality - [![CODE QUALITY](https://badgen.net/github/checks/nameless-on-discord/nameless/main/codeql?icon=github)]()
+- We do have a `publish` job, but the bots are not ready for wide use, sorry about that :(
 
 ----------------------------------------
 
 ## How to run this bot?
 
 - First, install `python3` - minimum version `3.10`, latest version preferred.
-- Second, create a virtual environment so your global `python` won't be badly polluted by packages and activate it.
+- Second, create a virtual environment so your global `python` won't be badly affected by the packages and activate it.
 
 ```shell
 python3 -m venv venv
@@ -35,11 +36,11 @@ source venv/bin/activate
 pip install -r requirements_core.txt
 ```
 
-- After that, edit `NamelessConfig_example.py` then rename to `NamelessConfig.py`.
+- After that, edit `NamelessConfig_example.py` as needed then rename to `NamelessConfig.py`.
 
 - Lastly, run the `main.py` file:
 
-> :warning: Update checks are disabled by default, if you want to enable it, use flag `--allow-updates-check`
+> :warning: Update checks are **disabled by default** to save some bandwidth, if you want to enable it, use the flag `--allow-updates-check`
 
 ```shell
 python main.py -OO
@@ -57,7 +58,7 @@ See [CONTRIBUTING.md](https://github.com/Lilia-Workshop/nameless/blob/main/CONTR
 
 ## Oh look, there are branches!
 
-- [main](https://github.com/nameless-on-discord/nameless/tree/main): Stable codes that is production-ready.
+- [main](https://github.com/nameless-on-discord/nameless/tree/main): Mainline of the code.
 - `feat/{name}`: New features that will be pushed directly or through PRs to `main`
 - `fix/{#}` or `fix/{name}`: Bug fixes that will be pushed to `main` after passing checks.
 

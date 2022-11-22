@@ -17,7 +17,7 @@ on:
       - '*'
 
 jobs:
-  test-and-lint:
+  python:
     if: ${{ github.repository == 'nameless-on-discord/nameless' }}
     runs-on: ubuntu-latest
     steps:

@@ -13,7 +13,7 @@ A rewrite of [original nameless*](https://github.com/FoxeiZ/nameless), now with 
 
 ## CI Status
 
-- Linting and testing - [![MAIN CI](https://badgen.net/github/checks/nameless-on-discord/nameless/main/test-and-lint?icon=github)]()
+- Linting and testing - [![MAIN CI](https://badgen.net/github/checks/nameless-on-discord/nameless/main/python?icon=github)]()
 - Code quality - [![CODE QUALITY](https://badgen.net/github/checks/nameless-on-discord/nameless/main/codeql?icon=github)]()
 - We do have a `publish` job, but the bots are not ready for wide use, just for testing, sorry about that :(
 

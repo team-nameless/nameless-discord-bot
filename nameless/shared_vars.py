@@ -2,7 +2,7 @@ import logging
 import re
 import sys
 from datetime import datetime
-from typing import List
+from typing import List, Any
 
 import requests
 from discord import Permissions
@@ -24,11 +24,10 @@ additional_handlers: List = []
 cogs_regex = re.compile(r"^(?!_.).*Cog.py")
 
 # Meta
-upstream_version_txt_url = "https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt"
+upstream_version_txt_url: str = ""
 start_time: datetime = datetime.min
-additional_handlers: List = []
-__nameless_current_version__ = "2.0.0"
-__nameless_upstream_version__ = requests.get(upstream_version_txt_url, timeout=10).text
+__nameless_current_version__: str = "2.0.0"
+__nameless_upstream_version__: str = ""
 
 # Perms
 needed_permissions = Permissions.none()

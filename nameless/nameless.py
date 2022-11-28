@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 from datetime import datetime
@@ -38,7 +39,7 @@ class Nameless(commands.AutoShardedBot):
 
         self.log_level: int = kwargs.get(
             "log_level",
-            logging.DEBUG if getattr(self.bot_config, "LAB", False) else logging.INFO,
+            logging.DEBUG if getattr(self.bot_config, "DEV", False) else logging.INFO,
         )
         self.allow_updates_check: bool = kwargs.get("allow_updates_check", False)
 
@@ -192,7 +193,7 @@ class Nameless(commands.AutoShardedBot):
         await super().close()
 
     def patch_loggers(self) -> None:
-        if getattr(self.bot_config, "LAB", False):
+        if getattr(self.bot_config, "DEV", False):
             file_handler = logging.FileHandler(filename="nameless.log", mode="w", delay=True)
             file_handler.setFormatter(logging.Formatter("%(asctime)s - [%(levelname)s] [%(name)s] %(message)s"))
             shared_vars.additional_handlers.append(file_handler)
@@ -225,19 +226,32 @@ class Nameless(commands.AutoShardedBot):
         shared_vars.crud_database = CRUD(self.bot_config)
 
         meta = getattr(self.bot_config, "META", {})
+
+        # The default value is "", so an additional or might work
         shared_vars.__nameless_current_version__ = meta.get("version", None) or shared_vars.__nameless_current_version__
         shared_vars.upstream_version_txt_url = (
             meta.get("version_txt", None)
             or "https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt"
         )
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(shared_vars.upstream_version_txt_url) as response:
-                if 200 <= response.status <= 299:
-                    shared_vars.__nameless_upstream_version__ = await response.text()
-                else:
-                    logging.warning("Upstream version fetching error, using 0.0.0 as upstream version")
-                    shared_vars.__nameless_upstream_version__ = "0.0.0"
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(shared_vars.upstream_version_txt_url, timeout=10) as response:
+                    if 200 <= response.status <= 299:
+                        shared_vars.__nameless_upstream_version__ = await response.text()
+                    else:
+                        logging.warning("Upstream version fetching failed, using 0.0.0 as upstream version")
+                        shared_vars.__nameless_upstream_version__ = "0.0.0"
+
+        except asyncio.exceptions.TimeoutError:
+            logging.error("Upstream version fetching error, using 0.0.0 as upstream version")
+            logging.info("This is because your internet failed to fetch within 10 seconds timeout")
+            shared_vars.__nameless_upstream_version__ = "0.0.0"
+
+        # Debug data
+        logging.debug("Used config class name: %s", shared_vars.config_cls.__name__)
+        logging.debug("Bot start time: %s", shared_vars.start_time)
+        logging.debug(shared_vars.upstream_version_txt_url)
 
     def start_bot(self):
         self.patch_loggers()

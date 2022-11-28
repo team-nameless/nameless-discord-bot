@@ -8,9 +8,9 @@ __all__ = ["NamelessConfig"]
 
 
 class NamelessConfig:
-    # Enable experimental stuffs
+    # Enable stuffs for developers
     # Set to True if you know what you are doing
-    LAB: bool = False
+    DEV: bool = False
 
     # Bot token
     # Go to here: https://discord.com/developers/applications/
@@ -44,15 +44,19 @@ class NamelessConfig:
         # Any source control link
         # Use falsy values for closed source (like when you have a private fork), but remember to comply the license.
         "source_code": "https://github.com/nameless-on-discord/nameless",
-        # A link leading to the raw version.txt file, used for latest version checking
+
+        # A link leading to the RAW version.txt file, used for upstream version checking
         # If this is a falsy value, https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt
         "version_txt": "https://raw.githubusercontent.com/nameless-on-discord/nameless/feat/v2/version.txt",
+
         # Bot support server URL
         # This should be a valid Discord invite URL, or a URL that leads to a valid Discord invite URL
         "support_server_url": "",
+
         # Bot custom version, should be a string:
         # Falsy value will use the value provided in nameless/shared_vars.py
         "version": None,
+
         # Bot description
         # Placeholders: {source_code} - META[source_code], or "original nameless repo" if META[source_code] is ""
         #                               If it was set to None, set to literal "{source_code}"

@@ -70,11 +70,11 @@ class NamelessConfig:
     # Choose which cog(s) to load
     # Available options:    Config,
     #                       Moderator,
-    #                       Music (requires `LAVALINK` to be properly provided),
+    #                       MusicV1 (requires `LAVALINK` to be properly provided),
     #                       Osu (requires `OSU` to be properly provided),
     #                       Owner
     COGS: List[LiteralString] = [
-        "Music",
+        "MusicV1",
         "Owner",
         "General",
         "Config",

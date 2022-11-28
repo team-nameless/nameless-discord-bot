@@ -21,7 +21,7 @@ from nameless.cogs.checks import MusicCogCheck
 from nameless.commons import Utility
 
 
-__all__ = ["MusicCog"]
+__all__ = ["MusicV1Cog"]
 
 music_default_sources: List[str] = ["youtube", "soundcloud", "ytmusic"]
 
@@ -161,7 +161,7 @@ class TrackPickDropdown(discord.ui.Select):
             v.stop()
 
 
-class MusicCog(commands.Cog):
+class MusicV1Cog(commands.Cog):
     def __init__(self, bot: Nameless):
         self.bot = bot
         self.can_use_spotify = bool(
@@ -390,7 +390,7 @@ class MusicCog(commands.Cog):
     @app_commands.describe(url="Radio url")
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
     @commands.check(MusicCogCheck.bot_must_silent)
-    async def music(self, ctx: commands.Context, url: str):
+    async def music_v1(self, ctx: commands.Context, url: str):
         """Play a radio"""
         await ctx.defer()
 
@@ -400,7 +400,7 @@ class MusicCog(commands.Cog):
 
         await self.__internal_play(ctx, url, True)
 
-    @music.command()
+    @music_v1.command()
     @commands.guild_only()
     @commands.check(MusicCogCheck.user_in_voice)
     async def connect(self, ctx: commands.Context):
@@ -422,7 +422,7 @@ class MusicCog(commands.Cog):
         except ClientException:
             await ctx.send("Already connected")
 
-    @music.command()
+    @music_v1.command()
     @commands.guild_only()
     @commands.check(MusicCogCheck.bot_in_voice)
     async def disconnect(self, ctx: commands.Context):
@@ -435,7 +435,7 @@ class MusicCog(commands.Cog):
         except AttributeError:
             await ctx.send("Already disconnected")
 
-    @music.command()
+    @music_v1.command()
     @commands.guild_only()
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
     @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
@@ -447,7 +447,7 @@ class MusicCog(commands.Cog):
         setattr(vc, "loop_sent", not getattr(vc, "loop_sent"))
         await ctx.send(f"Loop set to {'on' if getattr(vc, 'loop_sent') else 'off'}")
 
-    @music.command()
+    @music_v1.command()
     @commands.guild_only()
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
     @commands.check(MusicCogCheck.bot_must_play_something)
@@ -464,7 +464,7 @@ class MusicCog(commands.Cog):
         await vc.pause()
         await ctx.send("Paused")
 
-    @music.command()
+    @music_v1.command()
     @commands.guild_only()
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
     @commands.check(MusicCogCheck.bot_must_silent)
@@ -481,7 +481,7 @@ class MusicCog(commands.Cog):
         await vc.resume()
         await ctx.send("Resumed")
 
-    @music.command()
+    @music_v1.command()
     @commands.guild_only()
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
     @commands.check(MusicCogCheck.bot_must_play_something)
@@ -495,7 +495,7 @@ class MusicCog(commands.Cog):
         await vc.stop()
         await ctx.send("Stopped")
 
-    @music.command()
+    @music_v1.command()
     @commands.guild_only()
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
     @commands.check(MusicCogCheck.bot_must_silent)
@@ -513,7 +513,7 @@ class MusicCog(commands.Cog):
         track = vc.queue.get()
         await self.__internal_play(ctx, track.uri)  # pyright: ignore
 
-    @music.command()
+    @music_v1.command()
     @commands.guild_only()
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
     @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
@@ -534,7 +534,7 @@ class MusicCog(commands.Cog):
         else:
             await ctx.send("Not skipping because not enough votes!")
 
-    @music.command()
+    @music_v1.command()
     @commands.guild_only()
     @app_commands.describe(pos="Position to seek to in milliseconds, defaults to run from start")
     @commands.has_guild_permissions(manage_guild=True)
@@ -559,7 +559,7 @@ class MusicCog(commands.Cog):
             delta_pos = datetime.timedelta(milliseconds=pos)
             await ctx.send(f"Seek to position {delta_pos}")
 
-    @music.command()
+    @music_v1.command()
     @commands.guild_only()
     @app_commands.describe(segment="Segment to seek (from 0 to 10, respecting to 0%, 10%, ..., 100%)")
     @commands.has_guild_permissions(manage_guild=True)
@@ -583,7 +583,7 @@ class MusicCog(commands.Cog):
             delta_pos = datetime.timedelta(milliseconds=pos)
             await ctx.send(f"Seek to segment #{segment}: {delta_pos}")
 
-    @music.command()
+    @music_v1.command()
     @commands.guild_only()
     @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
@@ -598,7 +598,7 @@ class MusicCog(commands.Cog):
 
         await ctx.send(f"'Now playing' delivery is now {'on' if getattr(vc, 'play_now_allowed') else 'off'}")
 
-    @music.command()
+    @music_v1.command()
     @commands.guild_only()
     @commands.check(MusicCogCheck.bot_in_voice)
     @commands.check(MusicCogCheck.bot_must_play_something)
@@ -666,7 +666,7 @@ class MusicCog(commands.Cog):
             ]
         )
 
-    @music.group(fallback="view")
+    @music_v1.group(fallback="view")
     @commands.guild_only()
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
     @commands.check(MusicCogCheck.queue_has_element)
@@ -930,12 +930,12 @@ class MusicCog(commands.Cog):
 
 async def setup(bot: Nameless):
     if (lvl := getattr(shared_vars.config_cls, "LAVALINK", None)) and lvl.get("nodes", []):
-        await bot.add_cog(MusicCog(bot))
+        await bot.add_cog(MusicV1Cog(bot))
         logging.info("Cog of %s added!", __name__)
     else:
         raise commands.ExtensionFailed(__name__, ValueError("Lavalink options are not properly provided"))
 
 
 async def teardown(bot: Nameless):
-    await bot.remove_cog("MusicCog")
+    await bot.remove_cog("MusicV1Cog")
     logging.warning("Cog of %s removed!", __name__)

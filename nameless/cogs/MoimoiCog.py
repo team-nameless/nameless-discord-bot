@@ -1,4 +1,3 @@
-import datetime
 import re
 import logging
 from typing import AsyncGenerator, Optional, List
@@ -6,7 +5,7 @@ from bs4 import BeautifulSoup
 import aiohttp
 
 import discord
-from discord import Color, app_commands
+from discord import app_commands
 
 # from discord.app_commands import Choice
 from discord.ext import commands
@@ -16,7 +15,7 @@ from discord.ext import commands
 from nameless import Nameless, shared_vars
 
 # from nameless.customs.DiscordWaiter import DiscordWaiter
-from NamelessConfig import NamelessConfig
+# from NamelessConfig import NamelessConfig
 
 
 __all__ = ["MoimoiCog"]
@@ -47,17 +46,19 @@ class FailInclusionConfirmationView(discord.ui.View):
 
 class HTMLParser:
     @staticmethod
-    async def __try_parse(r: str, list_class_element: List[str], is_regex: bool = False) -> AsyncGenerator:
+    async def try_parse(r: str, list_class_element: List[str], tag="div", is_regex: bool = False) -> AsyncGenerator:
         try:
             for class_element in list_class_element:
                 soup = BeautifulSoup(r, "html.parser")
                 regex = re.compile(class_element)
-                yield soup.find_all("div", {"class": regex}) if is_regex else soup.find_all(
-                    "div", {"class": class_element}
-                )
+                yield soup.find_all(tag, {"class": regex}) if is_regex else soup.find_all(tag, {"class": class_element})
         except Exception as e:
             logging.error("%s raise an error: [%s] %s", __name__, e.__class__.__name__, str(e))
             return
+
+    @staticmethod
+    async def try_parse_unpack(data: str, attrs: List[str], tag="div", is_regex: bool = False) -> str:
+        return "".join([v.text async for v in __class__.try_parse(data, attrs, tag, is_regex)])
 
 
 class UserContainer(HTMLParser):
@@ -87,19 +88,16 @@ class UserContainer(HTMLParser):
         )
         self.tour_leader_avatar_url = data.get("tour_leader_avatar_url", "")
 
-    @staticmethod
-    async def _internal_parse(data: str, attrs: List[str], is_regex: bool = False):
-        return "".join([v.text async for v in __class__.__try_parse(data, attrs, is_regex)])
-
     @classmethod
     async def parse(cls, data):
-        name = await cls._internal_parse(data, ["name_block f_l f_16"])
-        title = await cls._internal_parse(data, ["trophy_inner_block f_13"])
-        rating = await cls._internal_parse(data, ["rating_block"])
-        user_avatar_url = await cls._internal_parse(data, ["w_112 f_l"])
-        tour_leader_avatar_url = await cls._internal_parse(data, ["w_120 m_t_10 f_r"])
-        dan_rating_img_url = await cls._internal_parse(data, ["h_35 f_l"])
-        season_rating_url = await cls._internal_parse(data, ["w_120 m_t_10 f_r"])
+        name = await cls.try_parse_unpack(data, ["name_block f_l f_16"])
+        title = await cls.try_parse_unpack(data, ["trophy_inner_block f_13"])
+        rating = await cls.try_parse_unpack(data, ["rating_block"])
+        user_avatar_url = await cls.try_parse_unpack(data, ["w_112 f_l"])
+        tour_leader_avatar_url = await cls.try_parse_unpack(data, ["w_120 m_t_10 f_r"])
+        dan_rating_img_url = await cls.try_parse_unpack(data, ["h_35 f_l"])
+        season_rating_url = await cls.try_parse_unpack(data, ["w_120 m_t_10 f_r"])
+        stars_count = await cls.try_parse_unpack(data, ["playlog_chara_star_block f_12"], tag="img")
 
         # TODO: Install NVIDIA proprietary driver to write this code
         return cls(
@@ -110,23 +108,76 @@ class UserContainer(HTMLParser):
             tour_leader_avatar_url=tour_leader_avatar_url,
             dan_rating_img_url=dan_rating_img_url,
             season_rating_url=season_rating_url,
-            #    stars_count=stars_count
+            stars_count=stars_count,
         )
 
 
-class SongContainer:
-    def __init__(self) -> None:
-        pass
+class TourmemberContainer(HTMLParser):
+
+    __slots__ = ("level", "stars_count", "image_url")
+
+    def __init__(self, **data) -> None:
+        self.level = data.get("level", 0)
+        self.stars_count = data.get("stars_count", 0)
+        self.image_url = data.get("image_url", "")
+
+    @staticmethod
+    async def _internal_parse(data: str, attrs: List[str], tag="div", is_regex: bool = False):
+        return [v.text async for v in __class__.try_parse(data, attrs, tag, is_regex)]
+
+    @classmethod
+    async def parse(cls, data) -> AsyncGenerator:
+        level_ls = await cls._internal_parse(data, ["playlog_chara_lv_block f_13"])
+        stars_count_ls = await cls._internal_parse(data, ["playlog_chara_star_block f_12"], tag="img")
+        image_url_ls = await cls._internal_parse(data, ["chara_cycle_img"])
+
+        for (level, stars_count, image_url) in zip(level_ls, stars_count_ls, image_url_ls):
+            yield cls(level=level, stars_count=stars_count, image_url=image_url)
 
 
-class PlaylogContainer:
+class TrackContainer(HTMLParser):
+
+    __slots__ = ("title", "difficulty", "cover_url")
+
+    def __init__(self, **data) -> None:
+        self.title = data.get("title", "")
+        self.difficulty = data.get("difficulty", "")
+        self.cover_url = data.get("cover_url", "")
+
+    @staticmethod
+    async def parse_diff(diff_url):
+        regex = re.compile(r"(?<=diff_)[a-z]+(?=\.png)")
+        return next(regex.finditer(diff_url))
+
+    @classmethod
+    async def parse(cls, data):
+        title = await cls.try_parse_unpack(data, ["basic_block m_5 p_5 p_l_10 f_13 break"])
+        difficulty = cls.parse_diff(await cls.try_parse_unpack(data, ["playlog_diff v_b"]))
+        cover_url = cls.try_parse_unpack(
+            data, [""], tag="img"
+        )  # TODO: wait for daily maimai maintained done and i will fix this
+
+        return cls(title=title, difficulty=difficulty, cover_url=cover_url)
+
+
+class PlaylogContainer(HTMLParser):
+
+    __slots__ = ("track", "rating", "achievement", "tour_member")
+
     def __init__(self, **data):
-        self.track_title = data.get("track_title", "")
+        self.track = data.get("track", TrackContainer())
         self.rating = data.get("rating", "")
         self.achievement = data.get("achievement", 0.0)
-        self.cover_url = data.get("cover_url", "")
-        self.difficulty = data.get("difficulty", "BASIC")
-        self.tour_leader_avatar_url = data.get("name", "tour_leader_avatar")
+        self.tour_member = data.get("tour_member", TourmemberContainer())
+
+    @classmethod
+    async def parse(cls, data):
+        rating = await cls.try_parse_unpack(data, ["rating_block"])
+        achievement = await cls.try_parse_unpack(data, ["playlog_achievement_txt t_r", "f_20"])
+        track = await TrackContainer.parse(data)
+        tour_member = [v async for v in TourmemberContainer.parse(data)]
+
+        return cls(track=track, rating=rating, achievement=achievement, tour_member=tour_member)
 
 
 class MoimoiCog(commands.Cog):
@@ -173,9 +224,7 @@ class MoimoiCog(commands.Cog):
             return resp
 
         raise Non200Code(
-            "Oops, trying to do a {} {} but return {} with message: {}".format(
-                method, resp.url, resp.status, await resp.text()
-            )
+            f"Oops, trying to do a {method} {resp.url} but return {resp.status} with message: {await resp.text()}"
         )
 
     async def _login_pass(self, segay_id, password):

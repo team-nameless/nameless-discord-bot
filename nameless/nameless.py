@@ -12,10 +12,10 @@ from discord.ext.commands import ExtensionFailed, errors
 from packaging import version
 from sqlalchemy.orm import close_all_sessions
 
-from NamelessConfig import NamelessConfig
 from nameless import shared_vars
 from nameless.database import CRUD
 from nameless.shared_vars import stdout_handler
+from NamelessConfig import NamelessConfig
 
 
 __all__ = ["Nameless"]
@@ -151,15 +151,15 @@ class Nameless(commands.AutoShardedBot):
     async def on_member_join(self, member: discord.Member):
         db_guild, _ = shared_vars.crud_database.get_or_create_guild_record(member.guild)
         assert db_guild is not None
-        
+
         if not member.bot:
             if db_guild.is_welcome_enabled:
                 if db_guild.welcome_message != "":
                     if the_channel := member.guild.get_channel_or_thread(db_guild.welcome_channel_id):
-                        
+
                         assert isinstance(the_channel, discord.TextChannel)
                         assert isinstance(the_channel, discord.Thread)
-                        
+
                         await the_channel.send(
                             content=db_guild.welcome_message.replace("{guild}", member.guild.name)
                             .replace("{name}", member.display_name)
@@ -177,7 +177,7 @@ class Nameless(commands.AutoShardedBot):
                     if the_channel := member.guild.get_channel_or_thread(db_guild.goodbye_channel_id):
                         assert isinstance(the_channel, discord.TextChannel)
                         assert isinstance(the_channel, discord.Thread)
-                        
+
                         await the_channel.send(
                             content=db_guild.goodbye_message.replace("{guild}", member.guild.name)
                             .replace("{name}", member.display_name)

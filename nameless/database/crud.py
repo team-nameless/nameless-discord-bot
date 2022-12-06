@@ -5,8 +5,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.util import IdentitySet
 
-from NamelessConfig import NamelessConfig
 from nameless.commons import Utility
+from NamelessConfig import NamelessConfig
 
 from .models import Base, DbGuild, DbUser
 

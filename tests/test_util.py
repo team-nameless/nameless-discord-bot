@@ -40,26 +40,6 @@ class TestUtility:
         assert port is None
         assert db_name == "nameless.db"
 
-    def test_get_db_url_fake_cls(self):
-        (
-            url,
-            dialect,
-            driver,
-            username,
-            password,
-            host,
-            port,
-            db_name,
-        ) = Utility.get_db_url(FakeConfig)
-        assert url == "postgresql+psycopg2://nameless:NamelessOutOfBetaWhen@localhost:12345/dame_dane"
-        assert dialect == "postgresql"
-        assert driver == "psycopg2"
-        assert username == "nameless"
-        assert password == "NamelessOutOfBetaWhen"
-        assert host == "localhost"
-        assert port == 12345
-        assert db_name == "dame_dane"
-
     def test_url_check_true(self):
         assert Utility.is_an_url("http://example.com")
         assert Utility.is_an_url("https://discord.com")

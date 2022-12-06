@@ -4,7 +4,7 @@ import pytest
 from nameless import database
 
 
-_crud = database.CRUD(None)
+_crud = database.CRUD()
 
 
 class TestSQLAlchemyDatabase:

@@ -4,7 +4,6 @@ from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
 
-import NamelessConfig_example
 from alembic import context
 from nameless.commons import Utility
 from nameless.database import Base
@@ -13,10 +12,8 @@ from nameless.database import Base
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-try:
-    db_url, a, b, c, d, e, f, g = Utility.get_db_url(NamelessConfig.NamelessConfig)
-except ModuleNotFoundError:
-    db_url, a, b, c, d, e, f, g = Utility.get_db_url()
+db_url, a, b, c, d, e, f, g = Utility.get_db_url()
+
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

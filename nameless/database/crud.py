@@ -1,10 +1,11 @@
-from typing import Optional, Tuple, Type, Union
+from typing import Optional, Tuple, Union
 
 import discord
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.util import IdentitySet
 
+from NamelessConfig import NamelessConfig
 from nameless.commons import Utility
 
 from .models import Base, DbGuild, DbUser
@@ -18,7 +19,7 @@ class CRUD:
     Basic database CRUD operations.
     """
 
-    def __init__(self, config_cls: Optional[Type] = None):
+    def __init__(self):
         (
             self.db_url,
             self.dialect,
@@ -28,11 +29,11 @@ class CRUD:
             self.username,
             self.password,
             self.db_name,
-        ) = Utility.get_db_url(config_cls)
+        ) = Utility.get_db_url()
         self.engine = create_engine(
             self.db_url,
             logging_name=self.db_name,
-            hide_parameters=not getattr(config_cls, "LAB", False),
+            hide_parameters=not getattr(NamelessConfig, "LAB", False),
         )
         _session = sessionmaker(bind=self.engine)
         self.__session = _session()

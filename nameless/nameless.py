@@ -155,27 +155,29 @@ class Nameless(commands.AutoShardedBot):
     async def on_member_join(self, member: discord.Member):
         db_guild, _ = shared_vars.crud_database.get_or_create_guild_record(member.guild)
 
-        if db_guild.is_welcome_enabled:
-            if db_guild.welcome_message != "":
-                if the_channel := member.guild.get_channel_or_thread(db_guild.welcome_channel_id):
-                    await the_channel.send(  # pyright: ignore
-                        content=db_guild.welcome_message.replace("{guild}", member.guild.name)
-                        .replace("{name}", member.display_name)
-                        .replace("{tag}", member.discriminator)
-                        .replace("{@user}", member.mention)
-                    )
+        if not member.bot:
+            if db_guild.is_welcome_enabled:
+                if db_guild.welcome_message != "":
+                    if the_channel := member.guild.get_channel_or_thread(db_guild.welcome_channel_id):
+                        await the_channel.send(  # pyright: ignore
+                            content=db_guild.welcome_message.replace("{guild}", member.guild.name)
+                            .replace("{name}", member.display_name)
+                            .replace("{tag}", member.discriminator)
+                            .replace("{@user}", member.mention)
+                        )
 
     async def on_member_remove(self, member: discord.Member):
         db_guild, _ = shared_vars.crud_database.get_or_create_guild_record(member.guild)
 
-        if db_guild.is_goodbye_enabled:
-            if db_guild.goodbye_message != "":
-                if the_channel := member.guild.get_channel_or_thread(db_guild.goodbye_channel_id):
-                    await the_channel.send(  # pyright: ignore
-                        content=db_guild.goodbye_message.replace("{guild}", member.guild.name)
-                        .replace("{name}", member.display_name)
-                        .replace("{tag}", member.discriminator)
-                    )
+        if not member.bot:
+            if db_guild.is_goodbye_enabled:
+                if db_guild.goodbye_message != "":
+                    if the_channel := member.guild.get_channel_or_thread(db_guild.goodbye_channel_id):
+                        await the_channel.send(  # pyright: ignore
+                            content=db_guild.goodbye_message.replace("{guild}", member.guild.name)
+                            .replace("{name}", member.display_name)
+                            .replace("{tag}", member.discriminator)
+                        )
 
     async def on_command_error(self, ctx: commands.Context, err: errors.CommandError, /) -> None:
         if not isinstance(err, errors.CommandNotFound):

@@ -142,14 +142,7 @@ class GeneralCog(commands.Cog):
         )
 
         nameless_meta = getattr(NamelessConfig, "META", {})
-        github_link = nameless_meta.get("github", None)
-        github_link = (
-            github_link
-            if github_link
-            else "https://github.com/nameless-on-discord/nameless"
-            if isinstance(github_link, str)
-            else "{github_link}"
-        )
+        github_link = nameless_meta.get("github", "https://github.com/nameless-on-discord/nameless")
         support_inv = ""
 
         try:
@@ -167,9 +160,9 @@ class GeneralCog(commands.Cog):
                 description=getattr(
                     NamelessConfig,
                     "BOT_DESCRIPTION",
-                    "I am a bot created from [nameless*]({github_link}) code "
-                    "made by Swyrin#7193 and [FoxeiZ](https://github.com/FoxeiZ)",
-                ).replace("{github_link}", github_link),
+                    f"I am a bot created from [nameless*]({github_link}) code "
+                    "made by [Swyrin#7193](https://github.com/Swyreee) and [FoxeiZ](https://github.com/FoxeiZ)",
+                ),
             )
             .set_thumbnail(url=ctx.bot.user.avatar.url)
             .add_field(name="Servers count", value=f"{servers_count}")

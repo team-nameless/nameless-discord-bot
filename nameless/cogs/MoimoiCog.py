@@ -1,18 +1,21 @@
-import re
+import datetime
 import logging
-from typing import AsyncGenerator, Optional, List
-from bs4 import BeautifulSoup
-import aiohttp
+import re
+from typing import AsyncGenerator, List, Optional
 
+import aiohttp
 import discord
-from discord import app_commands
+from bs4 import BeautifulSoup
+from discord import Color, app_commands
 
 # from discord.app_commands import Choice
 from discord.ext import commands
 
+from nameless import Nameless, shared_vars
+
+
 # from DiscordUtils import Pagination
 
-from nameless import Nameless, shared_vars
 
 # from nameless.customs.DiscordWaiter import DiscordWaiter
 # from NamelessConfig import NamelessConfig
@@ -46,19 +49,40 @@ class FailInclusionConfirmationView(discord.ui.View):
 
 class HTMLParser:
     @staticmethod
-    async def try_parse(r: str, list_class_element: List[str], tag="div", is_regex: bool = False) -> AsyncGenerator:
+    async def __unpack_find_all(
+        soup, name=None, attrs={}, custom_key=None, force_text=False, recursive=True, string=None, limit=None, **kwargs
+    ):
+        s = soup.find_all(name, attrs, recursive, string, limit, **kwargs)
+
+        if custom_key and s and not force_text:
+            return s[0].get(custom_key, "")
+
+        return "".join([v.text for v in s])
+
+    @staticmethod
+    async def try_parse(
+        r: str, list_class_element: List[str], tag="div", is_regex: bool = False, custom_key=None, force_text=False
+    ) -> AsyncGenerator:
         try:
             for class_element in list_class_element:
                 soup = BeautifulSoup(r, "html.parser")
                 regex = re.compile(class_element)
-                yield soup.find_all(tag, {"class": regex}) if is_regex else soup.find_all(tag, {"class": class_element})
+                yield await __class__.__unpack_find_all(
+                    soup, tag, {"class": regex if is_regex else class_element}, custom_key, force_text
+                )
         except Exception as e:
             logging.error("%s raise an error: [%s] %s", __name__, e.__class__.__name__, str(e))
             return
 
     @staticmethod
-    async def try_parse_unpack(data: str, attrs: List[str], tag="div", is_regex: bool = False) -> str:
-        return "".join([v.text async for v in __class__.try_parse(data, attrs, tag, is_regex)])
+    async def try_parse_unpack(
+        data: str, attrs: List[str], tag="div", is_regex: bool = False, custom_key=None, force_text=False
+    ) -> str:
+        return "".join([v async for v in __class__.try_parse(data, attrs, tag, is_regex, custom_key, force_text)])
+    
+    @staticmethod
+    async def try_unpack_image(data: str, attrs: List[str], custom_key="src", force_text=False):
+        return await __class__.try_parse_unpack(data, attrs, "img", False, custom_key, force_text)
 
 
 class UserContainer(HTMLParser):
@@ -67,12 +91,13 @@ class UserContainer(HTMLParser):
         "name",
         "title",
         "rating",
-        "avatar_url",
+        "user_avatar_url",
         "big_avatar_url",
         "playcount",
         "dan_rating_img_url",
         "season_rating_url",
         "stars_count",
+        "tour_leader_avatar_url",
     )
 
     def __init__(self, **data):
@@ -84,7 +109,7 @@ class UserContainer(HTMLParser):
         self.season_rating_url = data.get("season_rating_url", "")
         self.stars_count = data.get("stars_count", 0)
         self.user_avatar_url = data.get(
-            "avatar_url", "https://maimaidx-eng.com/maimai-mobile/img/Icon/34f0363f4ce86d07.png"
+            "user_avatar_url", "https://maimaidx-eng.com/maimai-mobile/img/Icon/34f0363f4ce86d07.png"
         )
         self.tour_leader_avatar_url = data.get("tour_leader_avatar_url", "")
 
@@ -93,11 +118,11 @@ class UserContainer(HTMLParser):
         name = await cls.try_parse_unpack(data, ["name_block f_l f_16"])
         title = await cls.try_parse_unpack(data, ["trophy_inner_block f_13"])
         rating = await cls.try_parse_unpack(data, ["rating_block"])
-        user_avatar_url = await cls.try_parse_unpack(data, ["w_112 f_l"])
-        tour_leader_avatar_url = await cls.try_parse_unpack(data, ["w_120 m_t_10 f_r"])
-        dan_rating_img_url = await cls.try_parse_unpack(data, ["h_35 f_l"])
-        season_rating_url = await cls.try_parse_unpack(data, ["w_120 m_t_10 f_r"])
-        stars_count = await cls.try_parse_unpack(data, ["playlog_chara_star_block f_12"], tag="img")
+        user_avatar_url = await cls.try_unpack_image(data, ["w_112 f_l"])
+        tour_leader_avatar_url = await cls.try_unpack_image(data, ["w_120 m_t_10 f_r"])
+        dan_rating_img_url = await cls.try_unpack_image(data, ["h_35 f_l"])
+        season_rating_url = await cls.try_unpack_image(data, ["p_l_10 h_35 f_l"])
+        stars_count = await cls.try_parse_unpack(data, ["p_l_10 f_l f_14"])
 
         # TODO: Install NVIDIA proprietary driver to write this code
         return cls(
@@ -153,9 +178,7 @@ class TrackContainer(HTMLParser):
     async def parse(cls, data):
         title = await cls.try_parse_unpack(data, ["basic_block m_5 p_5 p_l_10 f_13 break"])
         difficulty = cls.parse_diff(await cls.try_parse_unpack(data, ["playlog_diff v_b"]))
-        cover_url = cls.try_parse_unpack(
-            data, [""], tag="img"
-        )  # TODO: wait for daily maimai maintained done and i will fix this
+        cover_url = cls.try_parse_unpack(data, ["music_img m_5 m_r_0 f_l"], tag="img")
 
         return cls(title=title, difficulty=difficulty, cover_url=cover_url)
 
@@ -195,19 +218,6 @@ class MoimoiCog(commands.Cog):
         self.bot = bot
         self.cookies = None
 
-    @staticmethod
-    async def __try_parse(r: str, list_class_element) -> AsyncGenerator:
-        try:
-            for class_element in list_class_element:
-                soup = BeautifulSoup(r, "html.parser")
-                yield [*soup.find_all("div", {"class": class_element})][0].text
-                # name = [*soup.find_all("div", {"class": re.compile("playlog_*_container")})][0].text
-                # return name, rating
-
-        except Exception as e:
-            logging.error("%s raise an error: [%s] %s", __name__, e.__class__.__name__, str(e))
-            return
-
     async def __get_cookies(self):
         if self.__session is None:
             self.__session = aiohttp.ClientSession()
@@ -228,7 +238,6 @@ class MoimoiCog(commands.Cog):
         )
 
     async def _login_pass(self, segay_id, password):
-        # doan nay nen lay history khong
         body = {
             "retention": 1,
             "sid": segay_id,
@@ -255,11 +264,26 @@ class MoimoiCog(commands.Cog):
         await r_login.release()
 
         r_home = await self._fetch(method="GET", url=f"{self.MOI_INDEX_URL}/home")
-        data = [value async for value in self.__try_parse(await r_home.text(), ["name_block f_l f_16", "rating_block"])]
-        await r_home.release()
+        r_home = await r_home.text()
+        data = await UserContainer.parse(r_home)
 
-        await ctx.send(f"```\nDEBUG\nDATA {data}```")
-        await ctx.send(f"Oh hey I found your name is: {data[0]} and rating is {data[1]}")
+        eb = (
+            discord.Embed(
+                color=Color.brand_red(),
+                timestamp=datetime.datetime.now(),
+            )
+            .set_author(
+                name=f"{data.name}'s profile"
+            )
+            .set_thumbnail(url=data.user_avatar_url)
+            .set_footer(text=f"Requested by {ctx.author}")
+            .add_field(name="Rating", value=f"{data.rating}", inline=False)
+            .add_field(name="Playcount", value=data.playcount, inline=True)
+            .add_field(name="Dan rating", value=data.dan_rating_img_url)
+            .add_field(name="Season rating", value=data.season_rating_url)
+        )
+
+        await ctx.send(embeds=[eb])
 
     @moimoi.command()
     @app_commands.guilds(*getattr(shared_vars.config_cls, "GUILD_IDs", []))

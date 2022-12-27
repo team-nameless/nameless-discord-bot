@@ -210,12 +210,10 @@ class FFmpegAudioCustom(discord.FFmpegPCMAudio):
             return b""
         return ret
 
-    def seek(self, offset):
+    def seek(self, offset: int):
         with self.lock:
-            ret = b""
             while offset > 0:
-                ret = ret + self._stdout.read(offset)
-                offset = offset - len(ret)
+                offset = offset - len(self._stdout.read(offset))
 
 
 class YTDLSource(discord.PCMVolumeTransformer):

@@ -220,9 +220,9 @@ class FFmpegAudioCustom(discord.FFmpegPCMAudio):
 
 class YTDLSource(discord.PCMVolumeTransformer):
 
-    __slots__ = ("requester", "title", "author", "lenght", "extractor", "direct", "uri", "thumbnail", "stream_handler")
+    __slots__ = ("requester", "title", "author", "lenght", "extractor", "direct", "uri", "thumbnail")
 
-    def __init__(self, data, requester, source=None, stream_handler=None):
+    def __init__(self, data, requester, source=None):
 
         if source:
             self.source: FFmpegAudioCustom = source

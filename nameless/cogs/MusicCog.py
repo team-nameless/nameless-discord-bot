@@ -1,10 +1,12 @@
 import asyncio
 import datetime
+import io
 import logging
 import math
 import random
+import threading
 from functools import partial
-from typing import Any, AsyncIterable, Dict, List, Optional, Union
+from typing import IO, Any, AsyncIterable, Dict, List, Optional, Union
 
 import discord
 import DiscordUtils
@@ -13,6 +15,7 @@ from discord import ClientException, VoiceClient, app_commands
 # from discord.app_commands import Choice
 from discord.ext import commands
 from discord.ext.commands import Range
+from discord.opus import Encoder as OpusEncoder
 from discord.utils import escape_markdown
 from yt_dlp import YoutubeDL
 
@@ -181,18 +184,48 @@ class TrackPickDropdown(discord.ui.Select):
             v.stop()
 
 
-class FFMPEGAudioClass(discord.FFmpegAudio):
-    pass
+class FFmpegAudioCustom(discord.FFmpegPCMAudio):
+
+    ONE_SEC_FRAME_SIZE = OpusEncoder.FRAME_SIZE * 5
+
+    def __init__(
+        self,
+        source: Union[str, io.BufferedIOBase],
+        *,
+        executable: str = "ffmpeg",
+        pipe: bool = False,
+        stderr: Optional[IO[str]] = None,
+        before_options: Optional[str] = None,
+        options: Optional[str] = None,
+    ) -> None:
+        self.lock = threading.Lock()
+
+        super().__init__(
+            source, executable=executable, pipe=pipe, stderr=stderr, before_options=before_options, options=options
+        )
+
+    def read(self):
+        ret = self._stdout.read(OpusEncoder.FRAME_SIZE)
+        if len(ret) != OpusEncoder.FRAME_SIZE:
+            return b""
+        return ret
+
+    def seek(self, offset):
+        with self.lock:
+            ret = b""
+            while offset > 0:
+                ret = ret + self._stdout.read(offset)
+                offset = offset - len(ret)
 
 
 class YTDLSource(discord.PCMVolumeTransformer):
 
-    __slots__ = ("requester", "title", "author", "lenght", "extractor", "direct", "uri", "thumbnail")
+    __slots__ = ("requester", "title", "author", "lenght", "extractor", "direct", "uri", "thumbnail", "stream_handler")
 
-    def __init__(self, data, requester, source=None):
+    def __init__(self, data, requester, source=None, stream_handler=None):
 
         if source:
-            self.source: discord.FFmpegPCMAudio = source
+            self.source: FFmpegAudioCustom = source
             super().__init__(source)
 
         self.requester: discord.Member = requester
@@ -256,8 +289,12 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
         to_run = partial(ytdl.extract_info, url=data.uri, download=False)
         ret: dict = await loop.run_in_executor(None, to_run)  # type: ignore
+        # stream = DirectStreamHandler(ret["url"])
 
-        return cls(source=discord.FFmpegPCMAudio(ret["url"], **ffmpegopts), data=ret, requester=requester)
+        # return cls(
+        #     source=discord.FFmpegPCMAudio(stream, pipe=True), data=ret, requester=requester, stream_handler=stream
+        # )
+        return cls(source=FFmpegAudioCustom(ret["url"], **ffmpegopts), data=ret, requester=requester)
 
     def cleanup(self) -> None:
         if source := getattr(self, "source", None):
@@ -705,32 +742,25 @@ class MusicCog(commands.Cog):
         else:
             await ctx.send("Not skipping because not enough votes!")
 
-    # TODO: Implement seek (I still don't know how to do this, send help)
+    @music.command()
+    @commands.guild_only()
+    @app_commands.describe(offset="Position to seek to in milliseconds, defaults to run from start")
+    @commands.has_guild_permissions(manage_guild=True)
+    @app_commands.checks.has_permissions(manage_guild=True)
+    @commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
+    async def seek(self, ctx: commands.Context, offset: Range[int, 0] = 0):
+        """Seek to a position in a track"""
+        await ctx.defer()
 
-    # @music.command()
-    # @commands.guild_only()
-    # @app_commands.describe(pos="Position to seek to in milliseconds, defaults to run from start")
-    # @commands.has_guild_permissions(manage_guild=True)
-    # @app_commands.checks.has_permissions(manage_guild=True)
-    # @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    # @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
-    # async def seek(self, ctx: commands.Context, pos: Range[int, 0] = 0):
-    #     """Seek to a position in a track"""
-    #     await ctx.defer()
+        player: MainPlayer = self.get_player(ctx)
+        source: FFmpegAudioCustom = player.track.source
 
-    #     vc: VoiceClient = ctx.voice_client  # pyright: ignore
-    #     track: wavelink.Track = vc.track  # pyright: ignore
-
-    #     pos = pos if pos else 0
-
-    #     if not 0 <= pos / 1000 <= track.length:
-    #         await ctx.send("Invalid position to seek")
-    #         return
-
-    #     if await VoteMenu("seek", track.title, ctx, vc).start():
-    #         await vc.seek(pos)
-    #         delta_pos = datetime.timedelta(milliseconds=pos)
-    #         await ctx.send(f"Seek to position {delta_pos}")
+        try:
+            source.seek(offset * source.ONE_SEC_FRAME_SIZE)
+            await ctx.send("Seek success!")
+        except Exception as err:
+            await ctx.send(f"{err.__class__.__name__}: {str(err)}")
 
     # @music.command()
     # @commands.guild_only()

@@ -20,7 +20,6 @@ from NamelessConfig import NamelessConfig
 
 __all__ = ["Nameless"]
 
-os.chdir(Path(__file__).resolve().parent)
 logging.getLogger().handlers[:] = [shared_vars.stdout_handler]
 
 
@@ -72,13 +71,13 @@ class Nameless(commands.AutoShardedBot):
                 logging.warning("You are using a version NEWER than original code!")
 
         # Write current version in case I forgot
-        with open("../version.txt", "w", encoding="utf-8") as f:
+        with open("version.txt", "w", encoding="utf-8") as f:
             logging.info("Writing current version into version.txt")
             f.write(shared_vars.__nameless_current_version__)
 
     async def __register_all_cogs(self):
-        if cogs := getattr(NamelessConfig, "COGS", []):
-            allowed_cogs = list(filter(shared_vars.cogs_regex.match, os.listdir("cogs")))
+        if cogs := getattr(self.config_cls, "COGS", []):
+            allowed_cogs = list(filter(shared_vars.cogs_regex.match, os.listdir(f"nameless{os.sep}cogs")))
 
             for cog_name in cogs:
                 fail_reason = ""
@@ -185,6 +184,8 @@ class Nameless(commands.AutoShardedBot):
                         )
 
     async def on_command_error(self, ctx: commands.Context, err: errors.CommandError, /) -> None:
+        print(err.args)
+        
         if not isinstance(err, errors.CommandNotFound):
             await ctx.send(f"Something went wrong when executing the command: {err}")
 

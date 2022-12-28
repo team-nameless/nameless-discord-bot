@@ -21,7 +21,8 @@ from NamelessConfig import NamelessConfig
 __all__ = ["OwnerCog"]
 
 cogs_list = list(
-    "nameless.cogs." + z.replace(".py", "") for z in filter(shared_vars.cogs_regex.match, os.listdir(f"nameless{os.sep}cogs"))
+    "nameless.cogs." + z.replace(".py", "")
+    for z in filter(shared_vars.cogs_regex.match, os.listdir(f"nameless{os.sep}cogs"))
 )
 
 

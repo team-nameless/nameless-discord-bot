@@ -8,6 +8,13 @@ __all__ = ["NamelessConfig"]
 
 
 class NamelessConfig:
+    # Add owners to Nameless
+    # The bot creator is added by default
+    # Bot team members are added by default
+    # If you have nothing other than "the bot creator" and "team members", leave this as []
+    # Otherwise, leave their IDs here: Right-click on a user -> Copy ID
+    OWNERS: List[int] = []
+
     # Enable stuffs for developers
     # Set to True if you know what you are doing
     DEV: bool = False
@@ -61,7 +68,7 @@ class NamelessConfig:
 
     # Guild IDs to register commands
     # Leave empty array for global (slash commands takes one hour to mitigate, text takes immediately)
-    GUILD_IDs: List[int] = []
+    GUILDS: List[int] = []
 
     # Choose which cog(s) to load
     # Available options:    Config,

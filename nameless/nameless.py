@@ -8,7 +8,7 @@ from typing import List
 import aiohttp
 import discord
 from discord.ext import commands
-from discord.ext.commands import ExtensionFailed, errors
+from discord.ext.commands import errors
 from packaging import version
 from sqlalchemy.orm import close_all_sessions
 
@@ -86,8 +86,8 @@ class Nameless(commands.AutoShardedBot):
                 if cog_name + "Cog.py" in allowed_cogs:
                     try:
                         await self.load_extension(f"nameless.cogs.{cog_name}Cog")
-                    except ExtensionFailed as ex:
-                        fail_reason = str(ex.original)
+                    except commands.ExtensionError as ex:
+                        fail_reason = str(ex)
 
                     can_load = fail_reason == ""
                 else:
@@ -138,7 +138,7 @@ class Nameless(commands.AutoShardedBot):
         assert self.user is not None
         logging.info("Logged in as %s (ID: %s)", str(self.user), self.user.id)
 
-    async def on_error(self, event_method: str, *args, **kwargs) -> None:
+    async def on_error(self, event_method: str, /, *args, **kwargs) -> None:
         logging.error(
             "[%s] We have gone under a crisis!!! (args: [ %s ])",
             event_method,
@@ -199,6 +199,21 @@ class Nameless(commands.AutoShardedBot):
         close_all_sessions()
         await super().close()
 
+    async def is_owner(self, user: discord.User, /) -> bool:
+        the_app = self.application
+
+        if not super().is_owner(user):
+            return False
+
+        if user not in the_app.team.members:
+            return False
+
+        owner_list = getattr(NamelessConfig, "OWNERS", [])
+        if user.id not in owner_list:
+            return False
+
+        return True
+
     def patch_loggers(self) -> None:
         if getattr(NamelessConfig, "DEV", False):
             file_handler = logging.FileHandler(filename="nameless.log", mode="w", delay=True)
@@ -222,7 +237,8 @@ class Nameless(commands.AutoShardedBot):
                     logger.parent.handlers.append(handler)
                 logger.parent.propagate = False
 
-    async def construct_shared_vars(self):
+    @staticmethod
+    async def construct_shared_vars():
         """
         Constructs variables to shared_vars.py.
         """

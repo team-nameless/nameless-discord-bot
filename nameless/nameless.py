@@ -2,7 +2,6 @@ import asyncio
 import logging
 import os
 from datetime import datetime
-from pathlib import Path
 from typing import List
 
 import aiohttp
@@ -76,7 +75,7 @@ class Nameless(commands.AutoShardedBot):
             f.write(shared_vars.__nameless_current_version__)
 
     async def __register_all_cogs(self):
-        if cogs := getattr(self.config_cls, "COGS", []):
+        if cogs := getattr(NamelessConfig, "COGS", []):
             allowed_cogs = list(filter(shared_vars.cogs_regex.match, os.listdir(f"nameless{os.sep}cogs")))
 
             for cog_name in cogs:
@@ -202,6 +201,7 @@ class Nameless(commands.AutoShardedBot):
 
     async def is_owner(self, user: discord.User, /) -> bool:
         the_app = self.application
+        assert the_app is not None
 
         if not super().is_owner(user):
             return False

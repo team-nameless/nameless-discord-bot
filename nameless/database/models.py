@@ -1,7 +1,7 @@
 import datetime
 
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, SmallInteger, Text, UnicodeText
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import declarative_base  # pyright: ignore
 
 
 __all__ = ["Base", "DbUser", "DbGuild"]

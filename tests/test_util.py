@@ -1,24 +1,6 @@
 from nameless.commons import Utility
 
 
-class FakeConfig:
-    DATABASE = {
-        "dialect": "postgresql",
-        "driver": "psycopg2",
-        "username": "nameless",
-        "password": "NamelessOutOfBetaWhen",
-        "host": "localhost",
-        "port": 12345,
-        "db_name": "dame_dane",
-    }
-
-
-class PartialConfig:
-    TOKEN = ""
-    COGS = []
-    PREFIXES = []
-
-
 class TestUtility:
     def test_get_db_url_default(self):
         (

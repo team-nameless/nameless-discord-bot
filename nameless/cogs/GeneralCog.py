@@ -8,6 +8,7 @@ from discord import NotFound, app_commands
 from discord.ext import commands
 
 from nameless import Nameless, shared_vars
+from NamelessConfig import NamelessConfig
 
 
 __all__ = ["GeneralCog"]
@@ -18,7 +19,7 @@ class GeneralCog(commands.Cog):
         self.bot = bot
 
     @commands.hybrid_command()
-    @app_commands.guilds(*getattr(shared_vars.config_cls, "GUILD_IDs", []))
+    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
     @app_commands.describe(member="Target member, you by default")
     async def user(
         self,
@@ -38,7 +39,7 @@ class GeneralCog(commands.Cog):
         # should add to cache if possible
         mutual_guilds: List[str] = [g.name for g in ctx.bot.guilds if g.get_member(member.id)]
 
-        embed = (
+        embed: discord.Embed = (
             discord.Embed(
                 description=f"User ID: {member.id}",
                 timestamp=datetime.datetime.now(),
@@ -70,12 +71,15 @@ class GeneralCog(commands.Cog):
 
     @commands.hybrid_command()
     @commands.guild_only()
-    @app_commands.guilds(*getattr(shared_vars.config_cls, "GUILD_IDs", []))
+    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
     async def guild(self, ctx: commands.Context):
         """View this guild's information"""
         await ctx.defer()
 
         guild = ctx.guild
+
+        assert guild is not None
+
         guild_create_date = guild.created_at  # pyright: ignore
         members = guild.members  # pyright: ignore
 
@@ -125,7 +129,7 @@ class GeneralCog(commands.Cog):
 
     @commands.hybrid_command()
     @commands.guild_only()
-    @app_commands.guilds(*getattr(shared_vars.config_cls, "GUILD_IDs", []))
+    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
     async def the_bot(self, ctx: commands.Context):
         """View my information"""
         await ctx.defer()
@@ -158,7 +162,7 @@ class GeneralCog(commands.Cog):
         except NotFound:
             pass
 
-        embed = (
+        embed: discord.Embed = (
             discord.Embed(
                 title="Something about me!",
                 color=discord.Color.orange(),

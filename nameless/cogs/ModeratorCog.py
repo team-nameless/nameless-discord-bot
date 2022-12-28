@@ -6,9 +6,9 @@ from discord import Forbidden, HTTPException, app_commands
 from discord.ext import commands
 
 import nameless
-from nameless import shared_vars
 from nameless.customs.DiscordWaiter import DiscordWaiter
 from nameless.shared_vars import crud_database
+from NamelessConfig import NamelessConfig
 
 
 __all__ = ["ModeratorCog"]
@@ -19,7 +19,7 @@ class ModeratorCog(commands.Cog):
         self.bot = bot
 
     @commands.hybrid_group(fallback="do-not-use")
-    @app_commands.guilds(*getattr(shared_vars.config_cls, "GUILD_IDs", []))
+    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
     @commands.guild_only()
     async def mod(self, ctx: commands.Context):
         """Nothing here!"""

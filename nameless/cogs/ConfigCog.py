@@ -7,9 +7,9 @@ from discord import app_commands
 from discord.ext import commands
 
 import nameless
-from nameless import shared_vars
 from nameless.cogs.checks import BaseCheck
 from nameless.shared_vars import crud_database
+from NamelessConfig import NamelessConfig
 
 
 __all__ = ["ConfigCog"]
@@ -23,15 +23,18 @@ class ConfigCog(commands.Cog):
     @commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
     @commands.has_guild_permissions(manage_guild=True)
-    @app_commands.guilds(*getattr(shared_vars.config_cls, "GUILD_IDs", []))
+    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
     async def config(self, ctx: commands.Context):
         """View configured properties"""
         await ctx.defer()
-        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
-        wc_chn = ctx.guild.get_channel(dbg.welcome_channel_id)  # pyright: ignore
-        gb_chn = ctx.guild.get_channel(dbg.goodbye_channel_id)  # pyright: ignore
+        db_guild, _ = crud_database.get_or_create_guild_record(ctx.guild)
 
-        embed = (
+        assert db_guild is not None
+
+        wc_chn = ctx.guild.get_channel(db_guild.welcome_channel_id)  # pyright: ignore
+        gb_chn = ctx.guild.get_channel(db_guild.goodbye_channel_id)  # pyright: ignore
+
+        embed: discord.Embed = (
             discord.Embed(
                 title="Configured properties",
                 color=discord.Color.purple(),
@@ -39,22 +42,22 @@ class ConfigCog(commands.Cog):
             )
             .add_field(
                 name="Welcome message",
-                value=dbg.welcome_message if dbg.welcome_message else "Unset",
+                value=db_guild.welcome_message if db_guild.welcome_message else "Unset",
             )
             .add_field(
                 name="Welcome message delivery channel",
                 value=wc_chn.mention if wc_chn else "Unset",
             )
-            .add_field(name="Welcome message delivery allowance", value=dbg.is_welcome_enabled)
+            .add_field(name="Welcome message delivery allowance", value=db_guild.is_welcome_enabled)
             .add_field(
                 name="Goodbye message",
-                value=dbg.goodbye_message if dbg.goodbye_message else "Unset",
+                value=db_guild.goodbye_message if db_guild.goodbye_message else "Unset",
             )
             .add_field(
                 name="Goodbye message delivery channel",
                 value=gb_chn.mention if gb_chn else "Unset",
             )
-            .add_field(name="Goodbye message delivery allowance", value=dbg.is_goodbye_enabled)
+            .add_field(name="Goodbye message delivery allowance", value=db_guild.is_goodbye_enabled)
         )
         await ctx.send(embeds=[embed])
 
@@ -76,8 +79,10 @@ class ConfigCog(commands.Cog):
             await ctx.send("You can not use more than 500 characters for it!")
             return
 
-        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
-        dbg.welcome_message = message
+        db_guild, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        assert db_guild is not None
+
+        db_guild.welcome_message = message
         crud_database.save_changes()
         await ctx.send("Done updating welcome message")
 
@@ -99,8 +104,8 @@ class ConfigCog(commands.Cog):
             await ctx.send("You can not use more than 500 characters for it!")
             return
 
-        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
-        dbg.goodbye_message = message
+        db_guild, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild.goodbye_message = message
         crud_database.save_changes()
         await ctx.send("Done updating goodbye message")
 
@@ -117,8 +122,8 @@ class ConfigCog(commands.Cog):
     ):
         """Change goodbye message delivery channel"""
         await ctx.defer()
-        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
-        dbg.goodbye_channel_id = dest_channel.id
+        db_guild, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild.goodbye_channel_id = dest_channel.id
         crud_database.save_changes()
         await ctx.send(f"Done updating goodbye channel to {dest_channel.mention}")
 
@@ -135,8 +140,8 @@ class ConfigCog(commands.Cog):
     ):
         """Change welcome message delivery channel"""
         await ctx.defer()
-        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
-        dbg.welcome_channel_id = dest_channel.id
+        db_guild, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild.welcome_channel_id = dest_channel.id
         crud_database.save_changes()
         await ctx.send(f"Done updating welcome channel to {dest_channel.mention}")
 
@@ -148,10 +153,10 @@ class ConfigCog(commands.Cog):
     async def toggle_welcome(self, ctx: commands.Context):
         """Toggle welcome message delivery allowance"""
         await ctx.defer()
-        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
-        dbg.is_welcome_enabled = not dbg.is_welcome_enabled
+        db_guild, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild.is_welcome_enabled = not db_guild.is_welcome_enabled
         crud_database.save_changes()
-        await ctx.send(f"Welcome message delivery: {'on' if dbg.is_welcome_enabled else 'off'}")
+        await ctx.send(f"Welcome message delivery: {'on' if db_guild.is_welcome_enabled else 'off'}")
 
     @config.command()
     @commands.guild_only()
@@ -161,10 +166,10 @@ class ConfigCog(commands.Cog):
     async def toggle_goodbye(self, ctx: commands.Context):
         """Toggle goodbye message delivery allowance"""
         await ctx.defer()
-        dbg, _ = crud_database.get_or_create_guild_record(ctx.guild)
-        dbg.is_goodbye_enabled = not dbg.is_goodbye_enabled
+        db_guild, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild.is_goodbye_enabled = not db_guild.is_goodbye_enabled
         crud_database.save_changes()
-        await ctx.send(f"Goodbye message delivery: {'on' if dbg.is_goodbye_enabled else 'off'}")
+        await ctx.send(f"Goodbye message delivery: {'on' if db_guild.is_goodbye_enabled else 'off'}")
 
     @config.command()
     @commands.guild_only()

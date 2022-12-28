@@ -22,7 +22,6 @@ def main(args: List[str]):
     intents.members = getattr(cfg, "RECEIVE_MEMBER_EVENTS", False)
 
     nameless = Nameless(
-        config_cls=cfg,
         intents=intents,
         command_prefix=commands.when_mentioned_or(*prefixes) if allow_mention else prefixes,
         allow_updates_check=UPDATE_CHECK_FLAG in args,

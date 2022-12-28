@@ -2,9 +2,8 @@ import logging
 import re
 import sys
 from datetime import datetime
-from typing import List, Any
+from typing import List
 
-import requests
 from discord import Permissions
 
 from nameless import customs
@@ -13,7 +12,6 @@ from nameless.database import CRUD
 
 # Setup
 crud_database: CRUD
-config_cls: Any
 
 # Logging
 stdout_handler = logging.StreamHandler(sys.stdout)
@@ -30,7 +28,7 @@ __nameless_current_version__: str = "2.0.0"
 __nameless_upstream_version__: str = ""
 
 # Perms
-needed_permissions = Permissions.none()
+needed_permissions: Permissions = Permissions.none()
 needed_permissions.manage_roles = True
 needed_permissions.manage_channels = True
 needed_permissions.kick_members = True

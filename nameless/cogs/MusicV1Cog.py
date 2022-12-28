@@ -19,6 +19,7 @@ from wavelink.ext import spotify
 from nameless import Nameless, shared_vars
 from nameless.cogs.checks import MusicCogCheck
 from nameless.commons import Utility
+from NamelessConfig import NamelessConfig
 
 
 __all__ = ["MusicV1Cog"]
@@ -165,7 +166,7 @@ class MusicV1Cog(commands.Cog):
     def __init__(self, bot: Nameless):
         self.bot = bot
         self.can_use_spotify = bool(
-            (sp := shared_vars.config_cls.LAVALINK.get("spotify")) and sp.get("client_id") and sp.get("client_secret")
+            (sp := NamelessConfig.LAVALINK.get("spotify")) and sp.get("client_id") and sp.get("client_secret")
         )
 
         if not self.can_use_spotify:
@@ -277,7 +278,7 @@ class MusicV1Cog(commands.Cog):
 
     async def connect_nodes(self):
         await self.bot.wait_until_ready()
-        for node in shared_vars.config_cls.LAVALINK["nodes"]:
+        for node in NamelessConfig.LAVALINK["nodes"]:
             await wavelink.NodePool.create_node(
                 bot=self.bot,
                 host=node["host"],
@@ -285,8 +286,8 @@ class MusicV1Cog(commands.Cog):
                 password=node["password"],
                 https=node["is_secure"],
                 spotify_client=spotify.SpotifyClient(
-                    client_id=shared_vars.config_cls.LAVALINK["spotify"]["client_id"],
-                    client_secret=shared_vars.config_cls.LAVALINK["spotify"]["client_secret"],
+                    client_id=NamelessConfig.LAVALINK["spotify"]["client_id"],
+                    client_secret=NamelessConfig.LAVALINK["spotify"]["client_secret"],
                 )
                 if self.can_use_spotify
                 else None,
@@ -385,7 +386,7 @@ class MusicV1Cog(commands.Cog):
             raise commands.CommandError(f"No tracks found for {url}")
 
     @commands.hybrid_group(fallback="radio")
-    @app_commands.guilds(*getattr(shared_vars.config_cls, "GUILD_IDs", []))
+    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
     @commands.guild_only()
     @app_commands.describe(url="Radio url")
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
@@ -929,7 +930,7 @@ class MusicV1Cog(commands.Cog):
 
 
 async def setup(bot: Nameless):
-    if (lvl := getattr(shared_vars.config_cls, "LAVALINK", None)) and lvl.get("nodes", []):
+    if (lvl := getattr(NamelessConfig, "LAVALINK", None)) and lvl.get("nodes", []):
         await bot.add_cog(MusicV1Cog(bot))
         logging.info("Cog of %s added!", __name__)
     else:

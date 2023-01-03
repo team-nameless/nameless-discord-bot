@@ -233,7 +233,7 @@ class FFmpegAudioCustom(discord.FFmpegPCMAudio):
         if self._raw is discord.utils.MISSING:
             return
 
-        index_offset = index_offset * 500
+        index_offset = index_offset * 50
         idx = self._raw_idx + index_offset
         with self.lock:
             if idx > self._raw_idx:

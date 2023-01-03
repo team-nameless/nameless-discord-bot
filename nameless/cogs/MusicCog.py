@@ -185,9 +185,6 @@ class TrackPickDropdown(discord.ui.Select):
 
 
 class FFmpegAudioCustom(discord.FFmpegPCMAudio):
-
-    ONE_SEC_FRAME_SIZE = OpusEncoder.FRAME_SIZE * 5
-
     def __init__(
         self,
         source: Union[str, io.BufferedIOBase],
@@ -199,21 +196,63 @@ class FFmpegAudioCustom(discord.FFmpegPCMAudio):
         options: Optional[str] = None,
     ) -> None:
         self.lock = threading.Lock()
+        self._raw: List[bytes] = []
+        self._raw_idx = 0
+        self.is_seek = False
+        self.cache_done = False
 
         super().__init__(
             source, executable=executable, pipe=pipe, stderr=stderr, before_options=before_options, options=options
         )
 
+    def __internal_read(self) -> bytes:
+        if self._process and self._process.poll() is not None:
+            match self._process.returncode:
+                case 0:
+                    self.cache_done = True
+
+        if not self.cache_done:
+            ret = self._stdout.read(OpusEncoder.FRAME_SIZE)
+            self._raw.append(ret)
+
+        if self.is_seek or self.cache_done:
+            ret = self._raw[self._raw_idx]
+
+        self._raw_idx = self._raw_idx + 1
+        return ret  # pyright: ignore
+
     def read(self):
-        ret = self._stdout.read(OpusEncoder.FRAME_SIZE)
+        ret = self.__internal_read()
         if len(ret) != OpusEncoder.FRAME_SIZE:
             return b""
+
         return ret
 
-    def seek(self, offset: int):
+    def seek(self, index_offset: int):
+        self.is_seek = True
+        if self._raw is discord.utils.MISSING:
+            return
+
+        index_offset = index_offset * 500
+        idx = self._raw_idx + index_offset
         with self.lock:
-            while offset > 0:
-                offset = offset - len(self._stdout.read(offset))
+            if idx > self._raw_idx:
+                while self._raw_idx <= idx:
+                    self._raw.append(self._stdout.read(OpusEncoder.FRAME_SIZE))
+                    self._raw_idx = self._raw_idx + 1
+                return
+
+            self._raw_idx = max(self._raw_idx + index_offset, 0)
+
+    def seek_start(self):
+        self._raw_idx = 0
+
+    def cleanup(self) -> None:
+        self._kill_process()
+        self._process = self._stdout = self._stdin = discord.utils.MISSING
+
+    def final_cleanup(self) -> None:
+        self.lock = self._raw = discord.utils.MISSING
 
 
 class YTDLSource(discord.PCMVolumeTransformer):
@@ -287,11 +326,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
         to_run = partial(ytdl.extract_info, url=data.uri, download=False)
         ret: dict = await loop.run_in_executor(None, to_run)  # type: ignore
-        # stream = DirectStreamHandler(ret["url"])
 
-        # return cls(
-        #     source=discord.FFmpegPCMAudio(stream, pipe=True), data=ret, requester=requester, stream_handler=stream
-        # )
         return cls(source=FFmpegAudioCustom(ret["url"], **ffmpegopts), data=ret, requester=requester)
 
     def cleanup(self) -> None:
@@ -326,14 +361,14 @@ class MainPlayer:
         self.queue = asyncio.Queue()
         self.next = asyncio.Event()
 
-        self.track: YTDLSource = None  # pyright: ignore
+        self.track: YTDLSource
         self.volume = 0.5
         self.duration = 0
         self.position = 0
         self.repeat = False
 
-        self.task = ctx.bot.loop.create_task(self.create())
         setattr(self._guild.voice_client, "is_queue_empty", self.queue.empty)
+        self.task = ctx.bot.loop.create_task(self.create())
 
     @staticmethod
     def _build_embed(track: YTDLSource, header: str):
@@ -375,15 +410,15 @@ class MainPlayer:
                     self.track = await self.queue.get()
 
                     await self._channel.send(embed=self._build_embed(self.track, "Now playing track"))
-
-                self.track = await YTDLSource.generate_stream(self.track)
-                self.track.volume = self.volume
+                    self.track = await YTDLSource.generate_stream(self.track)
+                    self.track.volume = self.volume
+                    self.duration -= self.track.lenght
+                else:
+                    self.track.source.seek_start()
 
                 self._guild.voice_client.play(  # type: ignore
                     self.track, after=lambda _: self.client.loop.call_soon_threadsafe(self.next.set)
                 )
-
-                self.duration -= self.track.lenght
 
             except AttributeError as e:
                 print(self._guild.id, str(e))
@@ -395,10 +430,10 @@ class MainPlayer:
             finally:
                 await self.next.wait()
 
-                # Make sure the FFmpeg process is cleaned up.
+            if not self.repeat:
                 self.track.cleanup()
-                if not self.repeat:
-                    self.track = None  # type: ignore
+                self.track.source.final_cleanup()
+                self.track = None  # type: ignore
 
     def destroy(self, guild):
         """Disconnect and cleanup the player."""
@@ -747,7 +782,7 @@ class MusicCog(commands.Cog):
     @app_commands.checks.has_permissions(manage_guild=True)
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
     @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
-    async def seek(self, ctx: commands.Context, offset: Range[int, 0] = 0):
+    async def seek(self, ctx: commands.Context, offset: int = 0):
         """Seek to a position in a track"""
         await ctx.defer()
 
@@ -755,7 +790,7 @@ class MusicCog(commands.Cog):
         source: FFmpegAudioCustom = player.track.source
 
         try:
-            source.seek(offset * source.ONE_SEC_FRAME_SIZE)
+            source.seek(offset)
             await ctx.send("Seek success!")
         except Exception as err:
             await ctx.send(f"{err.__class__.__name__}: {str(err)}")

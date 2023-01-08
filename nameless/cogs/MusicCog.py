@@ -5,6 +5,7 @@ import logging
 import math
 import random
 import threading
+from array import array
 from functools import partial
 from typing import IO, Any, AsyncIterable, Dict, List, Optional, Union
 
@@ -15,8 +16,7 @@ from discord import ClientException, VoiceClient, app_commands
 # from discord.app_commands import Choice
 from discord.ext import commands
 from discord.ext.commands import Range
-from discord.opus import Encoder as OpusEncoder
-from discord.utils import escape_markdown
+from discord.utils import escape_markdown, MISSING
 from yt_dlp import YoutubeDL
 
 from nameless import Nameless, shared_vars
@@ -185,6 +185,10 @@ class TrackPickDropdown(discord.ui.Select):
 
 
 class FFmpegAudioCustom(discord.FFmpegPCMAudio):
+
+    FRAME_SIZE = 3840  # each frame is about 20ms 16bit 48KHz 2ch PCM
+    ONE_SEC_FRAME_SIZE = FRAME_SIZE * 50
+
     def __init__(
         self,
         source: Union[str, io.BufferedIOBase],
@@ -196,8 +200,10 @@ class FFmpegAudioCustom(discord.FFmpegPCMAudio):
         options: Optional[str] = None,
     ) -> None:
         self.lock = threading.Lock()
-        self._raw: List[bytes] = []
-        self._raw_idx = 0
+
+        self.stream: array = array("b")
+        self.stream_idx = 0
+
         self.is_seek = False
         self.cache_done = False
 
@@ -212,47 +218,48 @@ class FFmpegAudioCustom(discord.FFmpegPCMAudio):
                     self.cache_done = True
 
         if not self.cache_done:
-            ret = self._stdout.read(OpusEncoder.FRAME_SIZE)
-            self._raw.append(ret)
+            ret = self._stdout.read(self.FRAME_SIZE)
+            self.stream.frombytes(ret)
 
         if self.is_seek or self.cache_done:
-            ret = self._raw[self._raw_idx]
+            ret = self.stream[self.stream_idx:self.FRAME_SIZE + self.stream_idx].tobytes()
 
-        self._raw_idx = self._raw_idx + 1
+        self.stream_idx += self.FRAME_SIZE
         return ret  # pyright: ignore
 
     def read(self):
         ret = self.__internal_read()
-        if len(ret) != OpusEncoder.FRAME_SIZE:
+        if len(ret) != self.FRAME_SIZE:
             return b""
 
         return ret
 
     def seek(self, index_offset: int):
         self.is_seek = True
-        if self._raw is discord.utils.MISSING:
+        if self.stream is MISSING:  # return if trying to seek on a clean stream
             return
 
-        index_offset = index_offset * 50
-        idx = self._raw_idx + index_offset
+        print(self.stream_idx / self.ONE_SEC_FRAME_SIZE)
+
+        index_offset = index_offset * self.ONE_SEC_FRAME_SIZE + self.stream_idx
         with self.lock:
-            if idx > self._raw_idx:
-                while self._raw_idx <= idx:
-                    self._raw.append(self._stdout.read(OpusEncoder.FRAME_SIZE))
-                    self._raw_idx = self._raw_idx + 1
-                return
+            while self.stream_idx <= index_offset:
+                if self._process:
+                    self.stream.frombytes(self._stdout.read(self.FRAME_SIZE))
 
-            self._raw_idx = max(self._raw_idx + index_offset, 0)
+            self.stream_idx = max(index_offset, 0)
+            print(self.stream_idx / self.ONE_SEC_FRAME_SIZE)
 
-    def seek_start(self):
-        self._raw_idx = 0
+    def to_start(self):
+        with self.lock:
+            self.stream_idx = 0
 
     def cleanup(self) -> None:
         self._kill_process()
-        self._process = self._stdout = self._stdin = discord.utils.MISSING
+        self._process = self._stdout = self._stdin = MISSING
 
     def final_cleanup(self) -> None:
-        self.lock = self._raw = discord.utils.MISSING
+        self.lock = self.stream = MISSING
 
 
 class YTDLSource(discord.PCMVolumeTransformer):
@@ -414,7 +421,7 @@ class MainPlayer:
                     self.track.volume = self.volume
                     self.duration -= self.track.lenght
                 else:
-                    self.track.source.seek_start()
+                    self.track.source.to_start()
 
                 self._guild.voice_client.play(  # type: ignore
                     self.track, after=lambda _: self.client.loop.call_soon_threadsafe(self.next.set)

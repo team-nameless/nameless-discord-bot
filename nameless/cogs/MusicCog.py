@@ -239,13 +239,9 @@ class FFmpegAudioCustom(discord.FFmpegPCMAudio):
         if self.stream is MISSING:  # return if trying to seek on a clean stream
             return
 
-        print(self.stream_idx / self.ONE_SEC_FRAME_SIZE)
-
-        index_offset = index_offset * self.ONE_SEC_FRAME_SIZE + self.stream_idx
         with self.lock:
-            while self.stream_idx <= index_offset:
-                if self._process:
-                    self.stream.frombytes(self._stdout.read(self.FRAME_SIZE))
+            if self._process:
+                self.stream.frombytes(self._stdout.read(index_offset * self.ONE_SEC_FRAME_SIZE))
 
             self.stream_idx = max(index_offset, 0)
             print(self.stream_idx / self.ONE_SEC_FRAME_SIZE)

@@ -206,8 +206,9 @@ class Nameless(commands.AutoShardedBot):
         if not await super().is_owner(user):
             return False
 
-        if the_app.team and user not in the_app.team.members:
-            return False
+        if the_app.team:
+            if user not in the_app.team.members:
+                return False
 
         owner_list = getattr(NamelessConfig, "OWNERS", [])
         if user.id not in owner_list:

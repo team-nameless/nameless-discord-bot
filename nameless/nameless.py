@@ -203,18 +203,18 @@ class Nameless(commands.AutoShardedBot):
         the_app = self.application
         assert the_app is not None
 
-        if not await super().is_owner(user):
-            return False
+        if await super().is_owner(user):
+            return True
 
         if the_app.team:
-            if user not in the_app.team.members:
-                return False
+            if user in the_app.team.members:
+                return True
 
         owner_list = getattr(NamelessConfig, "OWNERS", [])
-        if user.id not in owner_list:
-            return False
+        if user.id in owner_list:
+            return True
 
-        return True
+        return False
 
     def patch_loggers(self) -> None:
         if getattr(NamelessConfig, "DEV", False):

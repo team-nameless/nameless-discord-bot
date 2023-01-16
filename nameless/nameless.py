@@ -203,10 +203,10 @@ class Nameless(commands.AutoShardedBot):
         the_app = self.application
         assert the_app is not None
 
-        if not super().is_owner(user):
+        if not await super().is_owner(user):
             return False
 
-        if user not in the_app.team.members:
+        if the_app.team and user not in the_app.team.members:
             return False
 
         owner_list = getattr(NamelessConfig, "OWNERS", [])

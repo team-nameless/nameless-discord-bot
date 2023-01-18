@@ -186,7 +186,11 @@ class ModeratorCog(commands.Cog):
     @commands.guild_only()
     @commands.has_guild_permissions(moderate_members=True)
     @app_commands.checks.has_permissions(moderate_members=True)
-    @app_commands.describe(member="Target member", reason="Warn addition reason", count="Warn count, useful for varied warning count per violation")
+    @app_commands.describe(
+        member="Target member",
+        reason="Warn addition reason",
+        count="Warn count, useful for varied warning count per violation",
+    )
     async def warn_add(
         self,
         ctx: commands.Context,
@@ -211,7 +215,11 @@ class ModeratorCog(commands.Cog):
     @commands.guild_only()
     @commands.has_guild_permissions(moderate_members=True)
     @app_commands.checks.has_permissions(moderate_members=True)
-    @app_commands.describe(member="Target member", reason="Warn removal reason", count="Warn count, useful for varied warning count per violation")
+    @app_commands.describe(
+        member="Target member",
+        reason="Warn removal reason",
+        count="Warn count, useful for varied warning count per violation",
+    )
     async def warn_remove(
         self,
         ctx: commands.Context,

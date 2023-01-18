@@ -1,10 +1,10 @@
+import functools
 import logging
 import os
 import re
 import sys
 from datetime import datetime
 from typing import List
-import functools
 
 from discord import Permissions
 

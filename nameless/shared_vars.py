@@ -1,8 +1,10 @@
 import logging
+import os
 import re
 import sys
 from datetime import datetime
 from typing import List
+import functools
 
 from discord import Permissions
 
@@ -22,9 +24,18 @@ additional_handlers: List = []
 cogs_regex = re.compile(r"^(?!_.).*Cog.py")
 
 # Meta
+
+
+@functools.lru_cache()
+def get_current_nameless_version() -> str:
+    current_file_directory: str = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+    with open(f"{current_file_directory}{os.sep}version.txt") as version_file:
+        return version_file.read()
+
+
 upstream_version_txt_url: str = ""
 start_time: datetime = datetime.min
-__nameless_current_version__: str = "2.0.0"
+__nameless_current_version__: str = get_current_nameless_version()
 __nameless_upstream_version__: str = ""
 
 # Perms

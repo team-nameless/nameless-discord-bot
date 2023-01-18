@@ -33,7 +33,7 @@ class CRUD:
         self.engine = create_engine(
             self.db_url,
             logging_name=self.db_name,
-            hide_parameters=not getattr(NamelessConfig, "LAB", False),
+            hide_parameters=not getattr(NamelessConfig, "DEV", False),
         )
         _session = sessionmaker(bind=self.engine)
         self.__session = _session()
@@ -63,6 +63,7 @@ class CRUD:
         :return: User record in database, True if the record is new.
         """
         u = self.get_user_record(discord_user)
+
         if not u:
             return self.create_user_record(discord_user), True
 

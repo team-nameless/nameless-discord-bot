@@ -19,7 +19,7 @@ class ConfigCog(commands.Cog):
     def __init__(self, bot: nameless.Nameless):
         self.bot = bot
 
-    @commands.hybrid_group(fallback="get")
+    @commands.hybrid_group(fallback="view")
     @commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
     @commands.has_guild_permissions(manage_guild=True)
@@ -33,32 +33,52 @@ class ConfigCog(commands.Cog):
 
         wc_chn = ctx.guild.get_channel(db_guild.welcome_channel_id)  # pyright: ignore
         gb_chn = ctx.guild.get_channel(db_guild.goodbye_channel_id)  # pyright: ignore
+        mute_role = ctx.guild.get_role(db_guild.mute_role_id)  # pyright: ignore
+        reaction = [":x:", ":white_check_mark:"]
 
         embed: discord.Embed = (
             discord.Embed(
-                title="Configured properties",
-                color=discord.Color.purple(),
+                color=discord.Color.orange(),
                 timestamp=datetime.datetime.now(),
             )
-            .add_field(
-                name="Welcome message",
-                value=db_guild.welcome_message if db_guild.welcome_message else "Unset",
-            )
-            .add_field(
-                name="Welcome message delivery channel",
-                value=wc_chn.mention if wc_chn else "Unset",
-            )
-            .add_field(name="Welcome message delivery allowance", value=db_guild.is_welcome_enabled)
-            .add_field(
-                name="Goodbye message",
-                value=db_guild.goodbye_message if db_guild.goodbye_message else "Unset",
-            )
-            .add_field(
-                name="Goodbye message delivery channel",
-                value=gb_chn.mention if gb_chn else "Unset",
-            )
-            .add_field(name="Goodbye message delivery allowance", value=db_guild.is_goodbye_enabled)
+            .set_thumbnail(url=ctx.guild.icon.url)
+            .set_author(icon_url=ctx.bot.user.avatar.url, name="Configured properties")
         )
+
+        embed\
+            .add_field(name=":star: Greeters",
+                       value="```\n"
+                             "These are the settings related to greeters such as welcome/goodbye setup, BOTs "
+                             "checks, fail fast to DM if available, etc. You should use '/config placeholders' in "
+                             "addition to the setup process."
+                             "\n```",
+                       inline=False)\
+            .add_field(
+                name=f"Welcome message {reaction[db_guild.is_welcome_enabled]}",
+                value=f"**[Destination]** {wc_chn.mention if wc_chn and not db_guild.is_dm_preferred else 'DM' if db_guild.is_dm_preferred else 'Nowhere'}\n"
+                      "**[Content]**\n"
+                      + db_guild.welcome_message if db_guild.welcome_message else "Unset",
+            )\
+            .add_field(
+                name=f"Goodbye message {reaction[db_guild.is_goodbye_enabled]}",
+                value=f"**[Destination]** {gb_chn.mention if gb_chn and not db_guild.is_dm_preferred else 'DM' if db_guild.is_dm_preferred else 'Nowhere'}\n"
+                      "**[Content]**\n"
+                      + db_guild.goodbye_message if db_guild.goodbye_message else "Unset",
+            )\
+            .add_field(name="Greeting to BOTs", value=db_guild.is_bot_greeting_enabled, inline=False)
+
+        embed\
+            .add_field(name=":police_officer: Server utilities",
+                       value="```\n"
+                             "These are the settings related to server utilities such as using native 'Timeout' "
+                             "in replace for traditional 'Mute role', ... "
+                             "\n```",
+                       inline=False)\
+            .add_field(name="Use native timeout feature", value=db_guild.is_timeout_preferred, inline=False)\
+            .add_field(name="Max warning count", value=db_guild.max_warn_count) \
+            .add_field(name="Mute role", value=mute_role.mention if mute_role else "Unset")\
+            .add_field(name="Send DM to violator", value="Idk")
+
         await ctx.send(embeds=[embed])
 
     @config.command()
@@ -175,7 +195,33 @@ class ConfigCog(commands.Cog):
     @commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
     @commands.has_guild_permissions(manage_guild=True)
-    async def view_placeholders(self, ctx: commands.Context):
+    @commands.check(BaseCheck.require_intents([discord.Intents.members]))
+    async def toggle_bot_greeter(self, ctx: commands.Context):
+        """Toggle greeting delivery allowance to BOTs"""
+        await ctx.defer()
+        db_guild, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild.is_bot_greeting_enabled = not db_guild.is_bot_greeting_enabled
+        crud_database.save_changes()
+        await ctx.send(f"Bot greeter delivery: {'on' if db_guild.is_bot_greeting_enabled else 'off'}")
+
+    @config.command()
+    @commands.guild_only()
+    @app_commands.checks.has_permissions(manage_guild=True)
+    @commands.has_guild_permissions(manage_guild=True)
+    @commands.check(BaseCheck.require_intents([discord.Intents.members]))
+    async def toggle_dm_instead_of_channel(self, ctx: commands.Context):
+        """Toggle greeting delivery to user's DM instead of the channel."""
+        await ctx.defer()
+        db_guild, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild.is_dm_preferred = not db_guild.is_dm_preferred
+        crud_database.save_changes()
+        await ctx.send(f"DM greeter delivery: {'on' if db_guild.is_dm_preferred else 'off'}")
+
+    @config.command()
+    @commands.guild_only()
+    @app_commands.checks.has_permissions(manage_guild=True)
+    @commands.has_guild_permissions(manage_guild=True)
+    async def placeholders(self, ctx: commands.Context):
         """View available placeholders"""
         await ctx.defer()
         placeholders = {
@@ -186,6 +232,18 @@ class ConfigCog(commands.Cog):
         }
 
         await ctx.send("\n".join(f"**{key}**\n{value}\n" for key, value in placeholders.items()))
+
+    @config.command()
+    @commands.guild_only()
+    @app_commands.checks.has_permissions(manage_guild=True)
+    @commands.has_guild_permissions(manage_guild=True)
+    async def toggle_native_timeout(self, ctx: commands.Context):
+        """Toggle using native 'Timeout' feature instead of using 'Mute role'"""
+        await ctx.defer()
+        db_guild, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild.is_timeout_preferred = not db_guild.is_timeout_preferred
+        crud_database.save_changes()
+        await ctx.send(f"Use native `Timeout` feature: {'on' if db_guild.is_timeout_preferred else 'off'}")
 
 
 async def setup(bot: nameless.Nameless):

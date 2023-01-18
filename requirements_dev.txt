@@ -10,3 +10,5 @@ pytest
 pytest-cov
 pyright
 pre-commit
+pyupgrade
+ruff

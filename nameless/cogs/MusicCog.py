@@ -5,7 +5,7 @@ import logging
 import math
 import random
 import threading
-from array import array
+from collections import deque
 from functools import partial
 from typing import IO, Any, AsyncIterable, Dict, List, Optional, Union
 
@@ -16,7 +16,7 @@ from discord import ClientException, VoiceClient, app_commands
 # from discord.app_commands import Choice
 from discord.ext import commands
 from discord.ext.commands import Range
-from discord.utils import escape_markdown, MISSING
+from discord.utils import MISSING, escape_markdown
 from yt_dlp import YoutubeDL
 
 from nameless import Nameless, shared_vars
@@ -27,7 +27,7 @@ from nameless.commons import Utility
 __all__ = ["MusicCog"]
 
 ytdlopts = {
-    "format": "bestaudio/93/best",
+    "format": "bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/93/best",
     "outtmpl": "downloads/%(extractor)s-%(id)s-%(title)s.%(ext)s",
     "restrictfilenames": True,
     "nocheckcertificate": True,
@@ -184,7 +184,7 @@ class TrackPickDropdown(discord.ui.Select):
             v.stop()
 
 
-class FFmpegAudioCustom(discord.FFmpegPCMAudio):
+class FFAudioProcess(discord.FFmpegOpusAudio):
 
     FRAME_SIZE = 3840  # each frame is about 20ms 16bit 48KHz 2ch PCM
     ONE_SEC_FRAME_SIZE = FRAME_SIZE * 50
@@ -193,58 +193,62 @@ class FFmpegAudioCustom(discord.FFmpegPCMAudio):
         self,
         source: Union[str, io.BufferedIOBase],
         *,
+        bitrate: Optional[int] = None,
         executable: str = "ffmpeg",
         pipe: bool = False,
-        stderr: Optional[IO[str]] = None,
+        stderr: Optional[IO[bytes]] = None,
         before_options: Optional[str] = None,
         options: Optional[str] = None,
     ) -> None:
         self.lock = threading.Lock()
 
-        self.stream: array = array("b")
+        self.stream: deque = deque()
         self.stream_idx = 0
 
         self.is_seek = False
         self.cache_done = False
 
         super().__init__(
-            source, executable=executable, pipe=pipe, stderr=stderr, before_options=before_options, options=options
+            source=source,
+            bitrate=bitrate,
+            codec="opus",
+            executable=executable,
+            pipe=pipe,
+            stderr=stderr,
+            before_options=before_options,
+            options=options,
         )
 
-    def __internal_read(self) -> bytes:
-        if self._process and self._process.poll() is not None:
-            match self._process.returncode:
-                case 0:
-                    self.cache_done = True
-
-        if not self.cache_done:
-            ret = self._stdout.read(self.FRAME_SIZE)
-            self.stream.frombytes(ret)
-
-        if self.is_seek or self.cache_done:
-            ret = self.stream[self.stream_idx:self.FRAME_SIZE + self.stream_idx].tobytes()
-
-        self.stream_idx += self.FRAME_SIZE
-        return ret  # pyright: ignore
-
     def read(self):
-        ret = self.__internal_read()
-        if len(ret) != self.FRAME_SIZE:
-            return b""
+        data = b""
+        if not self.cache_done:
+            data = next(self._packet_iter, b'')
+            self.stream.append(data)
+            if not data:
+                self.cache_done = True
 
-        return ret
+        if self.cache_done or self.is_seek:
+            data = self.stream[self.stream_idx]
+
+        self.stream_idx += 1
+        return data
 
     def seek(self, index_offset: int):
-        self.is_seek = True
-        if self.stream is MISSING:  # return if trying to seek on a clean stream
+        if self.stream is MISSING or self._process is MISSING:  # return if trying to seek on a clean stream
             return
 
         with self.lock:
-            if self._process:
-                self.stream.frombytes(self._stdout.read(index_offset * self.ONE_SEC_FRAME_SIZE))
+            self.is_seek = True
+            index_offset = max(index_offset * 50 + self.stream_idx, 0)
+
+            if index_offset > self.stream_idx:
+                for _ in range(index_offset - self.stream_idx):
+                    data = next(self._packet_iter, b'')
+                    if not data:
+                        break
+                    self.stream.append(data)
 
             self.stream_idx = max(index_offset, 0)
-            print(self.stream_idx / self.ONE_SEC_FRAME_SIZE)
 
     def to_start(self):
         with self.lock:
@@ -258,15 +262,14 @@ class FFmpegAudioCustom(discord.FFmpegPCMAudio):
         self.lock = self.stream = MISSING
 
 
-class YTDLSource(discord.PCMVolumeTransformer):
+class YTDLSource(discord.AudioSource):
 
-    __slots__ = ("requester", "title", "author", "lenght", "extractor", "direct", "uri", "thumbnail")
+    # __slots__ = ("requester", "title", "author", "lenght", "extractor", "direct", "uri", "thumbnail")
 
     def __init__(self, data, requester, source=None):
 
         if source:
-            self.source: FFmpegAudioCustom = source
-            super().__init__(source)
+            self.source: FFAudioProcess = source
 
         self.requester: discord.Member = requester
         self.title = data.get("title")
@@ -330,7 +333,13 @@ class YTDLSource(discord.PCMVolumeTransformer):
         to_run = partial(ytdl.extract_info, url=data.uri, download=False)
         ret: dict = await loop.run_in_executor(None, to_run)  # type: ignore
 
-        return cls(source=FFmpegAudioCustom(ret["url"], **ffmpegopts), data=ret, requester=requester)
+        return cls(source=FFAudioProcess(ret["url"], **ffmpegopts), data=ret, requester=requester)
+
+    def read(self) -> bytes:
+        return self.source.read()
+
+    def is_opus(self):
+        return self.source.is_opus()
 
     def cleanup(self) -> None:
         if source := getattr(self, "source", None):
@@ -414,7 +423,7 @@ class MainPlayer:
 
                     await self._channel.send(embed=self._build_embed(self.track, "Now playing track"))
                     self.track = await YTDLSource.generate_stream(self.track)
-                    self.track.volume = self.volume
+                    # self.track.volume = self.volume
                     self.duration -= self.track.lenght
                 else:
                     self.track.source.to_start()
@@ -423,11 +432,19 @@ class MainPlayer:
                     self.track, after=lambda _: self.client.loop.call_soon_threadsafe(self.next.set)
                 )
 
-            except AttributeError as e:
-                print(self._guild.id, str(e))
+            except AttributeError:
+                logging.exception(
+                    "We no longer connect to guild %s, but somehow we still in. Time to destroy!",
+                    self._guild.id
+                )
                 return self.destroy(self._guild)
 
             except Exception as e:
+                logging.exception(
+                    "I'm not sure what went wrong when we tried to process the request in guild %s. Anyway, I'm going to sleep. Here is the error: %s",
+                    self._guild.id,
+                    str(e)
+                )
                 return await self._channel.send(f"There was an error processing your song.\n" f"```css\n[{e}]\n```")
 
             finally:
@@ -790,7 +807,7 @@ class MusicCog(commands.Cog):
         await ctx.defer()
 
         player: MainPlayer = self.get_player(ctx)
-        source: FFmpegAudioCustom = player.track.source
+        source: FFAudioProcess = player.track.source
 
         try:
             source.seek(offset)

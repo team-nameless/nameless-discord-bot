@@ -22,7 +22,7 @@ __all__ = ["OwnerCog"]
 
 cogs_list = list(
     "nameless.cogs." + z.replace(".py", "")
-    for z in filter(shared_vars.cogs_regex.match, os.listdir(f"nameless{os.sep}cogs"))
+    for z in filter(shared_vars.cogs_regex.match, os.listdir(f"{os.path.dirname(__file__)}"))
 )
 
 
@@ -119,8 +119,8 @@ class OwnerCog(commands.Cog):
             return
 
         try:
-            with contextlib.redirect_stdout((out := io.StringIO())):
-                with contextlib.redirect_stderr((err := io.StringIO())):
+            with contextlib.redirect_stdout(out := io.StringIO()):
+                with contextlib.redirect_stderr(err := io.StringIO()):
                     exec(
                         f"async def func():\n{textwrap.indent(code, '    ')}",
                         (

@@ -69,14 +69,12 @@ class Nameless(commands.AutoShardedBot):
             else:
                 logging.warning("You are using a version NEWER than original code!")
 
-        # Write current version in case I forgot
-        with open("version.txt", "w", encoding="utf-8") as f:
-            logging.info("Writing current version into version.txt")
-            f.write(shared_vars.__nameless_current_version__)
-
     async def __register_all_cogs(self):
+        # Sometimes os.cwd() is bad
+        current_path = os.path.dirname(__file__)
+
         if cogs := getattr(NamelessConfig, "COGS", []):
-            allowed_cogs = list(filter(shared_vars.cogs_regex.match, os.listdir(f"nameless{os.sep}cogs")))
+            allowed_cogs = list(filter(shared_vars.cogs_regex.match, os.listdir(f"{current_path}{os.sep}cogs")))
 
             for cog_name in cogs:
                 fail_reason = ""
@@ -150,37 +148,55 @@ class Nameless(commands.AutoShardedBot):
         db_guild, _ = shared_vars.crud_database.get_or_create_guild_record(member.guild)
         assert db_guild is not None
 
-        if not member.bot:
-            if db_guild.is_welcome_enabled:
-                if db_guild.welcome_message != "":
-                    if the_channel := member.guild.get_channel_or_thread(db_guild.welcome_channel_id):
+        if db_guild.is_welcome_enabled:
+            if db_guild.welcome_message != "":
+                if member.bot and not db_guild.is_bot_greeting_enabled:
+                    return
 
-                        assert isinstance(the_channel, discord.TextChannel)
-                        assert isinstance(the_channel, discord.Thread)
+                send_target = member.guild.get_channel_or_thread(db_guild.welcome_channel_id)
 
-                        await the_channel.send(
-                            content=db_guild.welcome_message.replace("{guild}", member.guild.name)
-                            .replace("{name}", member.display_name)
-                            .replace("{tag}", member.discriminator)
-                            .replace("{@user}", member.mention)
-                        )
+                if db_guild.is_dm_preferred:
+                    send_target = member
+
+                assert send_target is not None and (
+                    isinstance(send_target, discord.TextChannel)
+                    or isinstance(send_target, discord.Thread)
+                    or isinstance(send_target, discord.Member)
+                )
+
+                await send_target.send(
+                    content=db_guild.welcome_message.replace("{guild}", member.guild.name)
+                    .replace("{name}", member.display_name)
+                    .replace("{tag}", member.discriminator)
+                    .replace("{@user}", member.mention)
+                )
 
     async def on_member_remove(self, member: discord.Member):
         db_guild, _ = shared_vars.crud_database.get_or_create_guild_record(member.guild)
         assert db_guild is not None
 
-        if not member.bot:
-            if db_guild.is_goodbye_enabled:
-                if db_guild.goodbye_message != "":
-                    if the_channel := member.guild.get_channel_or_thread(db_guild.goodbye_channel_id):
-                        assert isinstance(the_channel, discord.TextChannel)
-                        assert isinstance(the_channel, discord.Thread)
+        if db_guild.is_goodbye_enabled:
+            if db_guild.goodbye_message != "":
+                if member.bot and not db_guild.is_bot_greeting_enabled:
+                    return
 
-                        await the_channel.send(
-                            content=db_guild.goodbye_message.replace("{guild}", member.guild.name)
-                            .replace("{name}", member.display_name)
-                            .replace("{tag}", member.discriminator)
-                        )
+                send_target = member.guild.get_channel_or_thread(db_guild.goodbye_channel_id)
+
+                # Should always be useless now because user is no longer in server
+                # if db_guild.is_dm_preferred:
+                #    send_target = member
+
+                assert send_target is not None and (
+                    isinstance(send_target, discord.TextChannel)
+                    or isinstance(send_target, discord.Thread)
+                    or isinstance(send_target, discord.Member)
+                )
+
+                await send_target.send(
+                    content=db_guild.goodbye_message.replace("{guild}", member.guild.name)
+                    .replace("{name}", member.display_name)
+                    .replace("{tag}", member.discriminator)
+                )
 
     async def on_command_error(self, ctx: commands.Context, err: errors.CommandError, /) -> None:
         print(err.args)

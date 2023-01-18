@@ -1,5 +1,5 @@
 import logging
-from typing import Awaitable, Callable
+from typing import Awaitable, Callable, Type
 
 import discord
 from discord import Forbidden, HTTPException, app_commands
@@ -69,7 +69,7 @@ class ModeratorCog(commands.Cog):
         ctx: commands.Context,
         member: discord.Member,
         reason: str,
-        val: int,
+        val: Type,
         zero_fn: Callable[[commands.Context, discord.Member, str], Awaitable[None]],
         max_fn: Callable[[commands.Context, discord.Member, str], Awaitable[None]],
         diff_fn: Callable[[commands.Context, discord.Member, str, int, int], Awaitable[None]],
@@ -240,7 +240,7 @@ class ModeratorCog(commands.Cog):
         async def max_fn(_ctx: commands.Context, m: discord.Member, r: str):
             pass
 
-        await ModeratorCog.__generic_warn(ctx, member, reason, -count, zero_fn, max_fn, diff_fn)
+        await ModeratorCog.__generic_warn(ctx, member, reason, -count.real, zero_fn, max_fn, diff_fn)  # type: ignore
 
     @mod.command()
     @commands.guild_only()

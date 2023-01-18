@@ -222,7 +222,7 @@ class FFAudioProcess(discord.FFmpegOpusAudio):
     def read(self):
         data = b""
         if not self.cache_done:
-            data = next(self._packet_iter, b'')
+            data = next(self._packet_iter, b"")
             self.stream.append(data)
             if not data:
                 self.cache_done = True
@@ -243,7 +243,7 @@ class FFAudioProcess(discord.FFmpegOpusAudio):
 
             if index_offset > self.stream_idx:
                 for _ in range(index_offset - self.stream_idx):
-                    data = next(self._packet_iter, b'')
+                    data = next(self._packet_iter, b"")
                     if not data:
                         break
                     self.stream.append(data)
@@ -434,8 +434,7 @@ class MainPlayer:
 
             except AttributeError:
                 logging.exception(
-                    "We no longer connect to guild %s, but somehow we still in. Time to destroy!",
-                    self._guild.id
+                    "We no longer connect to guild %s, but somehow we still in. Time to destroy!", self._guild.id
                 )
                 return self.destroy(self._guild)
 
@@ -443,7 +442,7 @@ class MainPlayer:
                 logging.exception(
                     "I'm not sure what went wrong when we tried to process the request in guild %s. Anyway, I'm going to sleep. Here is the error: %s",
                     self._guild.id,
-                    str(e)
+                    str(e),
                 )
                 return await self._channel.send(f"There was an error processing your song.\n" f"```css\n[{e}]\n```")
 

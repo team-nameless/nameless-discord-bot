@@ -4,7 +4,6 @@ import os
 import re
 import sys
 from datetime import datetime
-from typing import List
 
 from discord import Permissions
 
@@ -18,7 +17,7 @@ crud_database: CRUD
 # Logging
 stdout_handler = logging.StreamHandler(sys.stdout)
 stdout_handler.setFormatter(customs.ColoredFormatter())
-additional_handlers: List = []
+additional_handlers: list = []
 
 # Patterns
 cogs_regex = re.compile(r"^(?!_.).*Cog.py")
@@ -26,7 +25,7 @@ cogs_regex = re.compile(r"^(?!_.).*Cog.py")
 # Meta
 
 
-@functools.lru_cache()
+@functools.lru_cache
 def get_current_nameless_version() -> str:
     current_file_directory: str = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     with open(f"{current_file_directory}{os.sep}version.txt") as version_file:

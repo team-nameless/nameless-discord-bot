@@ -195,7 +195,7 @@ class ModeratorCog(commands.Cog):
         self,
         ctx: commands.Context,
         member: discord.Member,
-        count: int = commands.Range[int, 1],
+        count=commands.Range[int, 1],
         reason: str = "Rule violation",
     ):
         """Add warning(s) to a member"""
@@ -224,7 +224,7 @@ class ModeratorCog(commands.Cog):
         self,
         ctx: commands.Context,
         member: discord.Member,
-        count: int = commands.Range[int, 1],
+        count=commands.Range[int, 1],
         reason: str = "Good behavior",
     ):
         """Remove warning(s) from a member"""

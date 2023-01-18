@@ -2,7 +2,6 @@ import asyncio
 import logging
 import os
 from datetime import datetime
-from typing import List
 
 import aiohttp
 import discord
@@ -39,7 +38,7 @@ class Nameless(commands.AutoShardedBot):
         )
         self.allow_updates_check: bool = kwargs.get("allow_updates_check", False)
 
-        self.loggers: List[logging.Logger] = [
+        self.loggers: list[logging.Logger] = [
             logging.getLogger(),
             logging.getLogger("sqlalchemy.engine"),
             logging.getLogger("sqlalchemy.dialects"),

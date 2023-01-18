@@ -35,6 +35,7 @@ class ConfigCog(commands.Cog):
         gb_chn = ctx.guild.get_channel(db_guild.goodbye_channel_id)  # pyright: ignore
         mute_role = ctx.guild.get_role(db_guild.mute_role_id)  # pyright: ignore
         reaction = [":x:", ":white_check_mark:"]
+        dm = db_guild.is_dm_preferred
 
         embed: discord.Embed = (
             discord.Embed(
@@ -55,13 +56,13 @@ class ConfigCog(commands.Cog):
             inline=False,
         ).add_field(
             name=f"Welcome message {reaction[db_guild.is_welcome_enabled]}",
-            value=f"**[Destination]** {wc_chn.mention if wc_chn and not db_guild.is_dm_preferred else 'DM' if db_guild.is_dm_preferred else 'Nowhere'}\n"
+            value=f"**[Destination]** {wc_chn.mention if wc_chn and not dm else 'DM' if dm else 'Nowhere'}\n"
             "**[Content]**\n" + db_guild.welcome_message
             if db_guild.welcome_message
             else "Unset",
         ).add_field(
             name=f"Goodbye message {reaction[db_guild.is_goodbye_enabled]}",
-            value=f"**[Destination]** {gb_chn.mention if gb_chn and not db_guild.is_dm_preferred else 'DM' if db_guild.is_dm_preferred else 'Nowhere'}\n"
+            value=f"**[Destination]**{gb_chn.mention if gb_chn and not dm else 'DM' if dm else 'Nowhere'}\n"
             "**[Content]**\n" + db_guild.goodbye_message
             if db_guild.goodbye_message
             else "Unset",

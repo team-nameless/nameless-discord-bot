@@ -58,6 +58,14 @@ jobs:
         run: |
           pylint **/*.py --disable=W,R,C
 
+      - name: Linting (ruff)
+        run: |
+          ruff nameless main.py NamelessConfig_example.py
+
+      - name: Non-modern code check (pyupgrade)
+        run: |
+          pyupgrade --py310-plus nameless/*.py
+
       - name: Run tests and return coverages (pytest & friends)
         run: |
           pytest --cov-report term-missing --cov=nameless.database --cov=nameless.commons.Utility tests/

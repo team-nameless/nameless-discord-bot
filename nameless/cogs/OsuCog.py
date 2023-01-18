@@ -209,7 +209,7 @@ class OsuCog(commands.Cog):
             elif request == "recents":
                 request_type = ScoreType.RECENT
 
-            prompt: str
+            # prompt: str
 
             # limit count
             if not is_from_context and ctx.bot.intents.message_content:

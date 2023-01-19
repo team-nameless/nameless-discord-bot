@@ -98,9 +98,9 @@ class VoteMenu:
             self.total_vote += 1
 
             if menu.value:
-                self.approve_member.append(menu.user)  # pyright: ignore
+                self.approve_member.append(menu.user)  # type: ignore
             else:
-                self.disapprove_member.append(menu.user)  # pyright: ignore
+                self.disapprove_member.append(menu.user)  # type: ignore
 
         pred = len(self.disapprove_member) < len(self.approve_member)
         if pred:
@@ -188,7 +188,7 @@ class MusicV1Cog(commands.Cog):
         for idx, track in enumerate(tracks):
             upcoming = (
                 f"{idx + 1} - "
-                f"[{escape_markdown(track.title)} by {escape_markdown(track.author)}]"  # pyright: ignore
+                f"[{escape_markdown(track.title)} by {escape_markdown(track.author)}]"  # type: ignore
                 f"({track.uri})\n"
             )
 
@@ -225,8 +225,8 @@ class MusicV1Cog(commands.Cog):
             while track := copycat.get():
                 upcoming = (
                     f"{idx + 1} - "
-                    f"[{escape_markdown(track.title)} by {escape_markdown(track.author)}]"  # pyright: ignore
-                    f"({track.uri})\n"  # pyright: ignore
+                    f"[{escape_markdown(track.title)} by {escape_markdown(track.author)}]"  # type: ignore
+                    f"({track.uri})\n"  # type: ignore
                 )
 
                 if len(txt) + len(upcoming) > 2048:
@@ -332,9 +332,9 @@ class MusicV1Cog(commands.Cog):
             setattr(player, "should_send_play_now", False)
 
             if track.is_stream():
-                await chn.send(f"Streaming music from {track.uri}")  # pyright: ignore
+                await chn.send(f"Streaming music from {track.uri}")  # type: ignore
             else:
-                await chn.send(f"Playing: **{track.title}** from **{track.author}** ({track.uri})")  # pyright: ignore
+                await chn.send(f"Playing: **{track.title}** from **{track.author}** ({track.uri})")  # type: ignore
 
     @commands.Cog.listener()
     async def on_wavelink_track_end(self, player: wavelink.Player, track: wavelink.Track, reason: str):
@@ -353,19 +353,19 @@ class MusicV1Cog(commands.Cog):
             elif is_loop and is_skip:
                 setattr(player, "loop_play_count", 0)
                 setattr(player, "skip_sent", False)
-                track = await player.queue.get_wait()  # pyright: ignore
+                track = await player.queue.get_wait()  # type: ignore
             elif is_skip and not is_loop:
-                track = await player.queue.get_wait()  # pyright: ignore
+                track = await player.queue.get_wait()  # type: ignore
             elif not is_skip and not is_loop:
-                track = await player.queue.get_wait()  # pyright: ignore
+                track = await player.queue.get_wait()  # type: ignore
 
-            await self.__internal_play2(player, track.uri)  # pyright: ignore
+            await self.__internal_play2(player, track.uri)  # type: ignore
         except wavelink.QueueEmpty:
             if chn:
-                await chn.send("The queue is empty now")  # pyright: ignore
+                await chn.send("The queue is empty now")  # type: ignore
 
     async def __internal_play(self, ctx: commands.Context, url: str, is_radio: bool = False):
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
 
         if is_radio:
             dbg, _ = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
@@ -409,10 +409,10 @@ class MusicV1Cog(commands.Cog):
         await ctx.defer()
 
         try:
-            await ctx.author.voice.channel.connect(cls=wavelink.Player, self_deaf=True)  # pyright: ignore
+            await ctx.author.voice.channel.connect(cls=wavelink.Player, self_deaf=True)  # type: ignore
             await ctx.send("Connected to your current voice channel")
 
-            vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+            vc: wavelink.Player = ctx.voice_client  # type: ignore
             setattr(vc, "skip_sent", False)
             setattr(vc, "stop_sent", False)
             setattr(vc, "loop_sent", False)
@@ -431,7 +431,7 @@ class MusicV1Cog(commands.Cog):
         await ctx.defer()
 
         try:
-            await ctx.voice_client.disconnect(force=True)  # pyright: ignore
+            await ctx.voice_client.disconnect(force=True)
             await ctx.send("Disconnected from my own voice channel")
         except AttributeError:
             await ctx.send("Already disconnected")
@@ -444,7 +444,7 @@ class MusicV1Cog(commands.Cog):
         """Toggle loop playback of current track"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
         setattr(vc, "loop_sent", not getattr(vc, "loop_sent"))
         await ctx.send(f"Loop set to {'on' if getattr(vc, 'loop_sent') else 'off'}")
 
@@ -456,7 +456,7 @@ class MusicV1Cog(commands.Cog):
         """Pause current playback"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
 
         if vc.is_paused():
             await ctx.send("Already paused")
@@ -473,7 +473,7 @@ class MusicV1Cog(commands.Cog):
         """Resume current playback, if paused"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
 
         if not vc.is_paused():
             await ctx.send("Already resuming")
@@ -490,7 +490,7 @@ class MusicV1Cog(commands.Cog):
         """Stop current playback."""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
         setattr(vc, "stop_sent", True)
 
         await vc.stop()
@@ -505,14 +505,14 @@ class MusicV1Cog(commands.Cog):
         """Play entire queue. Normally the queue should autoplay, but who knows?"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
 
         if vc.queue.is_empty:
             await ctx.send("Queue is empty")
             return
 
         track = vc.queue.get()
-        await self.__internal_play(ctx, track.uri)  # pyright: ignore
+        await self.__internal_play(ctx, track.uri)  # type: ignore
 
     @music_v1.command()
     @commands.guild_only()
@@ -523,8 +523,8 @@ class MusicV1Cog(commands.Cog):
         """Skip a song."""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-        track: wavelink.Track = vc.track  # pyright: ignore
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
+        track: wavelink.Track = vc.track  # type: ignore
 
         if await VoteMenu("skip", track.title, ctx, vc).start():
             setattr(vc, "should_send_play_now", True)
@@ -546,8 +546,8 @@ class MusicV1Cog(commands.Cog):
         """Seek to a position in a track"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-        track: wavelink.Track = vc.track  # pyright: ignore
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
+        track: wavelink.Track = vc.track  # type: ignore
 
         pos = pos if pos else 0
 
@@ -571,8 +571,8 @@ class MusicV1Cog(commands.Cog):
         """Seek to a segment in a track"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-        track: wavelink.Track = vc.track  # pyright: ignore
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
+        track: wavelink.Track = vc.track  # type: ignore
 
         if not 0 <= segment <= 10:
             await ctx.send("Invalid segment")
@@ -594,7 +594,7 @@ class MusicV1Cog(commands.Cog):
         """Toggle 'Now playing' message delivery"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
         setattr(vc, "play_now_allowed", not getattr(vc, "play_now_allowed"))
 
         await ctx.send(f"'Now playing' delivery is now {'on' if getattr(vc, 'play_now_allowed') else 'off'}")
@@ -607,8 +607,8 @@ class MusicV1Cog(commands.Cog):
         """Check now playing song"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
-        track: wavelink.Track = vc.track  # pyright: ignore
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
+        track: wavelink.Track = vc.track  # type: ignore
 
         is_stream = track.is_stream()
         dbg, _ = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
@@ -624,7 +624,7 @@ class MusicV1Cog(commands.Cog):
                 discord.Embed(timestamp=datetime.datetime.now(), color=discord.Color.orange())
                 .set_author(
                     name="Now playing track",
-                    icon_url=ctx.author.avatar.url,  # pyright: ignore
+                    icon_url=ctx.author.avatar.url,
                 )
                 .add_field(
                     name="Title",
@@ -658,9 +658,9 @@ class MusicV1Cog(commands.Cog):
                 .add_field(name="Paused", value=vc.is_paused())
                 .add_field(
                     name="Next track",
-                    value=f"[{escape_markdown(next_tr.title) if next_tr.title else 'Unknown title'} "  # pyright: ignore
-                    f"by {escape_markdown(next_tr.author)}]"  # pyright: ignore
-                    f"({next_tr.uri})"  # pyright: ignore
+                    value=f"[{escape_markdown(next_tr.title) if next_tr.title else 'Unknown title'} "  # type: ignore
+                    f"by {escape_markdown(next_tr.author)}]"  # type: ignore
+                    f"({next_tr.uri})"  # type: ignore
                     if next_tr
                     else None,
                 )
@@ -675,7 +675,7 @@ class MusicV1Cog(commands.Cog):
         """View current queue"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
 
         embeds = self.generate_embeds_from_queue(vc.queue)
         self.bot.loop.create_task(self.show_paginated_tracks(ctx, embeds))
@@ -691,12 +691,12 @@ class MusicV1Cog(commands.Cog):
         """Remove track from queue"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
         q = vc.queue._queue
 
         deleted_track: wavelink.Track = q[idx - 1]
 
-        vc.queue._queue = collections.deque([t for t in q if t])  # pyright: ignore
+        vc.queue._queue = collections.deque([t for t in q if t])  # type: ignore
         await ctx.send(f"Deleted track at position #{idx}: **{deleted_track.title}** from **{deleted_track.author}**")
 
     @queue.command()
@@ -708,7 +708,7 @@ class MusicV1Cog(commands.Cog):
         """Add selected track(s) to queue"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
 
         if search_cls := self.resolve_direct_url(search):
             track = (await vc.node.get_tracks(search_cls, search))[0]
@@ -744,7 +744,7 @@ class MusicV1Cog(commands.Cog):
             return
 
         drop: Union[discord.ui.Item[discord.ui.View], TrackPickDropdown] = view.children[0]
-        vals = drop.values  # pyright: ignore
+        vals = drop.values  # type: ignore
 
         if not vals:
             await m.delete()
@@ -788,14 +788,14 @@ class MusicV1Cog(commands.Cog):
 
         if source == "youtube":
             try:
-                pl = (await wavelink.YouTubePlaylist.search(url)).tracks  # pyright: ignore
+                pl = (await wavelink.YouTubePlaylist.search(url)).tracks  # type: ignore
             except wavelink.LoadTrackError:
                 pl = await wavelink.YouTubeTrack.search(url)
             tracks = pl
         elif source == "ytmusic":
             tracks = await wavelink.YouTubeMusicTrack.search(url)
         elif source == "spotify":
-            tracks = await spotify.SpotifyTrack.search(url, type=spotify.SpotifySearchType.playlist)  # pyright: ignore
+            tracks = await spotify.SpotifyTrack.search(url, type=spotify.SpotifySearchType.playlist)  # type: ignore
         elif source == "soundcloud":
             tracks = await wavelink.SoundCloudTrack.search(query=url)
 
@@ -803,12 +803,12 @@ class MusicV1Cog(commands.Cog):
             await ctx.send(f"No tracks found for {url} on {source}, have you checked your URL?")
             return
 
-        player: wavelink.Player = ctx.voice_client  # pyright: ignore
-        accepted_tracks = [track for track in tracks if not track.is_stream()]  # pyright: ignore
-        player.queue.extend(accepted_tracks)  # pyright: ignore
+        player: wavelink.Player = ctx.voice_client  # type: ignore
+        accepted_tracks = [track for track in tracks if not track.is_stream()]  # type: ignore
+        player.queue.extend(accepted_tracks)  # type: ignore
         await ctx.send(f"Added {len(tracks)} track(s) from {url} to the queue")
 
-        embeds = self.generate_embeds_from_tracks(accepted_tracks)  # pyright: ignore
+        embeds = self.generate_embeds_from_tracks(accepted_tracks)  # type: ignore
         self.bot.loop.create_task(self.show_paginated_tracks(ctx, embeds))
 
     @queue.command()
@@ -822,7 +822,7 @@ class MusicV1Cog(commands.Cog):
         """Move track to new position"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
 
         int_queue = vc.queue._queue
         queue_length = len(int_queue)
@@ -862,7 +862,7 @@ class MusicV1Cog(commands.Cog):
         """Swap two tracks."""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
         q = vc.queue._queue
         q_length = len(q)
 
@@ -887,9 +887,9 @@ class MusicV1Cog(commands.Cog):
         """Shuffle the queue"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
 
-        random.shuffle(vc.queue._queue)  # pyright: ignore
+        random.shuffle(vc.queue._queue)  # type: ignore
         await ctx.send("Shuffled the queue")
 
     @queue.command()
@@ -900,7 +900,7 @@ class MusicV1Cog(commands.Cog):
         """Clear the queue"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
 
         if await VoteMenu("clear", "queue", ctx, vc).start():
             vc.queue.clear()
@@ -916,7 +916,7 @@ class MusicV1Cog(commands.Cog):
         """Clear the queue"""
         await ctx.defer()
 
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
 
         vc.queue.clear()
         await ctx.send("Cleared the queue")
@@ -924,7 +924,7 @@ class MusicV1Cog(commands.Cog):
     @add.after_invoke
     @add_playlist.after_invoke
     async def autoplay_queue(self, ctx: commands.Context):
-        vc: wavelink.Player = ctx.voice_client  # pyright: ignore
+        vc: wavelink.Player = ctx.voice_client  # type: ignore
         if not vc.is_playing():
             await vc.play(vc.queue.get())
 

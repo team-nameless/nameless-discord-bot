@@ -87,7 +87,7 @@ class NamelessConfig:
     ]
 
     # Guild prefixes for text commands
-    PREFIXES: List[LiteralString] = ["nameless.", "n."]
+    PREFIXES: List[LiteralString] = ["nameless."]
 
     # Bot status
     # For example: "Playing with me"
@@ -114,6 +114,23 @@ class NamelessConfig:
         "host": "",
         "port": None,
         "db_name": "nameless.db",
+    }
+
+    # Configurations for Lavalink servers for music commands
+    LAVALINK: Dict[LiteralString, Any] = {
+        # Your lavalink node configurations
+        # Each node config is a dictionary with the following keys:
+        #   host (str),
+        #   port (int),
+        #   password (str),
+        #   is_secure (bool)
+        "nodes": [],
+        # Configuration for spotify integrations, safe to ignore
+        # You can get these from here: https://developer.spotify.com/dashboard/applications
+        "spotify": {
+            "client_id": "",
+            "client_secret": "",
+        },
     }
 
     # Configurations for osu! commands

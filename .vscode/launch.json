@@ -9,8 +9,8 @@
       "type": "python",
       "request": "launch",
       "module": "main",
-      "justMyCode": false,
-      "args": ["-OO"],
+      "justMyCode": true,
+      "args": ["--allow-updates-check"],
     }
   ]
 }

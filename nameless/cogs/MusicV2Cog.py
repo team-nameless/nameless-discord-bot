@@ -68,7 +68,7 @@ class VoteMenuView(discord.ui.View):
 
         self.stop()
 
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:  # pylint: disable=arguments-differ
         await interaction.response.defer()
         return True
 
@@ -380,6 +380,10 @@ class MainPlayer:
         self.position = 0
         self.repeat = False
 
+        if not self._guild and not isinstance(self._guild, discord.Guild):
+            logging.error("Wait what? There is no guild here!")
+            raise AttributeError(f"Try to access guild attribute, get {self._guild.__class__.__name__} instead")
+
         setattr(self._guild.voice_client, "is_queue_empty", self.queue.empty)
         self.task = ctx.bot.loop.create_task(self.create())
 
@@ -389,7 +393,7 @@ class MainPlayer:
             discord.Embed(timestamp=datetime.datetime.now(), color=discord.Color.orange())
             .set_author(
                 name=header,
-                icon_url=track.requester.avatar.url,
+                icon_url=getattr(track.requester.avatar, "url", None),
             )
             .add_field(
                 name="Title",
@@ -453,7 +457,7 @@ class MainPlayer:
             if not self.repeat:
                 self.track.cleanup()
                 self.track.source.final_cleanup()
-                self.track = None  # type: ignore
+                self.track = None
 
     def destroy(self, guild):
         """Disconnect and cleanup the player."""
@@ -569,23 +573,23 @@ class MusicV2Cog(commands.Cog):
         before: discord.VoiceState,
         after: discord.VoiceState,
     ):
+        """Handle voice state updates, auto-disconnect the bot, or maybe add a logging system in here :eyes:"""
         try:
             player = self.players[member.guild.id]
-        except KeyError:
+        except KeyError:  # We're not in this channel? Let's return the function
             return
 
-        # Technically auto disconnect the bot from lavalink
-        # Sometimes on manual disconnection
-        if member.id == self.bot.user.id:
-            try:
-                if len(player._guild.voice_client.channel.members) == 1:  # If bot is alone
-                    if player._guild.voice_client.channel.members[0].id == self.bot.user.id:
-                        logging.debug(
-                            "Guild player %s still connected even if it is removed from voice, disconnecting",
-                            player._guild.id,
-                        )
-                        await self.cleanup(player._guild)
-            except AttributeError:  # Handle things like bot got kicked or move to another channel, etc.
+        # Damn, we got kicked out.
+        if member.id == self.bot.user.id:  # type: ignore
+            return await self.cleanup(player._guild)
+
+        vc = player._guild.voice_client.channel
+        if len(vc.members) == 1:  # There is only one person
+            if vc.members[0].id == self.bot.user.id:  # type: ignore  #  And that person is us
+                logging.debug(
+                    "Guild player %s still connected even if it is removed from voice, disconnecting",
+                    player._guild.id,
+                )
                 await self.cleanup(player._guild)
 
     # @commands.Cog.listener()
@@ -872,6 +876,9 @@ class MusicV2Cog(commands.Cog):
 
         is_stream = track.is_stream()
         dbg, _ = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
+        if not dbg:
+            logging.error("Oh no. The database is gone! What do we do now?!!")
+            raise AttributeError
 
         try:
             next_tr = player.queue._queue.copy().pop()  # type: ignore
@@ -962,10 +969,10 @@ class MusicV2Cog(commands.Cog):
 
     @queue.command()
     @commands.guild_only()
-    @app_commands.describe(search="Search query", source="Source to search", range="How much result to show")
+    @app_commands.describe(search="Search query", source="Source to search", amount="How much result to show")
     # @app_commands.choices(source=[Choice(name=k, value=k) for k in music_default_sources])
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    async def add(self, ctx: commands.Context, search: str, source: str = "youtube", range: int = 1):
+    async def add(self, ctx: commands.Context, search: str, source: str = "youtube", amount: int = 1):
         """Add selected track(s) to queue"""
         await ctx.defer()
         m = await ctx.send("Searching...")
@@ -983,7 +990,7 @@ class MusicV2Cog(commands.Cog):
         #     return
 
         tracks: List[YTDLSource] = []
-        async for track in YTDLSource.get_tracks(ctx, search, amount=range):
+        async for track in YTDLSource.get_tracks(ctx, search, amount=amount):
             tracks.append(track)
 
         if not tracks:
@@ -1183,7 +1190,7 @@ class MusicV2Cog(commands.Cog):
                 ctx.author.id,
                 player._guild.id,
             )
-            logging.debug("MusicCog.force_clear raise an error: [%s] %s", e.__class__.__name__, str(e))
+            logging.error("MusicCog.force_clear raise an error: [%s] %s", e.__class__.__name__, str(e))
 
 
 async def setup(bot: Nameless):

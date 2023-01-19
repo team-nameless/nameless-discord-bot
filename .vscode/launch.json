@@ -10,7 +10,7 @@
       "request": "launch",
       "module": "main",
       "justMyCode": false,
-      "args": ["--allow-updates-check"],
+      "args": ["-OO"],
     }
   ]
 }

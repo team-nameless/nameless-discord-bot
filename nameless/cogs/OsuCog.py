@@ -11,6 +11,7 @@ from ossapi import GameMode, OssapiV2, Score, ScoreType, User, UserLookupKey
 
 from nameless import Nameless, shared_vars
 from nameless.customs.DiscordWaiter import DiscordWaiter
+from NamelessConfig import NamelessConfig
 
 
 __all__ = ["OsuCog"]
@@ -61,12 +62,12 @@ class OsuCog(commands.Cog):
     def __init__(self, bot: Nameless):
         self.bot = bot
         self.api = OssapiV2(
-            shared_vars.config_cls.OSU["client_id"],
-            shared_vars.config_cls.OSU["client_secret"],
+            NamelessConfig.OSU["client_id"],
+            NamelessConfig.OSU["client_secret"],
         )
 
     @commands.hybrid_group(fallback="get")
-    @app_commands.guilds(*getattr(shared_vars.config_cls, "GUILD_IDs", []))
+    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
     async def osu(self, ctx: commands.Context, member: Optional[discord.Member]):
         """View someone's osu! *linked* profile"""
         await ctx.defer()
@@ -208,7 +209,7 @@ class OsuCog(commands.Cog):
             elif request == "recents":
                 request_type = ScoreType.RECENT
 
-            prompt: str
+            # prompt: str
 
             # limit count
             if not is_from_context and ctx.bot.intents.message_content:
@@ -261,12 +262,13 @@ class OsuCog(commands.Cog):
                         timestamp=datetime.datetime.now(),
                     )
                     .set_author(
-                        name=f"{beatmap_set.artist} - {beatmap_set.title} [{beatmap.version}] "
-                        f"+{score.mods.long_name().replace(' ', '')}",
-                        url=beatmap.url,
+                        name=f"{beatmap_set.artist} - {beatmap_set.title} [{beatmap.version if beatmap else '???'}] "
+                        if beatmap_set
+                        else "No map found online!" f"+{score.mods.long_name().replace(' ', '')}",
+                        url=beatmap.url if beatmap else "",
                         icon_url=sender.avatar_url,
                     )
-                    .set_thumbnail(url=beatmap_set.covers.cover_2x)
+                    .set_thumbnail(url=beatmap_set.covers.cover_2x if beatmap_set and beatmap_set.covers else "")
                     .add_field(
                         name="Score",
                         value=f"{sender.country_code} #{score.rank_country} - GLB #{score.rank_global}",
@@ -276,7 +278,7 @@ class OsuCog(commands.Cog):
                     .add_field(name="Accuracy", value=f"{round(score.accuracy * 100, 2)}%")
                     .add_field(
                         name="Max combo",
-                        value=f"{score.max_combo}x/{beatmap.max_combo}",
+                        value=f"{score.max_combo}x/{beatmap.max_combo if beatmap else '???'}x",
                     )
                     .add_field(
                         name="Hit count",
@@ -374,11 +376,7 @@ class OsuCog(commands.Cog):
 
 
 async def setup(bot: Nameless):
-    if (
-        (osu := getattr(shared_vars.config_cls, "OSU", None))
-        and osu.get("client_id", "")
-        and osu.get("client_secret", "")
-    ):
+    if (osu := getattr(NamelessConfig, "OSU", None)) and osu.get("client_id", "") and osu.get("client_secret", ""):
         await bot.add_cog(OsuCog(bot))
         logging.info("Cog of %s added!", __name__)
     else:

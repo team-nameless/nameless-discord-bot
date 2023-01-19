@@ -1,12 +1,30 @@
 {
 	"recommendations": [
+		// Code
+		"njpwerner.autodocstring",
+		"VisualStudioExptTeam.vscodeintellicode",
 		"hbenl.vscode-test-explorer",
 		"ms-vscode.test-adapter-converter",
+		"TabNine.tabnine-vscode",
+		"GitHub.copilot",
 		"KevinRose.vsc-python-indent",
 		"tamasfe.even-better-toml",
 		"ms-python.python",
+		"Gruntfuggly.todo-tree",
 		"ms-python.vscode-pylance",
+		"yzhang.markdown-all-in-one",
 		"DavidAnson.vscode-markdownlint",
-		"littlefoxteam.vscode-python-test-adapter"
+		"donjayamanne.python-environment-manager",
+		"littlefoxteam.vscode-python-test-adapter",
+
+		// GitHub
+		"eamodio.gitlens",
+		"donjayamanne.githistory",
+		"GitHub.vscode-pull-request-github",
+
+		// Cosmetic
+		"LeonardSSH.vscord",
+		"Catppuccin.catppuccin-vsc",
+		"PKief.material-icon-theme"
 	],
 }

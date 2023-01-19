@@ -8,9 +8,16 @@ __all__ = ["NamelessConfig"]
 
 
 class NamelessConfig:
-    # Enable experimental stuffs
+    # Add owners to Nameless
+    # The bot creator is added by default
+    # Bot team members are added by default
+    # If you have nothing other than "the bot creator" and "team members", leave this as []
+    # Otherwise, leave their IDs here: Right-click on a user -> Copy ID
+    OWNERS: List[int] = []
+
+    # Enable stuffs for developers
     # Set to True if you know what you are doing
-    LAB: bool = False
+    DEV: bool = False
 
     # Bot token
     # Go to here: https://discord.com/developers/applications/
@@ -44,7 +51,7 @@ class NamelessConfig:
         # Any source control link
         # Use falsy values for closed source (like when you have a private fork), but remember to comply the license.
         "source_code": "https://github.com/nameless-on-discord/nameless",
-        # A link leading to the raw version.txt file, used for latest version checking
+        # A link leading to the RAW version.txt file, used for upstream version checking
         # If this is a falsy value, https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt
         "version_txt": "https://raw.githubusercontent.com/nameless-on-discord/nameless/feat/v2/version.txt",
         # Bot support server URL
@@ -61,16 +68,22 @@ class NamelessConfig:
 
     # Guild IDs to register commands
     # Leave empty array for global (slash commands takes one hour to mitigate, text takes immediately)
-    GUILD_IDs: List[int] = []
+    GUILDS: List[int] = []
 
     # Choose which cog(s) to load
     # Available options:    Config,
     #                       Moderator,
-    #                       Music,
+    #                       MusicV1 (requires `LAVALINK` to be properly provided),
+    #                       MusicV2 (MusicV1 must not be loaded)
     #                       Osu (requires `OSU` to be properly provided),
     #                       Owner
     COGS: List[LiteralString] = [
-        "Music",
+        "MusicV1",
+        "Owner",
+        "General",
+        "Config",
+        "Moderator",
+        "Osu",
     ]
 
     # Guild prefixes for text commands

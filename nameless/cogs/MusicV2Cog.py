@@ -22,9 +22,10 @@ from yt_dlp import YoutubeDL
 from nameless import Nameless, shared_vars
 from nameless.cogs.checks import MusicCogCheck
 from nameless.commons import Utility
+from NamelessConfig import NamelessConfig
 
 
-__all__ = ["MusicCog"]
+__all__ = ["MusicV2Cog"]
 
 ytdlopts = {
     "format": "bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/93/best",
@@ -312,11 +313,11 @@ class YTDLSource(discord.AudioSource):
         return cls(data, ctx.author)
 
     @classmethod
-    async def get_tracks(cls, ctx: commands.Context, search, range=5, loop=None) -> AsyncIterable:
+    async def get_tracks(cls, ctx: commands.Context, search, amount=5, loop=None) -> AsyncIterable:
         data = await cls._get_raw_data(search, loop)
 
         if entries := data.get("entries", None):
-            for track in entries[:range]:
+            for track in entries[:amount]:
                 track.update(
                     {"extractor": data.get("extractor"), "direct": data.get("direct")},
                 )
@@ -433,13 +434,13 @@ class MainPlayer:
                 )
 
             except AttributeError:
-                logging.exception(
+                logging.error(
                     "We no longer connect to guild %s, but somehow we still in. Time to destroy!", self._guild.id
                 )
                 return self.destroy(self._guild)
 
             except Exception as e:
-                logging.exception(
+                logging.error(
                     "I'm not sure what went wrong when we tried to process the request in guild %s. Anyway, I'm going to sleep. Here is the error: %s",
                     self._guild.id,
                     str(e),
@@ -459,7 +460,7 @@ class MainPlayer:
         return self.client.loop.create_task(self._cog.cleanup(guild))
 
 
-class MusicCog(commands.Cog):
+class MusicV2Cog(commands.Cog):
     def __init__(self, bot: Nameless):
         self.bot = bot
         self.players = {}
@@ -659,7 +660,7 @@ class MusicCog(commands.Cog):
             raise commands.CommandError(f"No tracks found for {url}")
 
     @commands.hybrid_group(fallback="radio")
-    @app_commands.guilds(*getattr(shared_vars.config_cls, "GUILD_IDs", []))
+    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
     @commands.guild_only()
     @app_commands.describe(url="Radio url")
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
@@ -810,7 +811,10 @@ class MusicCog(commands.Cog):
 
         try:
             source.seek(offset)
-            await ctx.send("Seek success!")
+            if ctx.message:
+                await ctx.message.add_reaction("✅")
+            else:
+                await ctx.send("✅")
         except Exception as err:
             await ctx.send(f"{err.__class__.__name__}: {str(err)}")
 
@@ -979,7 +983,7 @@ class MusicCog(commands.Cog):
         #     return
 
         tracks: List[YTDLSource] = []
-        async for track in YTDLSource.get_tracks(ctx, search, range=range):
+        async for track in YTDLSource.get_tracks(ctx, search, amount=range):
             tracks.append(track)
 
         if not tracks:
@@ -1183,7 +1187,10 @@ class MusicCog(commands.Cog):
 
 
 async def setup(bot: Nameless):
-    await bot.add_cog(MusicCog(bot))
+    if bot.get_cog("MusicV1Cog"):
+        raise commands.ExtensionFailed(__name__, RuntimeError("can't load MusicV1 and MusicV2 at the same time."))
+
+    await bot.add_cog(MusicV2Cog(bot))
     logging.info("Cog of %s added!", __name__)
 
 

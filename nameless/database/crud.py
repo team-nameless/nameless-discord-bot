@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Type, Union
+from typing import Optional, Tuple, Union
 
 import discord
 from sqlalchemy import create_engine
@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.util import IdentitySet
 
 from nameless.commons import Utility
+from NamelessConfig import NamelessConfig
 
 from .models import Base, DbGuild, DbUser
 
@@ -18,7 +19,7 @@ class CRUD:
     Basic database CRUD operations.
     """
 
-    def __init__(self, config_cls: Optional[Type] = None):
+    def __init__(self):
         (
             self.db_url,
             self.dialect,
@@ -28,11 +29,11 @@ class CRUD:
             self.username,
             self.password,
             self.db_name,
-        ) = Utility.get_db_url(config_cls)
+        ) = Utility.get_db_url()
         self.engine = create_engine(
             self.db_url,
             logging_name=self.db_name,
-            hide_parameters=not getattr(config_cls, "LAB", False),
+            hide_parameters=not getattr(NamelessConfig, "DEV", False),
         )
         _session = sessionmaker(bind=self.engine)
         self.__session = _session()
@@ -62,6 +63,7 @@ class CRUD:
         :return: User record in database, True if the record is new.
         """
         u = self.get_user_record(discord_user)
+
         if not u:
             return self.create_user_record(discord_user), True
 
@@ -71,19 +73,20 @@ class CRUD:
         self, discord_guild: Optional[Union[discord.Guild, discord.Object]]
     ) -> Tuple[Optional[DbGuild], bool]:
         """
+
         Get an existing guild record, create a new record if one doesn't exist
         :param discord_guild: Guild entity of discord
         :return: Guild record in database, True if the record is new
         """
-        if discord_guild:
-            g = self.get_guild_record(discord_guild)
+        if not discord_guild:
+            return None, True
 
-            if not g:
-                return self.create_guild_record(discord_guild), True
+        g = self.get_guild_record(discord_guild)
 
-            return g, False
+        if not g:
+            return self.create_guild_record(discord_guild), True
 
-        return None, True
+        return g, False
 
     def get_user_record(self, discord_user: Union[discord.Member, discord.User, discord.Object]) -> Optional[DbUser]:
         """Get user record in database"""

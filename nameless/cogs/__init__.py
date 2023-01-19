@@ -1,6 +1,6 @@
 from .ConfigCog import *
 from .GeneralCog import *
 from .ModeratorCog import *
-from .MusicCog import *
+from .MusicV1Cog import *
 from .OsuCog import *
 from .OwnerCog import *

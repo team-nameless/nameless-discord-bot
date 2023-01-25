@@ -27,9 +27,7 @@ class ConfigCog(commands.Cog):
     async def config(self, ctx: commands.Context):
         """View configured properties"""
         await ctx.defer()
-        db_guild, _ = crud_database.get_or_create_guild_record(ctx.guild)
-
-        assert db_guild is not None
+        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
 
         wc_chn = ctx.guild.get_channel(db_guild.welcome_channel_id)  # pyright: ignore
         gb_chn = ctx.guild.get_channel(db_guild.goodbye_channel_id)  # pyright: ignore
@@ -105,8 +103,7 @@ class ConfigCog(commands.Cog):
             await ctx.send("You can not use more than 500 characters for it!")
             return
 
-        db_guild, _ = crud_database.get_or_create_guild_record(ctx.guild)
-        assert db_guild is not None
+        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
 
         db_guild.welcome_message = message
         crud_database.save_changes()
@@ -130,9 +127,8 @@ class ConfigCog(commands.Cog):
             await ctx.send("You can not use more than 500 characters for it!")
             return
 
-        db_guild, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
         db_guild.goodbye_message = message
-        crud_database.save_changes()
         await ctx.send("Done updating goodbye message")
 
     @config.command()
@@ -148,9 +144,8 @@ class ConfigCog(commands.Cog):
     ):
         """Change goodbye message delivery channel"""
         await ctx.defer()
-        db_guild, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
         db_guild.goodbye_channel_id = dest_channel.id
-        crud_database.save_changes()
         await ctx.send(f"Done updating goodbye channel to {dest_channel.mention}")
 
     @config.command()
@@ -166,9 +161,8 @@ class ConfigCog(commands.Cog):
     ):
         """Change welcome message delivery channel"""
         await ctx.defer()
-        db_guild, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
         db_guild.welcome_channel_id = dest_channel.id
-        crud_database.save_changes()
         await ctx.send(f"Done updating welcome channel to {dest_channel.mention}")
 
     @config.command()
@@ -179,9 +173,8 @@ class ConfigCog(commands.Cog):
     async def toggle_welcome(self, ctx: commands.Context):
         """Toggle welcome message delivery allowance"""
         await ctx.defer()
-        db_guild, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
         db_guild.is_welcome_enabled = not db_guild.is_welcome_enabled
-        crud_database.save_changes()
         await ctx.send(f"Welcome message delivery: {'on' if db_guild.is_welcome_enabled else 'off'}")
 
     @config.command()
@@ -192,9 +185,8 @@ class ConfigCog(commands.Cog):
     async def toggle_goodbye(self, ctx: commands.Context):
         """Toggle goodbye message delivery allowance"""
         await ctx.defer()
-        db_guild, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
         db_guild.is_goodbye_enabled = not db_guild.is_goodbye_enabled
-        crud_database.save_changes()
         await ctx.send(f"Goodbye message delivery: {'on' if db_guild.is_goodbye_enabled else 'off'}")
 
     @config.command()
@@ -205,9 +197,8 @@ class ConfigCog(commands.Cog):
     async def toggle_bot_greeter(self, ctx: commands.Context):
         """Toggle greeting delivery allowance to BOTs"""
         await ctx.defer()
-        db_guild, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
         db_guild.is_bot_greeting_enabled = not db_guild.is_bot_greeting_enabled
-        crud_database.save_changes()
         await ctx.send(f"Bot greeter delivery: {'on' if db_guild.is_bot_greeting_enabled else 'off'}")
 
     @config.command()
@@ -218,9 +209,8 @@ class ConfigCog(commands.Cog):
     async def toggle_dm_instead_of_channel(self, ctx: commands.Context):
         """Toggle greeting delivery to user's DM instead of the channel."""
         await ctx.defer()
-        db_guild, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
         db_guild.is_dm_preferred = not db_guild.is_dm_preferred
-        crud_database.save_changes()
         await ctx.send(f"DM greeter delivery: {'on' if db_guild.is_dm_preferred else 'off'}")
 
     @config.command()
@@ -246,9 +236,8 @@ class ConfigCog(commands.Cog):
     async def toggle_native_timeout(self, ctx: commands.Context):
         """Toggle using native 'Timeout' feature instead of using 'Mute role'"""
         await ctx.defer()
-        db_guild, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
         db_guild.is_timeout_preferred = not db_guild.is_timeout_preferred
-        crud_database.save_changes()
         await ctx.send(f"Use native `Timeout` feature: {'on' if db_guild.is_timeout_preferred else 'off'}")
 
 

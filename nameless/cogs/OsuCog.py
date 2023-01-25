@@ -71,9 +71,9 @@ class OsuCog(commands.Cog):
     async def osu(self, ctx: commands.Context, member: Optional[discord.Member]):
         """View someone's osu! *linked* profile"""
         await ctx.defer()
-        dbu, _ = shared_vars.crud_database.get_or_create_user_record(member if member else ctx.author)
+        db_user = shared_vars.crud_database.get_or_create_user_record(member if member else ctx.author)
 
-        if not dbu.osu_username:
+        if not db_user.osu_username:
             await ctx.send("This user did not link with me")
             return
 
@@ -84,8 +84,8 @@ class OsuCog(commands.Cog):
                 colour=Color.brand_red(),
             )
             .set_image(url=ctx.author.display_avatar.url)
-            .add_field(name="Username", value=dbu.osu_username, inline=True)
-            .add_field(name="Mode", value=dbu.osu_mode, inline=True)
+            .add_field(name="Username", value=db_user.osu_username, inline=True)
+            .add_field(name="Mode", value=db_user.osu_mode, inline=True)
         )
         await ctx.send(embeds=[embed])
 
@@ -95,9 +95,9 @@ class OsuCog(commands.Cog):
     async def update(self, ctx: commands.Context, username: str, mode: str = "Osu"):
         """Update your auto search"""
         await ctx.defer()
-        dbu, _ = shared_vars.crud_database.get_or_create_user_record(ctx.author)
-        dbu.osu_username, dbu.osu_mode = username, mode.title()
-        shared_vars.crud_database.save_changes()
+        db_user = shared_vars.crud_database.get_or_create_user_record(ctx.author)
+        db_user.osu_username, db_user.osu_mode = username, mode.title()
+
         await ctx.send("Updated")
 
     @osu.command()
@@ -115,9 +115,9 @@ class OsuCog(commands.Cog):
     ):
         """Force database to update a member's auto search"""
         await ctx.defer()
-        dbu, _ = shared_vars.crud_database.get_or_create_user_record(member)
-        dbu.osu_username, dbu.osu_mode = username, mode.title()
-        shared_vars.crud_database.save_changes()
+        db_user = shared_vars.crud_database.get_or_create_user_record(member)
+        db_user.osu_username, db_user.osu_mode = username, mode.title()
+
         await ctx.send("Updated")
 
     async def __generic_check(
@@ -333,17 +333,17 @@ class OsuCog(commands.Cog):
     ):
         """Check osu! profile of a member"""
         await ctx.defer()
-        dbu, _ = shared_vars.crud_database.get_or_create_user_record(member)
+        db_user = shared_vars.crud_database.get_or_create_user_record(member)
 
-        if dbu.osu_username == "":
+        if db_user.osu_username == "":
             await ctx.send(content="This user did not linked to me")
             return
 
         await self.__generic_check(
             ctx,
             request,
-            dbu.osu_username,
-            dbu.osu_mode if mode == "default" else mode,
+            db_user.osu_username,
+            db_user.osu_mode if mode == "default" else mode,
             include_fail,
             count,
         )

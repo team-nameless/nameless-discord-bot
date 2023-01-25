@@ -144,8 +144,7 @@ class Nameless(commands.AutoShardedBot):
         )
 
     async def on_member_join(self, member: discord.Member):
-        db_guild, _ = shared_vars.crud_database.get_or_create_guild_record(member.guild)
-        assert db_guild is not None
+        db_guild = shared_vars.crud_database.get_or_create_guild_record(member.guild)
 
         if db_guild.is_welcome_enabled:
             if db_guild.welcome_message != "":
@@ -171,8 +170,7 @@ class Nameless(commands.AutoShardedBot):
                 )
 
     async def on_member_remove(self, member: discord.Member):
-        db_guild, _ = shared_vars.crud_database.get_or_create_guild_record(member.guild)
-        assert db_guild is not None
+        db_guild = shared_vars.crud_database.get_or_create_guild_record(member.guild)
 
         if db_guild.is_goodbye_enabled:
             if db_guild.goodbye_message != "":

@@ -156,18 +156,7 @@ class Nameless(commands.AutoShardedBot):
                 if db_guild.is_dm_preferred:
                     send_target = member
 
-                assert send_target is not None and (
-                    isinstance(send_target, discord.TextChannel)
-                    or isinstance(send_target, discord.Thread)
-                    or isinstance(send_target, discord.Member)
-                )
-
-                await send_target.send(
-                    content=db_guild.welcome_message.replace("{guild}", member.guild.name)
-                    .replace("{name}", member.display_name)
-                    .replace("{tag}", member.discriminator)
-                    .replace("{@user}", member.mention)
-                )
+                await self.send_greeter(db_guild.goodbye_message, member, send_target)
 
     async def on_member_remove(self, member: discord.Member):
         db_guild = shared_vars.crud_database.get_or_create_guild_record(member.guild)
@@ -183,17 +172,19 @@ class Nameless(commands.AutoShardedBot):
                 # if db_guild.is_dm_preferred:
                 #    send_target = member
 
-                assert send_target is not None and (
-                    isinstance(send_target, discord.TextChannel)
-                    or isinstance(send_target, discord.Thread)
-                    or isinstance(send_target, discord.Member)
-                )
+                await self.send_greeter(db_guild.goodbye_message, member, send_target)
 
-                await send_target.send(
-                    content=db_guild.goodbye_message.replace("{guild}", member.guild.name)
-                    .replace("{name}", member.display_name)
-                    .replace("{tag}", member.discriminator)
-                )
+    async def send_greeter(self, content: str, member: discord.Member, send_target: discord.abc.Messageable):
+        if send_target is not None and (
+            isinstance(send_target, discord.TextChannel)
+            or isinstance(send_target, discord.Thread)
+            or isinstance(send_target, discord.Member)
+        ):
+            await send_target.send(
+                content=content.replace("{guild}", member.guild.name)
+                .replace("{name}", member.display_name)
+                .replace("{tag}", member.discriminator)
+            )
 
     async def on_command_error(self, ctx: commands.Context, err: errors.CommandError, /) -> None:
         print(err.args)

@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 from datetime import datetime
+from typing import Optional
 
 import aiohttp
 import discord
@@ -174,7 +175,12 @@ class Nameless(commands.AutoShardedBot):
 
                 await self.send_greeter(db_guild.goodbye_message, member, send_target)
 
-    async def send_greeter(self, content: str, member: discord.Member, send_target: discord.abc.Messageable):
+    async def send_greeter(
+        self,
+        content: str,
+        member: discord.Member,
+        send_target: Optional[discord.abc.GuildChannel | discord.Member | discord.Thread],
+    ):
         if send_target is not None and (
             isinstance(send_target, discord.TextChannel)
             or isinstance(send_target, discord.Thread)

@@ -60,9 +60,7 @@ class CRUD:
         """Check if the record is new one"""
         return self.session.query(model).filter_by(**kwargs).one_or_none() is None
 
-    def get_or_create_user_record(
-        self, discord_user: Union[discord.Member, discord.User, discord.Object]
-    ) -> DbUser:
+    def get_or_create_user_record(self, discord_user: Union[discord.Member, discord.User, discord.Object]) -> DbUser:
         """
         Get an existing discord_user record, create a new record if one doesn't exist
         :param discord_user: User entity of discord.
@@ -75,9 +73,7 @@ class CRUD:
 
         return u
 
-    def get_or_create_guild_record(
-        self, discord_guild: Optional[Union[discord.Guild, discord.Object]]
-    ) -> DbGuild:
+    def get_or_create_guild_record(self, discord_guild: Optional[Union[discord.Guild, discord.Object]]) -> DbGuild:
         """
         Get an existing guild record, create a new record if one doesn't exist
         :param discord_guild: Guild entity of discord

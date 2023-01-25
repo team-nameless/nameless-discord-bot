@@ -371,7 +371,6 @@ class MusicV1Cog(commands.Cog):
             db_guild = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
             db_guild.radio_start_time = discord.utils.utcnow()
 
-
         await self.__internal_play2(vc, url, is_radio)
 
     async def __internal_play2(self, vc: wavelink.Player, url: str, is_radio: bool = False):

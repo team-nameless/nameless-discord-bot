@@ -112,7 +112,7 @@ class ModeratorCog(commands.Cog):
         db_guild = crud_database.get_or_create_guild_record(ctx.guild)
         mute_role = ctx.guild.get_role(db_guild.mute_role_id)
 
-        if db_guild.is_timeout_preferred or not mute_role:
+        if db_guild.is_timeout_preferred or mute_role is None:
             is_muted = member.is_timed_out()
             if is_muted:
                 if not mute:

@@ -24,12 +24,11 @@ from nameless.cogs.checks import MusicCogCheck
 from nameless.commons import Utility
 from NamelessConfig import NamelessConfig
 
-
 __all__ = ["MusicV2Cog"]
 
 ytdlopts = {
     "format": "bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/93/best",
-    "outtmpl": "downloads/%(extractor)s-%(id)s-%(title)s.%(ext)s",
+    "outtmpl": r"downloads/%(extractor)s-%(id)s-%(title)s.%(ext)s",
     "restrictfilenames": True,
     "nocheckcertificate": True,
     "ignoreerrors": False,
@@ -40,101 +39,41 @@ ytdlopts = {
     "default_search": "ytsearch5",
     "source_address": "0.0.0.0",
 }
+ytdl = YoutubeDL(ytdlopts)
 
 ffmpegopts = {"before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5", "options": "-vn"}
-
-ytdl = YoutubeDL(ytdlopts)
 
 
 class VoteMenuView(discord.ui.View):
     __slots__ = ("user", "value")
-
-    def __init__(self):
-        super().__init__(timeout=15)
-        self.user = None
-        self.value = None
-
-    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green, emoji="✅")
-    async def approve(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.value = True
-        self.user = interaction.user.mention
-
-        self.stop()
-
-    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.grey, emoji="❌")
-    async def disapprove(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.value = False
-        self.user = interaction.user.mention
-
-        self.stop()
-
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:  # pylint: disable=arguments-differ
-        await interaction.response.defer()
-        return True
-
-
-class VoteMenu:
-    __slots__ = (
-        "action",
-        "content",
-        "ctx",
-        "max_vote_user",
-        "total_vote",
-        "approve_member",
-        "disapprove_member",
-    )
 
     def __init__(
         self,
         action: str,
         content: str,
         ctx: commands.Context,
-        voice_client: VoiceClient,
+        timeout: Optional[float] = None,
     ):
+        super().__init__(timeout=timeout)
+
         self.ctx = ctx
         self.action = action
         self.content = f"{content[:50]}..."
 
-        self.max_vote_user = math.ceil(len(voice_client.channel.members) / 2)
+        self.max_vote = math.ceil(len([m for m in ctx.voice_client.channel.members if not m.bot]) / 2)  # type: ignore
         self.total_vote = 1
 
         self.approve_member: List[str] = [ctx.author.mention]
         self.disapprove_member: List[str] = []
 
-    async def start(self):
-        if self.max_vote_user <= 1:
-            return True
-
-        message = await self.ctx.send(embed=self.__eb())
-
-        while len(self.disapprove_member) < self.max_vote_user and len(self.approve_member) < self.max_vote_user:
-            menu = VoteMenuView()
-            await message.edit(embed=self.__eb(), view=menu)
-            await menu.wait()
-
-            if menu.user in self.approve_member or menu.user in self.disapprove_member:
-                continue
-
-            self.total_vote += 1
-
-            if menu.value:
-                self.approve_member.append(menu.user)  # type: ignore
-            else:
-                self.disapprove_member.append(menu.user)  # type: ignore
-
-        pred = len(self.disapprove_member) < len(self.approve_member)
-        if pred:
-            await message.edit(content=f"{self.action.title()} {self.content}!", embed=None, view=None)
-        else:
-            await message.edit(content=f"Not enough votes to {self.action}!", embed=None, view=None)
-
-        return pred
+        self.message: discord.Message = None  # type: ignore
+        ctx.bot.loop.create_task(self.update())
 
     def __eb(self):
         return (
             discord.Embed(
                 title=f"Vote {self.action} {self.content}",
-                description=f"Total vote: {self.total_vote}/{self.max_vote_user}",
+                description=f"Total vote: {self.total_vote}/{self.max_vote}",
             )
             .add_field(
                 name="Approve",
@@ -149,11 +88,73 @@ class VoteMenu:
             .set_footer(text=f"Requested by {self.ctx.author.name}")
         )
 
+    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green, emoji="✅")
+    async def approve(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.approve_member.append(interaction.user.mention)
+        await self.update()
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.grey, emoji="❌")
+    async def disapprove(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.disapprove_member.append(interaction.user.mention)
+        await self.update()
+
+    async def send_or_edit(self, **kwargs):
+        if self.message:
+            self.message = await self.message.edit(**kwargs)
+            return
+
+        self.message = await self.ctx.send(**kwargs)
+
+    async def update(self):
+        if self.max_vote <= 1:
+            self.stop()
+            return
+
+        self.total_vote += 1
+        await self.send_or_edit(embed=self.__eb(), view=self)
+
+        if self.total_vote == self.max_vote:
+            self.stop()
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:  # pylint: disable=arguments-differ
+        if interaction.user.mention in self.approve_member or interaction.user.mention in self.disapprove_member:
+            return False
+
+        await interaction.response.defer()
+        return True
+
+
+class VoteMenu:
+    __slots__ = ("view",)
+
+    def __init__(
+        self,
+        action: str,
+        content: str,
+        ctx: commands.Context,
+    ):
+        self.view = VoteMenuView(action, content, ctx)
+
+    async def start(self):
+        await self.view.wait()
+
+        pred = True
+        if self.view.max_vote > 1:
+            pred = (
+                len(self.view.disapprove_member) < len(self.view.approve_member) and len(self.view.approve_member) > 1
+            )
+
+        if pred:
+            await self.view.send_or_edit(
+                content=f"{self.view.action.title()} {self.view.content}!", embed=None, view=None
+            )
+        else:
+            await self.view.send_or_edit(content=f"Not enough votes to {self.view.action}!", embed=None, view=None)
+
+        return pred
+
 
 class TrackPickDropdown(discord.ui.Select):
-
-    __slots__ = ("options",)
-
     def __init__(self, tracks: List):
         options = [
             discord.SelectOption(
@@ -175,7 +176,7 @@ class TrackPickDropdown(discord.ui.Select):
             custom_id="music-pick-select",
             placeholder="Choose your tracks",
             min_values=1,
-            max_values=10,
+            max_values=len(options),
             options=options,
         )
 
@@ -260,6 +261,7 @@ class FFAudioProcess(discord.FFmpegOpusAudio):
         self._process = self._stdout = self._stdin = MISSING
 
     def final_cleanup(self) -> None:
+        self.cleanup()
         self.lock = self.stream = MISSING
 
 
@@ -274,7 +276,7 @@ class YTDLSource(discord.AudioSource):
 
         self.requester: discord.Member = requester
         self.title = data.get("title")
-        self.author = data.get("uploader")
+        self.author = data.get("uploader") or data.get("channel")
         self.lenght = data.get("duration", 0)
         self.direct = data.get("direct", False)
         self.thumbnail = data.get("thumbnail", None)
@@ -286,18 +288,21 @@ class YTDLSource(discord.AudioSource):
             self.uri = data.get("webpage_url")
 
     @staticmethod
-    async def _get_raw_data(search, loop=None) -> Dict:
+    async def _get_raw_data(search, loop=None, ytdl_cls=ytdl) -> Dict:
         loop = loop or asyncio.get_event_loop()
 
-        to_run = partial(ytdl.extract_info, url=search, download=False)
+        to_run = partial(ytdl_cls.extract_info, url=search, download=False)
         data: Dict = await loop.run_in_executor(None, to_run)  # type: ignore
 
         return data
 
     @staticmethod
-    def custom_ytdl_search(default_search):
+    def custom_ytdl(provider="ytsearch", amount=5):
+        if provider == "ytsearch" and amount == 5:
+            return ytdl
+
         config = ytdlopts.copy()
-        config["default_search"] = default_search
+        config["default_search"] = f"{provider}{amount}"
         return YoutubeDL(config)
 
     def is_stream(self):
@@ -314,17 +319,21 @@ class YTDLSource(discord.AudioSource):
 
     @classmethod
     async def get_tracks(cls, ctx: commands.Context, search, amount=5, loop=None) -> AsyncIterable:
-        data = await cls._get_raw_data(search, loop)
+        data = await cls._get_raw_data(search, loop, ytdl_cls=cls.custom_ytdl(amount=amount))
+        if not data:
+            return
 
         if entries := data.get("entries", None):
-            for track in entries[:amount]:
-                track.update(
-                    {"extractor": data.get("extractor"), "direct": data.get("direct")},
-                )
-                yield cls(track, ctx.author)
+            for track in entries:
+                track.update({"extractor": data.get("extractor"), "direct": data.get("direct")})
+                yield cls.info_wrapper(track, ctx.author)
         else:
             data.update({"extractor": data.get("extractor"), "direct": data.get("direct")})
-            yield cls(data, ctx.author)
+            yield cls.info_wrapper(data, ctx.author)
+
+    @classmethod
+    def info_wrapper(cls, *args, **kwargs):
+        return cls(*args, **kwargs)
 
     @classmethod
     async def generate_stream(cls, data, loop=None):
@@ -339,13 +348,12 @@ class YTDLSource(discord.AudioSource):
     def read(self) -> bytes:
         return self.source.read()
 
-    def is_opus(self):
+    def is_opus(self) -> bool:
         return self.source.is_opus()
 
     def cleanup(self) -> None:
         if source := getattr(self, "source", None):
-            source.cleanup()
-        del self
+            source.final_cleanup()
 
 
 class MainPlayer:
@@ -385,7 +393,7 @@ class MainPlayer:
             raise AttributeError(f"Try to access guild attribute, get {self._guild.__class__.__name__} instead")
 
         setattr(self._guild.voice_client, "is_queue_empty", self.queue.empty)
-        self.task = ctx.bot.loop.create_task(self.create())
+        self.task: asyncio.Task = ctx.bot.loop.create_task(self.create())
 
     @staticmethod
     def _build_embed(track: YTDLSource, header: str):
@@ -456,7 +464,6 @@ class MainPlayer:
 
             if not self.repeat:
                 self.track.cleanup()
-                self.track.source.final_cleanup()
                 self.track = None
 
     def destroy(self, guild):
@@ -467,13 +474,24 @@ class MainPlayer:
 class MusicV2Cog(commands.Cog):
     def __init__(self, bot: Nameless):
         self.bot = bot
-        self.players = {}
+        self.players: Dict[int, MainPlayer] = {}
+
+    def get_player(self, ctx: commands.Context):
+        """Retrieve the guild player, or generate one."""
+        try:
+            player = self.players[ctx.guild.id]
+        except KeyError:
+            player = MainPlayer(ctx, self)
+            self.players[ctx.guild.id] = player
+
+        return player
 
     async def cleanup(self, guild):
         await guild.voice_client.disconnect()
 
         try:
             player = self.players[guild.id]
+            player.track.cleanup()
             player.task.cancel()
         except asyncio.CancelledError:
             pass
@@ -584,7 +602,7 @@ class MusicV2Cog(commands.Cog):
             return await self.cleanup(player._guild)
 
         vc = player._guild.voice_client.channel
-        if len(vc.members) == 1:  # There is only one person
+        if len(vc.members) == 1:  # type: ignore # There is only one person
             if vc.members[0].id == self.bot.user.id:  # type: ignore  #  And that person is us
                 logging.debug(
                     "Guild player %s still connected even if it is removed from voice, disconnecting",
@@ -634,16 +652,6 @@ class MusicV2Cog(commands.Cog):
     #         if chn:
     #             await chn.send("The queue is empty now")
 
-    def get_player(self, ctx: commands.Context):
-        """Retrieve the guild player, or generate one."""
-        try:
-            player = self.players[ctx.guild.id]
-        except KeyError:
-            player = MainPlayer(ctx, self)
-            self.players[ctx.guild.id] = player
-
-        return player
-
     async def __internal_play(self, ctx: commands.Context, url: str, is_radio: bool = False):
         if is_radio:
             dbg, _ = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
@@ -659,7 +667,7 @@ class MusicV2Cog(commands.Cog):
         if track:
             if is_radio and not track.is_stream():
                 raise commands.CommandError("Radio track must be a stream")
-            player.queue.put(track)
+            await player.queue.put(track)
         else:
             raise commands.CommandError(f"No tracks found for {url}")
 
@@ -794,10 +802,8 @@ class MusicV2Cog(commands.Cog):
         player: MainPlayer = self.get_player(ctx)
         track: YTDLSource = player.track
 
-        if await VoteMenu("skip", track.title, ctx, vc).start():
+        if await VoteMenu("skip", track.title, ctx).start():
             vc.stop()
-        else:
-            await ctx.send("Not skipping because not enough votes!")
 
     @music.command()
     @commands.guild_only()
@@ -821,30 +827,6 @@ class MusicV2Cog(commands.Cog):
                 await ctx.send("✅")
         except Exception as err:
             await ctx.send(f"{err.__class__.__name__}: {str(err)}")
-
-    # @music.command()
-    # @commands.guild_only()
-    # @app_commands.describe(segment="Segment to seek (from 0 to 10, respecting to 0%, 10%, ..., 100%)")
-    # @commands.has_guild_permissions(manage_guild=True)
-    # @app_commands.checks.has_permissions(manage_guild=True)
-    # @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    # @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
-    # async def seek_segment(self, ctx: commands.Context, segment: Range[int, 0, 10] = 0):
-    #     """Seek to a segment in a track"""
-    #     await ctx.defer()
-
-    #     vc: VoiceClient = ctx.voice_client
-    #     track: wavelink.Track = vc.track
-
-    #     if not 0 <= segment <= 10:
-    #         await ctx.send("Invalid segment")
-    #         return
-
-    #     if await VoteMenu("seek_segment", track.title, ctx, vc).start():
-    #         pos = int(float(track.length * (segment * 10) / 100) * 1000)
-    #         await vc.seek(pos)
-    #         delta_pos = datetime.timedelta(milliseconds=pos)
-    #         await ctx.send(f"Seek to segment #{segment}: {delta_pos}")
 
     # I don't know if I'm going to remove this function or reimplement it.
     # @music.command()
@@ -969,52 +951,39 @@ class MusicV2Cog(commands.Cog):
 
     @queue.command()
     @commands.guild_only()
-    @app_commands.describe(search="Search query", source="Source to search", amount="How much result to show")
+    @app_commands.describe(search="Search query", source="Source to search", amount="How much results to show")
     # @app_commands.choices(source=[Choice(name=k, value=k) for k in music_default_sources])
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    async def add(self, ctx: commands.Context, search: str, source: str = "youtube", amount: int = 1):
+    async def add(self, ctx: commands.Context, search: str, source: str = "youtube", amount: int = 5):
         """Add selected track(s) to queue"""
         await ctx.defer()
         m = await ctx.send("Searching...")
 
         player: MainPlayer = self.get_player(ctx)
 
-        # track = await YTDLSource.get_track(ctx, search)
-        # if track.is_stream():
-        #     await ctx.send("This is a stream, cannot add to queue")
-        #     return
-
         # if "search" in track.extractor:
         #     await player.queue.put(track)
         #     await ctx.send(content=f"Added `{track.title}` into the queue")
         #     return
 
-        tracks: List[YTDLSource] = []
-        async for track in YTDLSource.get_tracks(ctx, search, amount=amount):
-            tracks.append(track)
-
+        tracks: List[YTDLSource] = [tr async for tr in YTDLSource.get_tracks(ctx, search, amount=amount)]
         if not tracks:
             await ctx.send(f"No tracks found for '{search}' on '{source}'.")
             return
 
         soon_to_add_queue: List[YTDLSource] = []
         if len(tracks) > 1:
-            view = discord.ui.View().add_item(TrackPickDropdown([track for track in tracks if not track.is_stream()]))
+            dropdown: Union[discord.ui.Item[discord.ui.View], TrackPickDropdown] = TrackPickDropdown(tracks)
+            view = discord.ui.View().add_item(dropdown)
             await m.edit(content="Tracks found", view=view)
 
             if await view.wait():
                 await m.edit(content="Timed out!", view=None, delete_after=30)
                 return
 
-            drop: Union[discord.ui.Item[discord.ui.View], TrackPickDropdown] = view.children[0]
-            vals = drop.values  # type: ignore
-
-            if not vals:
+            vals = dropdown.values
+            if not vals or "None" in vals:
                 await m.delete()
-                return
-
-            if "Nope" in vals:
-                await m.edit(content="All choices cleared", view=None)
                 return
 
             for val in vals:
@@ -1163,10 +1132,9 @@ class MusicV2Cog(commands.Cog):
         """Clear the queue"""
         await ctx.defer()
 
-        vc: VoiceClient = ctx.voice_client  # type: ignore
         player: MainPlayer = self.get_player(ctx)
 
-        if await VoteMenu("clear", "queue", ctx, vc).start():
+        if await VoteMenu("clear", "queue", ctx).start():
             player.clear_queue()
             await ctx.send("Cleared the queue")
 

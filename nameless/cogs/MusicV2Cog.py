@@ -7,13 +7,12 @@ import random
 import threading
 from collections import deque
 from functools import partial
-from typing import IO, Any, AsyncIterable, Dict, List, Optional, Union
+from typing import IO, Any, AsyncGenerator, Dict, List, Optional, Union
 
 import discord
 import DiscordUtils
 from discord import ClientException, VoiceClient, app_commands
-
-# from discord.app_commands import Choice
+from discord.app_commands import Choice
 from discord.ext import commands
 from discord.ext.commands import Range
 from discord.utils import MISSING, escape_markdown
@@ -26,7 +25,13 @@ from NamelessConfig import NamelessConfig
 
 __all__ = ["MusicV2Cog"]
 
-ytdlopts = {
+PROVIDER_MAPPING = {
+    "youtube": "ytsearch",
+    "ytmusic": "https://music.youtube.com/search?q=",
+    "soundcloud": "scsearch",
+}
+FFMPEG_OPTS = {"before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5", "options": "-vn"}
+YTDL_OPTS = {
     "format": "bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/93/best",
     "outtmpl": r"downloads/%(extractor)s-%(id)s-%(title)s.%(ext)s",
     "restrictfilenames": True,
@@ -37,11 +42,10 @@ ytdlopts = {
     "extract_flat": "in_playlist",
     "no_warnings": True,
     "default_search": "ytsearch5",
+    "playlist_items": "1-200",
     "source_address": "0.0.0.0",
 }
-ytdl = YoutubeDL(ytdlopts)
-
-ffmpegopts = {"before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5", "options": "-vn"}
+ytdl = YoutubeDL(YTDL_OPTS)
 
 
 class VoteMenuView(discord.ui.View):
@@ -275,7 +279,7 @@ class YTDLSource(discord.AudioSource):
             self.source: FFAudioProcess = source
 
         self.requester: discord.Member = requester
-        self.title = data.get("title")
+        self.title = data.get("title", "Unknown title")
         self.author = data.get("uploader") or data.get("channel")
         self.lenght = data.get("duration", 0)
         self.direct = data.get("direct", False)
@@ -288,7 +292,7 @@ class YTDLSource(discord.AudioSource):
             self.uri = data.get("webpage_url")
 
     @staticmethod
-    async def _get_raw_data(search, loop=None, ytdl_cls=ytdl) -> Dict:
+    async def __get_raw_data(search, loop=None, ytdl_cls=ytdl) -> Dict:
         loop = loop or asyncio.get_event_loop()
 
         to_run = partial(ytdl_cls.extract_info, url=search, download=False)
@@ -297,29 +301,33 @@ class YTDLSource(discord.AudioSource):
         return data
 
     @staticmethod
-    def custom_ytdl(provider="ytsearch", amount=5):
-        if provider == "ytsearch" and amount == 5:
+    def maybe_new_extractor(provider, amount) -> YoutubeDL:
+        if provider == "youtube" and amount == 5:
             return ytdl
 
-        config = ytdlopts.copy()
-        config["default_search"] = f"{provider}{amount}"
+        config = YTDL_OPTS.copy()
+        match provider:
+            case "ytmusic":
+                config.update(
+                    {
+                        "default_search": PROVIDER_MAPPING[provider],
+                        "playlist_items": f"1-{amount}",
+                    }
+                )
+            case "youtube" | "soundcloud":
+                config.update(
+                    {
+                        "default_search": f"{PROVIDER_MAPPING[provider]}{amount}",
+                    }
+                )
         return YoutubeDL(config)
 
     def is_stream(self):
         return self.direct
 
     @classmethod
-    async def get_track(cls, ctx: commands.Context, search, loop=None):
-        data = await cls._get_raw_data(search, loop)
-        if tracks := data.get("entries", None):
-            track: Dict = tracks[0]
-            del data["entries"]
-            data.update(track)
-        return cls(data, ctx.author)
-
-    @classmethod
-    async def get_tracks(cls, ctx: commands.Context, search, amount=5, loop=None) -> AsyncIterable:
-        data = await cls._get_raw_data(search, loop, ytdl_cls=cls.custom_ytdl(amount=amount))
+    async def get_tracks(cls, ctx: commands.Context, search, amount, provider, loop=None) -> AsyncGenerator:
+        data = await cls.__get_raw_data(search, loop, ytdl_cls=cls.maybe_new_extractor(provider, amount))
         if not data:
             return
 
@@ -328,8 +336,11 @@ class YTDLSource(discord.AudioSource):
                 track.update({"extractor": data.get("extractor"), "direct": data.get("direct")})
                 yield cls.info_wrapper(track, ctx.author)
         else:
-            data.update({"extractor": data.get("extractor"), "direct": data.get("direct")})
-            yield cls.info_wrapper(data, ctx.author)
+            yield cls(data, ctx.author)
+
+    @classmethod
+    async def get_track(cls, ctx: commands.Context, search, loop=None):
+        return await anext(cls.get_tracks(ctx, search, 5, search, loop))
 
     @classmethod
     def info_wrapper(cls, *args, **kwargs):
@@ -343,7 +354,7 @@ class YTDLSource(discord.AudioSource):
         to_run = partial(ytdl.extract_info, url=data.uri, download=False)
         ret: dict = await loop.run_in_executor(None, to_run)  # type: ignore
 
-        return cls(source=FFAudioProcess(ret["url"], **ffmpegopts), data=ret, requester=requester)
+        return cls(source=FFAudioProcess(ret["url"], **FFMPEG_OPTS), data=ret, requester=requester)
 
     def read(self) -> bytes:
         return self.source.read()
@@ -951,24 +962,24 @@ class MusicV2Cog(commands.Cog):
 
     @queue.command()
     @commands.guild_only()
-    @app_commands.describe(search="Search query", source="Source to search", amount="How much results to show")
-    # @app_commands.choices(source=[Choice(name=k, value=k) for k in music_default_sources])
+    @app_commands.describe(
+        search="Search query", provider="Pick a provider to search from", amount="How much results to show"
+    )
+    @app_commands.choices(provider=[Choice(name=k, value=k) for k in PROVIDER_MAPPING])
     @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    async def add(self, ctx: commands.Context, search: str, source: str = "youtube", amount: int = 5):
+    async def add(self, ctx: commands.Context, search: str, provider: str = "youtube", amount: int = 5):
         """Add selected track(s) to queue"""
         await ctx.defer()
         m = await ctx.send("Searching...")
 
         player: MainPlayer = self.get_player(ctx)
 
-        # if "search" in track.extractor:
-        #     await player.queue.put(track)
-        #     await ctx.send(content=f"Added `{track.title}` into the queue")
-        #     return
+        if provider == "ytmusic":
+            search = f"{search}#songs"
 
-        tracks: List[YTDLSource] = [tr async for tr in YTDLSource.get_tracks(ctx, search, amount=amount)]
+        tracks: List[YTDLSource] = [tr async for tr in YTDLSource.get_tracks(ctx, search, amount, provider)]
         if not tracks:
-            await ctx.send(f"No tracks found for '{search}' on '{source}'.")
+            await ctx.send(f"No tracks found for '{search}' on '{provider}'.")
             return
 
         soon_to_add_queue: List[YTDLSource] = []
@@ -982,7 +993,7 @@ class MusicV2Cog(commands.Cog):
                 return
 
             vals = dropdown.values
-            if not vals or "None" in vals:
+            if not vals or "Nope" in vals:
                 await m.delete()
                 return
 
@@ -996,7 +1007,7 @@ class MusicV2Cog(commands.Cog):
 
         await m.edit(content=f"Added {len(soon_to_add_queue)} tracks into the queue", view=None)
 
-        embeds = [player._build_embed(track, f"Requested by {track.requester}") for track in tracks]
+        embeds = [player._build_embed(track, f"Requested by {track.requester}") for track in soon_to_add_queue]
         self.bot.loop.create_task(self.show_paginated_tracks(ctx, embeds, timeout=15))
 
     # No playlist for now

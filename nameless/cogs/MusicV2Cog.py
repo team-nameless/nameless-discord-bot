@@ -280,7 +280,7 @@ class YTDLSource(discord.AudioSource):
 
         self.requester: discord.Member = requester
         self.title = data.get("title", "Unknown title")
-        self.author = data.get("uploader") or data.get("channel")
+        self.author = data.get("uploader") or data.get("channel", "Unknown artits")
         self.lenght = data.get("duration", 0)
         self.direct = data.get("direct", False)
         self.thumbnail = data.get("thumbnail", None)
@@ -382,6 +382,7 @@ class MainPlayer:
         "position",
         "repeat",
         "task",
+        "loop_play_count",
     )
 
     def __init__(self, ctx: commands.Context, cog) -> None:
@@ -398,12 +399,12 @@ class MainPlayer:
         self.duration = 0
         self.position = 0
         self.repeat = False
+        self.loop_play_count = 0
 
         if not self._guild and not isinstance(self._guild, discord.Guild):
             logging.error("Wait what? There is no guild here!")
             raise AttributeError(f"Try to access guild attribute, get {self._guild.__class__.__name__} instead")
 
-        setattr(self._guild.voice_client, "is_queue_empty", self.queue.empty)
         self.task: asyncio.Task = ctx.bot.loop.create_task(self.create())
 
     @staticmethod
@@ -421,7 +422,7 @@ class MainPlayer:
             )
             .add_field(
                 name="Author",
-                value=escape_markdown(track.author) if track.author else "N/A",
+                value=escape_markdown(track.author),
             )
             .add_field(
                 name="Source",
@@ -429,12 +430,15 @@ class MainPlayer:
             )
         )
 
+    def is_queue_empty(self):
+        return self.queue.empty()
+
     def clear_queue(self):
         while not self.queue.empty():
             try:
                 self.queue.get_nowait()
             except asyncio.QueueEmpty:
-                continue
+                break
 
     async def create(self):
         await self.client.wait_until_ready()
@@ -445,11 +449,12 @@ class MainPlayer:
                 if not self.repeat or self.track is None:
                     self.track = await self.queue.get()
 
-                    await self._channel.send(embed=self._build_embed(self.track, "Now playing track"))
+                    await self._channel.send(embed=self._build_embed(self.track, "Now playing"))
                     self.track = await YTDLSource.generate_stream(self.track)
                     # self.track.volume = self.volume
                     self.duration -= self.track.lenght
                 else:
+                    self.loop_play_count += 1
                     self.track.source.to_start()
 
                 self._guild.voice_client.play(  # type: ignore
@@ -476,6 +481,7 @@ class MainPlayer:
             if not self.repeat:
                 self.track.cleanup()
                 self.track = None
+                self.loop_play_count = 0
 
     def destroy(self, guild):
         """Disconnect and cleanup the player."""
@@ -882,7 +888,7 @@ class MusicV2Cog(commands.Cog):
             embeds=[
                 discord.Embed(timestamp=datetime.datetime.now(), color=discord.Color.orange())
                 .set_author(
-                    name="Now playing track",
+                    name="Now playing",
                     icon_url=ctx.author.avatar.url,
                 )
                 .add_field(
@@ -892,7 +898,7 @@ class MusicV2Cog(commands.Cog):
                 )
                 .add_field(
                     name="Author",
-                    value=escape_markdown(track.author) if track.author else "N/A",
+                    value=escape_markdown(track.author),
                 )
                 .add_field(
                     name="Source",
@@ -911,15 +917,15 @@ class MusicV2Cog(commands.Cog):
                     value="This is a stream"
                     if is_stream
                     else f"Looped {getattr(vc, 'loop_play_count')} time(s)"
-                    if getattr(vc, "loop_sent") is True
+                    if player.repeat is True
                     else False,
                 )
                 .add_field(name="Paused", value=vc.is_paused())
                 .add_field(
                     name="Next track",
-                    value=f"[{escape_markdown(next_tr.title) if next_tr.title else 'Unknown title'} "
+                    value=f"[{escape_markdown(next_tr.title)} "
                     f"by {escape_markdown(next_tr.author)}]"
-                    f"({next_tr.uri})"
+                    f"({next_tr.uri[:100]})"
                     if next_tr
                     else None,
                 )

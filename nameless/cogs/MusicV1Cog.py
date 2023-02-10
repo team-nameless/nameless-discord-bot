@@ -623,7 +623,7 @@ class MusicV1Cog(commands.Cog):
                 discord.Embed(timestamp=datetime.datetime.now(), color=discord.Color.orange())
                 .set_author(
                     name="Now playing track",
-                    icon_url=ctx.author.avatar.url,  # pyright: ignore
+                    icon_url=ctx.author.display_avatar.url,
                 )
                 .add_field(
                     name="Title",

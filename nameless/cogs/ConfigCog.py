@@ -41,7 +41,7 @@ class ConfigCog(commands.Cog):
                 timestamp=datetime.datetime.now(),
             )
             .set_thumbnail(url=ctx.guild.icon.url)
-            .set_author(icon_url=ctx.bot.user.avatar.url, name="Configured properties")
+            .set_author(icon_url=ctx.bot.user.display_avatar.url, name="Configured properties")
         )
 
         embed.add_field(

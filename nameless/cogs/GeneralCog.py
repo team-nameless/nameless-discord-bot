@@ -46,7 +46,7 @@ class GeneralCog(commands.Cog):
                 title=f"Something about {member}",
                 color=discord.Color.orange(),
             )
-            .set_thumbnail(url=member.avatar.url)  # pyright: ignore
+            .set_thumbnail(url=member.display_avatar.url)
             .add_field(
                 name="Account creation date",
                 value=f"<t:{int(account_create_date.timestamp())}:R>",
@@ -165,7 +165,7 @@ class GeneralCog(commands.Cog):
                     "made by [Swyrin#7193](https://github.com/Swyreee) and [FoxeiZ](https://github.com/FoxeiZ)",
                 ),
             )
-            .set_thumbnail(url=ctx.bot.user.avatar.url)
+            .set_thumbnail(url=ctx.bot.user.display_avatar.url)
             .add_field(name="Servers count", value=f"{servers_count}")
             .add_field(name="Members count", value=f"{total_members_count}")
             .add_field(name="Last launch/Uptime", value=f"<t:{uptime}:R>")

@@ -7,9 +7,11 @@ import re
 import subprocess
 import sys
 import textwrap
+import time
 
 import discord
 import discord.ui
+from discord.utils import escape_markdown
 from discord import app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
@@ -103,7 +105,7 @@ class OwnerCog(commands.Cog):
     @commands.hybrid_command(name="eval")
     @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
     async def _eval(self, ctx: commands.Context, *, code: str):
-        """Evaluate some pieces of python code"""
+        """Evaluate some pieces of Python code"""
         await ctx.defer()
 
         groups = re.search(r"```(?:python|py)?\n([\w\W\r\n]*)\n?```", code)
@@ -117,6 +119,11 @@ class OwnerCog(commands.Cog):
         if not code:
             await ctx.send("No code to run")
             return
+        
+        pending_message = await ctx.send("Running...")
+
+        start_time = time.time()
+        stdout_result, stderr_result = None, None
 
         try:
             with contextlib.redirect_stdout(out := io.StringIO()):
@@ -141,12 +148,13 @@ class OwnerCog(commands.Cog):
                     stdout_result = f"{out.getvalue()}"
                     stderr_result = f"{err.getvalue()}"
         except RuntimeError as e:
-            stdout_result = ""
             stderr_result = e
+            
+        end_time = time.time()
 
-        stdout_result = str(stdout_result)[:1000] if stdout_result else "Nothing in stdout"
-        stderr_result = str(stderr_result)[:1000] if stderr_result else "Nothing in stderr"
-        returns = str(returns)[:1000] if returns else "No returned value"
+        stdout_result = escape_markdown(str(stdout_result))[:1000] if stdout_result else "Nothing in stdout"
+        stderr_result = escape_markdown(str(stderr_result))[:1000] if stderr_result else "Nothing in stderr"
+        returns = escape_markdown(str(returns))[:1000] if returns else "No returned value"
 
         embed = (
             discord.Embed(
@@ -155,12 +163,13 @@ class OwnerCog(commands.Cog):
                 timestamp=datetime.datetime.now(),
                 color=discord.Color.orange(),
             )
-            .add_field(name="stdout", value=stdout_result, inline=False)
-            .add_field(name="stderr", value=stderr_result, inline=False)
-            .add_field(name="Return value", value=returns, inline=False)
+            .add_field(name="stdout", value=f"```\n{stdout_result}\n```", inline=False)
+            .add_field(name="stderr", value=f"```\n{stderr_result}\n```", inline=False)
+            .add_field(name="Return value", value=f"```\n{returns}\n```", inline=False)
+            .add_field(name="Elapsed time", value=f"{round(end_time - start_time, 3)} second(s)", inline=False)
         )
 
-        await ctx.send(embed=embed)
+        await pending_message.edit(content=None, embed=embed)
 
 
 async def setup(bot: Nameless):

@@ -194,7 +194,7 @@ class Nameless(commands.AutoShardedBot):
 
     async def on_command_error(self, ctx: commands.Context, err: errors.CommandError, /) -> None:
         if not isinstance(err, errors.CommandNotFound):
-            await ctx.send(f"Something went wrong when executing the command:\n```\n{err}\n``")
+            await ctx.send(f"Something went wrong when executing the command:\n```\n{err}\n```")
 
         logging.exception(
             "[on_command_error] We have gone under a crisis!!!",

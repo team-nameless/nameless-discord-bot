@@ -11,10 +11,10 @@ import time
 
 import discord
 import discord.ui
-from discord.utils import escape_markdown
 from discord import app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
+from discord.utils import escape_markdown
 
 from nameless import Nameless, shared_vars
 from NamelessConfig import NamelessConfig
@@ -119,7 +119,7 @@ class OwnerCog(commands.Cog):
         if not code:
             await ctx.send("No code to run")
             return
-        
+
         pending_message = await ctx.send("Running...")
 
         start_time = time.time()
@@ -149,7 +149,7 @@ class OwnerCog(commands.Cog):
                     stderr_result = f"{err.getvalue()}"
         except RuntimeError as e:
             stderr_result = e
-            
+
         end_time = time.time()
 
         stdout_result = escape_markdown(str(stdout_result))[:1000] if stdout_result else "Nothing in stdout"

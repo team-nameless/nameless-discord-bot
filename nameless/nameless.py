@@ -179,7 +179,7 @@ class Nameless(commands.AutoShardedBot):
         self,
         content: str,
         member: discord.Member,
-        send_target: Optional[discord.abc.GuildChannel | discord.Member | discord.Thread],
+        send_target: discord.abc.GuildChannel | discord.Member | discord.Thread | None,
     ):
         if send_target is not None and (
             isinstance(send_target, discord.TextChannel)

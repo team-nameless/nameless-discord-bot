@@ -191,7 +191,6 @@ class TrackPickDropdown(discord.ui.Select):
 
 
 class FFAudioProcess(discord.FFmpegOpusAudio):
-
     FRAME_SIZE = 3840  # each frame is about 20ms 16bit 48KHz 2ch PCM
     ONE_SEC_FRAME_SIZE = FRAME_SIZE * 50
 
@@ -270,11 +269,9 @@ class FFAudioProcess(discord.FFmpegOpusAudio):
 
 
 class YTDLSource(discord.AudioSource):
-
     # __slots__ = ("requester", "title", "author", "lenght", "extractor", "direct", "uri", "thumbnail")
 
     def __init__(self, data, requester, source=None):
-
         if source:
             self.source: FFAudioProcess = source
 
@@ -368,7 +365,6 @@ class YTDLSource(discord.AudioSource):
 
 
 class MainPlayer:
-
     __slots__ = (
         "client",
         "_guild",
@@ -671,7 +667,7 @@ class MusicV2Cog(commands.Cog):
 
     async def __internal_play(self, ctx: commands.Context, url: str, is_radio: bool = False):
         if is_radio:
-            dbg, _ = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
+            dbg = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
             dbg.radio_start_time = discord.utils.utcnow()
             shared_vars.crud_database.save_changes()
 
@@ -874,7 +870,7 @@ class MusicV2Cog(commands.Cog):
         track: YTDLSource = player.track
 
         is_stream = track.is_stream()
-        dbg, _ = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
+        dbg = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
         if not dbg:
             logging.error("Oh no. The database is gone! What do we do now?!!")
             raise AttributeError

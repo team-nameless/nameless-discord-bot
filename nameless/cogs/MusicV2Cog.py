@@ -269,7 +269,7 @@ class FFAudioProcess(discord.FFmpegOpusAudio):
 
 
 class YTDLSource(discord.AudioSource):
-    # __slots__ = ("requester", "title", "author", "lenght", "extractor", "direct", "uri", "thumbnail")
+    # __slots__ = ("requester", "title", "author", "length", "extractor", "direct", "uri", "thumbnail")
 
     def __init__(self, data, requester, source=None):
         if source:
@@ -278,7 +278,7 @@ class YTDLSource(discord.AudioSource):
         self.requester: discord.Member = requester
         self.title = data.get("title", "Unknown title")
         self.author = data.get("uploader") or data.get("channel", "Unknown artits")
-        self.lenght = data.get("duration", 0)
+        self.length = data.get("duration", 0)
         self.direct = data.get("direct", False)
         self.thumbnail = data.get("thumbnail", None)
         self.extractor = data.get("extractor", "None")
@@ -451,7 +451,7 @@ class MainPlayer:
                         await self._channel.send(embed=self._build_embed(self.track, "Now playing"))
                     self.track = await YTDLSource.generate_stream(self.track)
                     # self.track.volume = self.volume
-                    self.duration -= self.track.lenght
+                    self.duration -= self.track.length
                 else:
                     self.loop_play_count += 1
                     self.track.source.to_start()
@@ -864,7 +864,7 @@ class MusicV2Cog(commands.Cog):
                     value=str(
                         datetime.datetime.now() - dbg.radio_start_time
                         if is_stream
-                        else f"{datetime.timedelta(seconds=player.position)}/{datetime.timedelta(seconds=track.lenght)}"
+                        else f"{datetime.timedelta(seconds=player.position)}/{datetime.timedelta(seconds=track.length)}"
                     ),
                 )
                 .add_field(

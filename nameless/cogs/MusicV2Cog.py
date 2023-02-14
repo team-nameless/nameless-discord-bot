@@ -971,54 +971,6 @@ class MusicV2Cog(commands.Cog):
         embeds = [player._build_embed(track, f"Requested by {track.requester}") for track in soon_to_add_queue]
         self.bot.loop.create_task(self.show_paginated_tracks(ctx, embeds, timeout=15))
 
-    # No playlist for now
-    # TODO: Add playlist
-
-    # @queue.command()
-    # @commands.guild_only()
-    # @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    # @app_commands.describe(url="Playlist URL", source="Source to get playlist")
-    # @app_commands.choices(source=[Choice(name=k, value=k) for k in music_default_sources])
-    # async def add_playlist(self, ctx: commands.Context, url: str, source: str = "youtube"):
-    #     """Add track(s) from playlist to queue"""
-    #     await ctx.defer()
-
-    #     tracks: Optional[
-    #         Union[
-    #             List[wavelink.YouTubeTrack],
-    #             List[wavelink.YouTubeMusicTrack],
-    #             List[spotify.SpotifyTrack],
-    #             List[wavelink.SoundCloudTrack],
-    #             List[Type[wavelink.tracks.Playable]],
-    #             List[Type[wavelink.SearchableTrack]],
-    #         ]
-    #     ] = []
-
-    #     if source == "youtube":
-    #         try:
-    #             pl = (await wavelink.YouTubePlaylist.search(url)).tracks
-    #         except wavelink.LoadTrackError:
-    #             pl = await wavelink.YouTubeTrack.search(url)
-    #         tracks = pl
-    #     elif source == "ytmusic":
-    #         tracks = await wavelink.YouTubeMusicTrack.search(url)
-    #     elif source == "spotify":
-    #         tracks = await spotify.SpotifyTrack.search(url, type=spotify.SpotifySearchType.playlist)
-    #     elif source == "soundcloud":
-    #         tracks = await wavelink.SoundCloudTrack.search(query=url)
-
-    #     if not tracks:
-    #         await ctx.send(f"No tracks found for {url} on {source}, have you checked your URL?")
-    #         return
-
-    #     player: wavelink.Player = ctx.voice_client
-    #     accepted_tracks = [track for track in tracks if not track.is_stream()]
-    #     player.queue.extend(accepted_tracks)
-    #     await ctx.send(f"Added {len(tracks)} track(s) from {url} to the queue")
-
-    #     embeds = self.generate_embeds_from_tracks(accepted_tracks)
-    #     self.bot.loop.create_task(self.show_paginated_tracks(ctx, embeds))
-
     @queue.command()
     @commands.guild_only()
     @app_commands.describe(before="Old position", after="New position")

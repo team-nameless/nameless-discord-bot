@@ -379,6 +379,7 @@ class MainPlayer:
         "repeat",
         "task",
         "loop_play_count",
+        "allow_np_msg",
     )
 
     def __init__(self, ctx: commands.Context, cog) -> None:
@@ -396,6 +397,7 @@ class MainPlayer:
         self.position = 0
         self.repeat = False
         self.loop_play_count = 0
+        self.allow_np_msg = True
 
         if not self._guild and not isinstance(self._guild, discord.Guild):
             logging.error("Wait what? There is no guild here!")
@@ -445,7 +447,8 @@ class MainPlayer:
                 if not self.repeat or self.track is None:
                     self.track = await self.queue.get()
 
-                    await self._channel.send(embed=self._build_embed(self.track, "Now playing"))
+                    if self.allow_np_msg:
+                        await self._channel.send(embed=self._build_embed(self.track, "Now playing"))
                     self.track = await YTDLSource.generate_stream(self.track)
                     # self.track.volume = self.volume
                     self.duration -= self.track.lenght
@@ -623,48 +626,6 @@ class MusicV2Cog(commands.Cog):
                 )
                 await self.cleanup(player._guild)
 
-    # @commands.Cog.listener()
-    # async def on_wavelink_track_start(self, player: wavelink.Player, track: wavelink.Track):
-    #     chn = player.guild.get_channel(getattr(player, "trigger_channel_id"))
-
-    #     if getattr(player, "play_now_allowed") and (
-    #         (chn is not None and not getattr(player, "loop_sent")) or (getattr(player, "should_send_play_now"))
-    #     ):
-    #         setattr(player, "should_send_play_now", False)
-
-    #         if track.is_stream():
-    #             await chn.send(f"Streaming music from {track.uri}")
-    #         else:
-    #             await chn.send(f"Playing: **{track.title}** from **{track.author}** ({track.uri})")
-
-    # @commands.Cog.listener()
-    # async def on_wavelink_track_end(self, player: wavelink.Player, track: wavelink.Track, reason: str):
-    #     if getattr(player, "stop_sent"):
-    #         setattr(player, "stop_sent", False)
-    #         return
-
-    #     chn = player.guild.get_channel(getattr(player, "trigger_channel_id"))
-
-    #     is_loop = getattr(player, "loop_sent")
-    #     is_skip = getattr(player, "skip_sent")
-
-    #     try:
-    #         if is_loop and not is_skip:
-    #             setattr(player, "loop_play_count", getattr(player, "loop_play_count") + 1)
-    #         elif is_loop and is_skip:
-    #             setattr(player, "loop_play_count", 0)
-    #             setattr(player, "skip_sent", False)
-    #             track = await player.queue.get_wait()
-    #         elif is_skip and not is_loop:
-    #             track = await player.queue.get_wait()
-    #         elif not is_skip and not is_loop:
-    #             track = await player.queue.get_wait()
-
-    #         await self.__internal_play2(player, track.uri)
-    #     except wavelink.QueueEmpty:
-    #         if chn:
-    #             await chn.send("The queue is empty now")
-
     async def __internal_play(self, ctx: commands.Context, url: str, is_radio: bool = False):
         if is_radio:
             dbg = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
@@ -841,21 +802,19 @@ class MusicV2Cog(commands.Cog):
         except Exception as err:
             await ctx.send(f"{err.__class__.__name__}: {str(err)}")
 
-    # I don't know if I'm going to remove this function or reimplement it.
-    # @music.command()
-    # @commands.guild_only()
-    # @commands.has_guild_permissions(manage_guild=True)
-    # @app_commands.checks.has_permissions(manage_guild=True)
-    # @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    # @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
-    # async def toggle_play_now(self, ctx: commands.Context):
-    #     """Toggle 'Now playing' message delivery"""
-    #     await ctx.defer()
+    @music.command()
+    @commands.guild_only()
+    @commands.has_guild_permissions(manage_guild=True)
+    @app_commands.checks.has_permissions(manage_guild=True)
+    @commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
+    async def toggle_play_now(self, ctx: commands.Context):
+        """Toggle 'Now playing' message delivery"""
+        await ctx.defer()
+        player: MainPlayer = self.get_player(ctx)
 
-    #     vc: VoiceClient = ctx.voice_client
-    #     setattr(vc, "play_now_allowed", not getattr(vc, "play_now_allowed"))
-
-    #     await ctx.send(f"'Now playing' delivery is now {'on' if getattr(vc, 'play_now_allowed') else 'off'}")
+        player.allow_np_msg = not player.allow_np_msg
+        await ctx.send(f"'Now playing' delivery is now {'on' if player.allow_np_msg else 'off'}")
 
     @music.command()
     @commands.guild_only()

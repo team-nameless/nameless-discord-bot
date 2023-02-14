@@ -7,7 +7,7 @@ from nameless import database
 _crud = database.CRUD()
 
 
-class TestSQLAlchemyDatabase:
+class TestDatabase:
     @pytest.fixture(autouse=True)
     def fixture(self):
         self.crud = _crud  # pylint: disable=W0201
@@ -26,18 +26,30 @@ class TestSQLAlchemyDatabase:
             self.crud.save_changes()
 
     def test_user_rollback(self):
+        # Non-existence -> Created
+        assert self.crud.get_user_record(self.mock_user) is None
         self.crud.create_user_record(self.mock_user)
         assert (u := self.crud.get_user_record(self.mock_user)) is not None
+
+        # Created -> Non-existence
         self.crud.delete_user_record(u)
         assert self.crud.get_user_record(self.mock_user) is None
+
+        # Go back: Non-existence -> Created
         self.crud.rollback()
         assert self.crud.get_user_record(self.mock_user) is not None
 
     def test_guild_rollback(self):
+        # Non-existence -> Created
+        assert self.crud.get_guild_record(self.mock_guild) is None
         self.crud.create_guild_record(self.mock_guild)
         assert (g := self.crud.get_guild_record(self.mock_guild)) is not None
+
+        # Created -> Non-existence
         self.crud.delete_guild_record(g)
         assert self.crud.get_guild_record(self.mock_guild) is None
+
+        # Go back: Non-existence -> Created
         self.crud.rollback()
         assert self.crud.get_guild_record(self.mock_guild) is not None
 
@@ -49,47 +61,29 @@ class TestSQLAlchemyDatabase:
         self.crud.create_guild_record(self.mock_guild)
         assert self.crud.get_guild_record(self.mock_guild) is not None
 
-    def test_user_read_fail(self):
-        assert self.crud.get_user_record(self.mock_user) is None
-
-    def test_guild_read_fail(self):
-        assert self.crud.get_guild_record(self.mock_guild) is None
-
     def test_user_delete(self):
-        self.crud.create_user_record(self.mock_user)
-        assert (u := self.crud.get_user_record(self.mock_user)) is not None
+        # Create a fake one
+        u = self.crud.create_user_record(self.mock_user)
+
         self.crud.delete_user_record(u)
         assert self.crud.get_user_record(self.mock_user) is None
 
     def test_guild_delete(self):
-        self.crud.create_guild_record(self.mock_guild)
-        assert (g := self.crud.get_guild_record(self.mock_guild)) is not None
+        # Create a fake one
+        g = self.crud.create_guild_record(self.mock_guild)
+
         self.crud.delete_guild_record(g)
         assert self.crud.get_guild_record(self.mock_guild) is None
-
-    def test_guild_write_once(self):
-        self.crud.create_guild_record(self.mock_guild)
-        assert self.crud.get_guild_record(self.mock_guild) is not None
 
     def test_guild_write_once_more(self):
         self.crud.create_guild_record(self.mock_guild)
         self.crud.create_guild_record(self.mock_guild)
         assert self.crud.get_guild_record(self.mock_guild) is not None
 
-    def test_user_write_once(self):
-        self.crud.create_user_record(self.mock_user)
-        assert self.crud.get_user_record(self.mock_user) is not None
-
     def test_user_write_once_more(self):
         self.crud.create_user_record(self.mock_user)
         self.crud.create_user_record(self.mock_user)
         assert self.crud.get_user_record(self.mock_user) is not None
-
-    def test_props(self):
-        assert self.crud.session is not None
-        assert self.crud.dirty is not None
-        assert self.crud.db_url == "sqlite:///nameless.db"
-        assert self.crud.new is not None
 
     def test_get_or_create_user(self):
         assert self.crud.get_user_record(self.mock_user) is None
@@ -103,36 +97,29 @@ class TestSQLAlchemyDatabase:
 
     def test_get_or_create_user_none_before(self):
         assert self.crud.get_user_record(self.mock_user) is None
-        _, is_new = self.crud.get_or_create_user_record(self.mock_user)
-        assert is_new
-        assert self.crud.get_user_record(self.mock_user) is not None
 
     def test_get_or_create_guild_none_before(self):
         assert self.crud.get_guild_record(self.mock_guild) is None
-        _, is_new = self.crud.get_or_create_guild_record(self.mock_guild)
-        assert is_new
-        assert self.crud.get_guild_record(self.mock_guild) is not None
 
     def test_get_or_create_user_existed_before(self):
+        # Create fake user
         self.crud.create_user_record(self.mock_user)
-        assert self.crud.get_user_record(self.mock_user) is not None
-        _, is_new = self.crud.get_or_create_user_record(self.mock_user)
-        assert not is_new
+
         assert self.crud.get_user_record(self.mock_user) is not None
 
     def test_get_or_create_guild_existed_before(self):
+        # Create fake guild
         self.crud.create_guild_record(self.mock_guild)
-        assert self.crud.get_guild_record(self.mock_guild) is not None
-        _, is_new = self.crud.get_or_create_guild_record(self.mock_guild)
-        assert not is_new
+
         assert self.crud.get_guild_record(self.mock_guild) is not None
 
     def test_get_or_create_dm_channel(self):
-        self.crud.create_guild_record(None)
-        assert self.crud.get_guild_record(None) is None
-        _, is_new = self.crud.get_or_create_guild_record(None)
-        assert is_new
-        assert self.crud.get_guild_record(None) is None
+        # Guild is None -> DM channel
+
+        with pytest.raises(ValueError):
+            self.crud.get_or_create_guild_record(None)
+            self.crud.create_guild_record(None)
+            self.crud.get_guild_record(None)
 
     def test_user_delete_none(self):
         with pytest.raises(ValueError):

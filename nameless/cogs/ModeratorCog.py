@@ -76,28 +76,28 @@ class ModeratorCog(commands.Cog):
     ):
         await ctx.defer()
 
-        u, _ = crud_database.get_or_create_user_record(member)
-        g, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        db_user = crud_database.get_or_create_user_record(member)
+        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
 
-        max_warn_count = g.max_warn_count
+        max_warn_count = db_guild.max_warn_count
 
-        if (u.warn_count == 0 and val < 0) or (u.warn_count == max_warn_count and val > 0):
-            await ctx.send(f"The user already have {u.warn_count} warn(s).")
+        if (db_user.warn_count == 0 and val < 0) or (db_user.warn_count == max_warn_count and val > 0):
+            await ctx.send(f"The user already have {db_user.warn_count} warn(s).")
             return
 
-        u.warn_count += val
+        db_user.warn_count += val
         crud_database.save_changes()
 
-        if u.warn_count == 0:
+        if db_user.warn_count == 0:
             await zero_fn(ctx, member, reason)
-        elif u.warn_count == max_warn_count:
+        elif db_user.warn_count == max_warn_count:
             await max_fn(ctx, member, reason)
         else:
-            await diff_fn(ctx, member, reason, u.warn_count, u.warn_count - val)
+            await diff_fn(ctx, member, reason, db_user.warn_count, db_user.warn_count - val)
 
         await ctx.send(
             f"{'Removed' if val < 0 else 'Added'} {abs(val)} warning(s) to {member.mention} with reason: {reason}\n"
-            f"Now they are having {u.warn_count} warning(s)"
+            f"Now they are having {db_user.warn_count} warning(s)"
         )
 
     @staticmethod
@@ -109,11 +109,10 @@ class ModeratorCog(commands.Cog):
     ):
         await ctx.defer()
 
-        g, _ = crud_database.get_or_create_guild_record(ctx.guild)
-        u, _ = crud_database.get_or_create_user_record(member)
-        mute_role = ctx.guild.get_role(g.mute_role_id)
+        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
+        mute_role = ctx.guild.get_role(db_guild.mute_role_id)
 
-        if g.is_timeout_preferred or not mute_role:
+        if db_guild.is_timeout_preferred or mute_role is None:
             is_muted = member.is_timed_out()
             if is_muted:
                 if not mute:
@@ -228,13 +227,13 @@ class ModeratorCog(commands.Cog):
         reason: str = "Good behavior",
     ):
         """Remove warning(s) from a member"""
-        g, _ = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
 
         async def zero_fn(_ctx: commands.Context, m: discord.Member, r: str):
             pass
 
         async def diff_fn(_ctx: commands.Context, m: discord.Member, r: str, current: int, prev: int):
-            if prev == g.max_warn_count:
+            if prev == db_guild.max_warn_count:
                 await self.__generic_mute(_ctx, m, r, False)
 
         async def max_fn(_ctx: commands.Context, m: discord.Member, r: str):
@@ -278,9 +277,9 @@ class ModeratorCog(commands.Cog):
     async def set_max_warn_count(self, ctx: commands.Context, count: commands.Range[int, 1]):
         """Set max warn count for this server"""
         await ctx.defer()
-        g, _ = crud_database.get_or_create_guild_record(ctx.guild)
-        g.max_warn_count = count
-        crud_database.save_changes()
+        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild.max_warn_count = count
+
         await ctx.send(f"Set max warning count to {count}")
 
     @mod.command()
@@ -291,9 +290,9 @@ class ModeratorCog(commands.Cog):
     async def set_mute_role(self, ctx: commands.Context, role: discord.Role):
         """Set mute role"""
         await ctx.defer()
-        g, _ = crud_database.get_or_create_guild_record(ctx.guild)
-        g.mute_role_id = role.id
-        crud_database.save_changes()
+        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild.mute_role_id = role.id
+
         await ctx.send(f"Set mute role to `{role.name}` with ID `{role.id}`")
 
 

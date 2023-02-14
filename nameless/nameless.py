@@ -145,8 +145,7 @@ class Nameless(commands.AutoShardedBot):
         )
 
     async def on_member_join(self, member: discord.Member):
-        db_guild, _ = shared_vars.crud_database.get_or_create_guild_record(member.guild)
-        assert db_guild is not None
+        db_guild = shared_vars.crud_database.get_or_create_guild_record(member.guild)
 
         if db_guild.is_welcome_enabled:
             if db_guild.welcome_message != "":
@@ -158,22 +157,10 @@ class Nameless(commands.AutoShardedBot):
                 if db_guild.is_dm_preferred:
                     send_target = member
 
-                assert send_target is not None and (
-                    isinstance(send_target, discord.TextChannel)
-                    or isinstance(send_target, discord.Thread)
-                    or isinstance(send_target, discord.Member)
-                )
-
-                await send_target.send(
-                    content=db_guild.welcome_message.replace("{guild}", member.guild.name)
-                    .replace("{name}", member.display_name)
-                    .replace("{tag}", member.discriminator)
-                    .replace("{@user}", member.mention)
-                )
+                await self.send_greeter(db_guild.goodbye_message, member, send_target)
 
     async def on_member_remove(self, member: discord.Member):
-        db_guild, _ = shared_vars.crud_database.get_or_create_guild_record(member.guild)
-        assert db_guild is not None
+        db_guild = shared_vars.crud_database.get_or_create_guild_record(member.guild)
 
         if db_guild.is_goodbye_enabled:
             if db_guild.goodbye_message != "":
@@ -186,23 +173,28 @@ class Nameless(commands.AutoShardedBot):
                 # if db_guild.is_dm_preferred:
                 #    send_target = member
 
-                assert send_target is not None and (
-                    isinstance(send_target, discord.TextChannel)
-                    or isinstance(send_target, discord.Thread)
-                    or isinstance(send_target, discord.Member)
-                )
+                await self.send_greeter(db_guild.goodbye_message, member, send_target)
 
-                await send_target.send(
-                    content=db_guild.goodbye_message.replace("{guild}", member.guild.name)
-                    .replace("{name}", member.display_name)
-                    .replace("{tag}", member.discriminator)
-                )
+    async def send_greeter(
+        self,
+        content: str,
+        member: discord.Member,
+        send_target: discord.abc.GuildChannel | discord.Member | discord.Thread | None,
+    ):
+        if send_target is not None and (
+            isinstance(send_target, discord.TextChannel)
+            or isinstance(send_target, discord.Thread)
+            or isinstance(send_target, discord.Member)
+        ):
+            await send_target.send(
+                content=content.replace("{guild}", member.guild.name)
+                .replace("{name}", member.display_name)
+                .replace("{tag}", member.discriminator)
+            )
 
     async def on_command_error(self, ctx: commands.Context, err: errors.CommandError, /) -> None:
-        print(err.args)
-
         if not isinstance(err, errors.CommandNotFound):
-            await ctx.send(f"Something went wrong when executing the command: {err}")
+            await ctx.send(f"Something went wrong when executing the command:\n```\n{err}\n```")
 
         logging.exception(
             "[on_command_error] We have gone under a crisis!!!",

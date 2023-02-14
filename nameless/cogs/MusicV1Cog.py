@@ -368,9 +368,8 @@ class MusicV1Cog(commands.Cog):
         vc: wavelink.Player = ctx.voice_client  # type: ignore
 
         if is_radio:
-            dbg, _ = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
-            dbg.radio_start_time = discord.utils.utcnow()
-            shared_vars.crud_database.save_changes()
+            db_guild = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
+            db_guild.radio_start_time = discord.utils.utcnow()
 
         await self.__internal_play2(vc, url, is_radio)
 
@@ -611,7 +610,7 @@ class MusicV1Cog(commands.Cog):
         track: wavelink.Track = vc.track  # type: ignore
 
         is_stream = track.is_stream()
-        dbg, _ = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
+        dbg = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
         # next_tr: Optional[Union[Type[wavelink.Track], wavelink.tracks.Playable]]
 
         try:
@@ -624,7 +623,7 @@ class MusicV1Cog(commands.Cog):
                 discord.Embed(timestamp=datetime.datetime.now(), color=discord.Color.orange())
                 .set_author(
                     name="Now playing track",
-                    icon_url=ctx.author.avatar.url,
+                    icon_url=ctx.author.display_avatar.url,
                 )
                 .add_field(
                     name="Title",

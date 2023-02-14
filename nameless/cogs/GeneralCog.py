@@ -46,7 +46,7 @@ class GeneralCog(commands.Cog):
                 title=f"Something about {member}",
                 color=discord.Color.orange(),
             )
-            .set_thumbnail(url=member.avatar.url)  # pyright: ignore
+            .set_thumbnail(url=member.display_avatar.url)
             .add_field(
                 name="Account creation date",
                 value=f"<t:{int(account_create_date.timestamp())}:R>",
@@ -80,29 +80,27 @@ class GeneralCog(commands.Cog):
 
         assert guild is not None
 
-        guild_create_date = guild.created_at  # pyright: ignore
-        members = guild.members  # pyright: ignore
+        guild_create_date = guild.created_at
+        members = guild.members
 
         bots_count = len([member for member in members if member.bot])
         humans_count = len([member for member in members if not member.bot])
         total_count = bots_count + humans_count
-        public_threads_count = len([thread for thread in guild.threads if not thread.is_private()])  # pyright: ignore
-        events = guild.scheduled_events  # pyright: ignore
-        boosters_count = len(guild.premium_subscribers)  # pyright: ignore
-        boosts_count = guild.premium_subscription_count  # pyright: ignore
-        boost_lvl = guild.premium_tier  # pyright: ignore
+        public_threads_count = len([thread for thread in guild.threads if not thread.is_private()])
+        events = guild.scheduled_events
+        boosters_count = len(guild.premium_subscribers)
+        boosts_count = guild.premium_subscription_count
+        boost_lvl = guild.premium_tier
         is_boosted = boosts_count > 0
 
         embed = (
             discord.Embed(
-                description=f"Guild ID: {guild.id}"  # pyright: ignore
-                f"- Owner {guild.owner}"  # pyright: ignore
-                f"- Shard #{guild.shard_id}",  # pyright: ignore
+                description=f"Guild ID: {guild.id} - Owner {guild.owner} - Shard #{guild.shard_id}",
                 timestamp=datetime.datetime.now(),
-                title=f"Something about '{guild.name}'",  # pyright: ignore
+                title=f"Something about '{guild.name}'",
                 color=discord.Color.orange(),
             )
-            .set_thumbnail(url=guild.banner.url if guild.banner else "")  # pyright: ignore
+            .set_thumbnail(url=guild.banner.url if guild.banner else "")
             .add_field(
                 name="Guild creation date",
                 value=f"<t:{int(guild_create_date.timestamp())}:R>",
@@ -113,9 +111,9 @@ class GeneralCog(commands.Cog):
             )
             .add_field(
                 name="Channel(s)",
-                value=f"{len(guild.channels)} channel(s) - {public_threads_count} public thread(s)",  # pyright: ignore
+                value=f"{len(guild.channels)} channel(s) - {public_threads_count} public thread(s)",
             )
-            .add_field(name="Role(s) count", value=str(len(guild.roles)))  # pyright: ignore
+            .add_field(name="Role(s) count", value=str(len(guild.roles)))
             .add_field(name="Pending event(s) count", value=f"{len(events)} pending event(s)")
             .add_field(
                 name="Boost(s)",
@@ -167,7 +165,7 @@ class GeneralCog(commands.Cog):
                     "made by [Swyrin#7193](https://github.com/Swyreee) and [FoxeiZ](https://github.com/FoxeiZ)",
                 ),
             )
-            .set_thumbnail(url=ctx.bot.user.avatar.url)
+            .set_thumbnail(url=ctx.bot.user.display_avatar.url)
             .add_field(name="Servers count", value=f"{servers_count}")
             .add_field(name="Members count", value=f"{total_members_count}")
             .add_field(name="Last launch/Uptime", value=f"<t:{uptime}:R>")

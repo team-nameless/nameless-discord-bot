@@ -1,5 +1,5 @@
 sqlalchemy
-ossapi
+ossapi==2.6.0
 discord.py
 discord.py[speed]
 discord.py[voice]

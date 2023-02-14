@@ -269,7 +269,7 @@ class FFAudioProcess(discord.FFmpegOpusAudio):
 
 
 class YTDLSource(discord.AudioSource):
-    # __slots__ = ("requester", "title", "author", "length", "extractor", "direct", "uri", "thumbnail")
+    __slots__ = ("requester", "title", "author", "length", "extractor", "direct", "uri", "thumbnail")
 
     def __init__(self, data, requester, source=None):
         if source:

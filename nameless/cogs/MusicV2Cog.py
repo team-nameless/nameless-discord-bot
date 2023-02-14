@@ -23,6 +23,7 @@ from nameless.cogs.checks import MusicCogCheck
 from nameless.commons import Utility
 from NamelessConfig import NamelessConfig
 
+
 __all__ = ["MusicV2Cog"]
 
 PROVIDER_MAPPING = {

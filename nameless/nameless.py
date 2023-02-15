@@ -37,7 +37,6 @@ class Nameless(commands.AutoShardedBot):
             logging.DEBUG if getattr(NamelessConfig, "DEV", False) else logging.INFO,
         )
         self.allow_updates_check: bool = kwargs.get("allow_updates_check", False)
-        self.global_logger = logging.getLogger()
 
         self.loggers: list[logging.Logger] = [
             logging.getLogger(),

@@ -414,6 +414,7 @@ class MainPlayer:
                 name=header,
                 icon_url=getattr(track.requester.avatar, "url", None),
             )
+            .set_thumbnail(url=track.thumbnail)
             .add_field(
                 name="Title",
                 value=escape_markdown(track.title),
@@ -835,10 +836,10 @@ class MusicV2Cog(commands.Cog):
             logging.error("Oh no. The database is gone! What do we do now?!!")
             raise AttributeError
 
-        try:
-            next_tr = player.queue._queue.copy().pop()  # type: ignore
-        except IndexError:
+        if player.queue.empty():
             next_tr = None
+        else:
+            next_tr = player.queue._queue[0]  # type: ignore
 
         await ctx.send(
             embeds=[
@@ -985,7 +986,7 @@ class MusicV2Cog(commands.Cog):
 
         player: MainPlayer = self.get_player(ctx)
         int_queue = player.queue._queue  # type: ignore
-        queue_length = len(int_queue)
+        queue_length = player.queue.qsize()
 
         if not (before != after and 1 <= before <= queue_length and 1 <= after <= queue_length):
             await ctx.send("Invalid queue position(s)")

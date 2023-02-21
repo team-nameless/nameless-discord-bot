@@ -407,7 +407,7 @@ class MainPlayer:
         self.task: asyncio.Task = ctx.bot.loop.create_task(self.create())
 
     @staticmethod
-    def _build_embed(track: YTDLSource, header: str):
+    def build_embed(track: YTDLSource, header: str):
         return (
             discord.Embed(timestamp=datetime.datetime.now(), color=discord.Color.orange())
             .set_author(
@@ -450,7 +450,7 @@ class MainPlayer:
                     self.track = await self.queue.get()
 
                     if self.allow_np_msg:
-                        await self._channel.send(embed=self._build_embed(self.track, "Now playing"))
+                        await self._channel.send(embed=self.build_embed(self.track, "Now playing"))
                     self.track = await YTDLSource.generate_stream(self.track)
                     # self.track.volume = self.volume
                     self.duration -= self.track.length
@@ -842,51 +842,24 @@ class MusicV2Cog(commands.Cog):
             next_tr = player.queue._queue[0]  # type: ignore
 
         await ctx.send(
-            embeds=[
-                discord.Embed(timestamp=datetime.datetime.now(), color=discord.Color.orange())
-                .set_author(
-                    name="Now playing",
-                    icon_url=ctx.author.avatar.url,
-                )
-                .add_field(
-                    name="Title",
-                    value=escape_markdown(track.title),
-                    inline=False,
-                )
-                .add_field(
-                    name="Author",
-                    value=escape_markdown(track.author),
-                )
-                .add_field(
-                    name="Source",
-                    value=escape_markdown(track.uri) if track.uri else "N/A",
-                )
-                .add_field(
-                    name="Playtime" if is_stream else "Position",
-                    value=str(
-                        datetime.datetime.now() - dbg.radio_start_time
-                        if is_stream
-                        else f"{datetime.timedelta(seconds=player.position)}/{datetime.timedelta(seconds=track.length)}"
-                    ),
-                )
-                .add_field(
-                    name="Looping",
-                    value="This is a stream"
-                    if is_stream
-                    else f"Looped {getattr(vc, 'loop_play_count')} time(s)"
-                    if player.repeat is True
-                    else False,
-                )
-                .add_field(name="Paused", value=vc.is_paused())
-                .add_field(
-                    name="Next track",
-                    value=f"[{escape_markdown(next_tr.title)} "
-                    f"by {escape_markdown(next_tr.author)}]"
-                    f"({next_tr.uri[:100]})"
-                    if next_tr
-                    else None,
-                )
-            ]
+            embed=player.build_embed(track=track, header="Now playing")
+            .add_field(
+                name="Looping",
+                value="This is a stream"
+                if is_stream
+                else f"Looped {getattr(vc, 'loop_play_count')} time(s)"
+                if player.repeat is True
+                else False,
+            )
+            .add_field(name="Paused", value=vc.is_paused())
+            .add_field(
+                name="Next track",
+                value=f"[{escape_markdown(next_tr.title)} "
+                f"by {escape_markdown(next_tr.author)}]"
+                f"({next_tr.uri[:100]})"
+                if next_tr
+                else None,
+            )
         )
 
     @music.group(fallback="view")
@@ -970,7 +943,7 @@ class MusicV2Cog(commands.Cog):
 
         await m.edit(content=f"Added {len(soon_to_add_queue)} tracks into the queue", view=None)
 
-        embeds = [player._build_embed(track, f"Requested by {track.requester}") for track in soon_to_add_queue]
+        embeds = [player.build_embed(track, f"Requested by {track.requester}") for track in soon_to_add_queue]
         self.bot.loop.create_task(self.show_paginated_tracks(ctx, embeds, timeout=15))
 
     @queue.command()

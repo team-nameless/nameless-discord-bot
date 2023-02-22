@@ -15,6 +15,7 @@ from nameless.database import CRUD
 from nameless.shared_vars import stdout_handler
 from NamelessConfig import NamelessConfig
 
+
 __all__ = ["Nameless"]
 
 logging.getLogger().handlers[:] = [shared_vars.stdout_handler]

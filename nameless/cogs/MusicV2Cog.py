@@ -264,7 +264,7 @@ class FFAudioProcess(discord.FFmpegOpusAudio):
         self._kill_process()
         self._process = self._stdout = self._stdin = MISSING
 
-    def final_cleanup(self) -> None:
+    def all_cleanup(self) -> None:
         self.cleanup()
         self.lock = self.stream = MISSING
 
@@ -361,8 +361,9 @@ class YTDLSource(discord.AudioSource):
         return self.source.is_opus()
 
     def cleanup(self) -> None:
-        if source := getattr(self, "source", None):
-            source.final_cleanup()
+        source: FFAudioProcess
+        if source := getattr(self, "source", None):  # type: ignore
+            source.all_cleanup()
 
 
 class MainPlayer:
@@ -509,6 +510,9 @@ class MusicV2Cog(commands.Cog):
 
         try:
             player = self.players[guild.id]
+            if not player.next.is_set():
+                player.next.set()
+
             player.track.cleanup()
             player.task.cancel()
         except asyncio.CancelledError:
@@ -611,22 +615,26 @@ class MusicV2Cog(commands.Cog):
     ):
         """Handle voice state updates, auto-disconnect the bot, or maybe add a logging system in here :eyes:"""
         try:
-            player = self.players[member.guild.id]
+            self.players[member.guild.id]
         except KeyError:  # We're not in this channel? Let's return the function
+            return
+
+        # Handle edge-case
+        if after.channel.members == 0:
             return
 
         # Damn, we got kicked out.
         if member.id == self.bot.user.id:  # type: ignore
-            return await self.cleanup(player._guild)
+            return self.bot.loop.create_task(self.cleanup(member.guild))
 
-        vc = player._guild.voice_client.channel
-        if len(vc.members) == 1:  # type: ignore # There is only one person
-            if vc.members[0].id == self.bot.user.id:  # type: ignore  #  And that person is us
+        vc = member.guild.voice_client.channel
+        if len(vc.members) == 1:  # type: ignore  # There is only one person
+            if vc.members[0].id == self.bot.user.id:  # type: ignore  # And that person is us
                 logging.debug(
                     "Guild player %s still connected even if it is removed from voice, disconnecting",
-                    player._guild.id,
+                    member.guild.id,
                 )
-                await self.cleanup(player._guild)
+                await self.cleanup(member.guild)
 
     async def __internal_play(self, ctx: commands.Context, url: str, is_radio: bool = False):
         if is_radio:
@@ -1069,5 +1077,5 @@ async def setup(bot: Nameless):
 
 
 async def teardown(bot: Nameless):
-    await bot.remove_cog("MusicCog")
+    await bot.remove_cog("MusicV2Cog")
     logging.warning("Cog of %s removed!", __name__)

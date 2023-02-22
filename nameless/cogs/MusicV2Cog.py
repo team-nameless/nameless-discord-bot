@@ -393,7 +393,7 @@ class MainPlayer:
         self.queue = asyncio.Queue()
         self.next = asyncio.Event()
 
-        self.track: YTDLSource
+        self.track: YTDLSource = None  # type: ignore
         self.volume = 0.5
         self.duration = 0
         self.position = 0
@@ -485,6 +485,9 @@ class MainPlayer:
                 self.track = None
                 self.loop_play_count = 0
 
+            if not self._guild.voice_client:  # random check
+                return self.destroy(self._guild)
+
     def destroy(self, guild):
         """Disconnect and cleanup the player."""
         return self.client.loop.create_task(self._cog.cleanup(guild))
@@ -505,21 +508,22 @@ class MusicV2Cog(commands.Cog):
 
         return player
 
-    async def cleanup(self, guild):
-        await guild.voice_client.disconnect()
-
+    async def cleanup(self, guild_id: int):
         try:
-            player = self.players[guild.id]
+            player = self.players[guild_id]
+            player._guild.voice_client.stop()  # type: ignore
             if not player.next.is_set():
                 player.next.set()
 
-            player.track.cleanup()
+            await player._guild.voice_client.disconnect()  # type: ignore
+            if player.track:  # edge-case
+                player.track.cleanup()
+
             player.task.cancel()
+            del self.players[guild_id]
+
         except asyncio.CancelledError:
             pass
-
-        try:
-            del self.players[guild.id]
         except KeyError:
             pass
 
@@ -619,14 +623,6 @@ class MusicV2Cog(commands.Cog):
         except KeyError:  # We're not in this channel? Let's return the function
             return
 
-        # Handle edge-case
-        if after.channel.members == 0:
-            return
-
-        # Damn, we got kicked out.
-        if member.id == self.bot.user.id:  # type: ignore
-            return self.bot.loop.create_task(self.cleanup(member.guild))
-
         vc = member.guild.voice_client.channel
         if len(vc.members) == 1:  # type: ignore  # There is only one person
             if vc.members[0].id == self.bot.user.id:  # type: ignore  # And that person is us
@@ -634,7 +630,7 @@ class MusicV2Cog(commands.Cog):
                     "Guild player %s still connected even if it is removed from voice, disconnecting",
                     member.guild.id,
                 )
-                await self.cleanup(member.guild)
+                await self.cleanup(member.guild.id)
 
     async def __internal_play(self, ctx: commands.Context, url: str, is_radio: bool = False):
         if is_radio:
@@ -693,7 +689,7 @@ class MusicV2Cog(commands.Cog):
         await ctx.defer()
 
         try:
-            await self.cleanup(ctx.guild)
+            await self.cleanup(ctx.guild.id)
             await ctx.send("Disconnected from my own voice channel")
         except AttributeError:
             await ctx.send("Already disconnected")

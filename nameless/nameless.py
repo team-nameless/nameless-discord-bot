@@ -15,7 +15,6 @@ from nameless.database import CRUD
 from nameless.shared_vars import stdout_handler
 from NamelessConfig import NamelessConfig
 
-
 __all__ = ["Nameless"]
 
 logging.getLogger().handlers[:] = [shared_vars.stdout_handler]
@@ -204,6 +203,15 @@ class Nameless(commands.AutoShardedBot):
     async def close(self) -> None:
         logging.warning(msg="Shutting down...")
         close_all_sessions()
+
+        if _mcog := self.get_cog("MusicV2Cog"):
+            if _mcog.players:  # type: ignore
+                players: dict = _mcog.players.copy()  # type: ignore
+                logging.info("Ensuring all players in %i guilds are stopped", len(players))
+                for _g in players:
+                    await _mcog.cleanup(_g)  # type: ignore
+                logging.info("All done!")
+
         await super().close()
 
     async def is_owner(self, user: discord.User, /) -> bool:

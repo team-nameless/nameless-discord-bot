@@ -3,7 +3,6 @@ from typing import Any, Dict, List, Optional
 import discord
 from typing_extensions import LiteralString
 
-
 __all__ = ["NamelessConfig"]
 
 
@@ -138,4 +137,11 @@ class NamelessConfig:
     OSU: Dict[LiteralString, Any] = {
         "client_id": 0,
         "client_secret": "",
+    }
+
+    # Configurations for musicv2 commands
+    # This is optional, but highly recommended
+    SOUNDCLOUD: Dict[LiteralString, Any] = {
+        "user_id": 0,
+        "client_id": "",
     }

@@ -32,7 +32,7 @@ PROVIDER_MAPPING = {
 }
 FFMPEG_OPTS = {"before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5", "options": "-vn"}
 YTDL_OPTS = {
-    "format": "bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/93/best",
+    "format": "bestaudio[ext=webm][abr<=?64]/bestaudio[ext=webm]/bestaudio[ext=m4a][abr<=?64]/bestaudio[ext=m4a]/bestaudio/93/best",
     "outtmpl": r"downloads/%(extractor)s-%(id)s-%(title)s.%(ext)s",
     "restrictfilenames": True,
     "nocheckcertificate": True,
@@ -335,7 +335,7 @@ class YTDLSource(discord.AudioSource):
                     return cls.info_wrapper(data, bot.user)
 
                 case _:
-                    data = await cls.__get_raw_data(track.title, process=False)
+                    data = await cls.__get_raw_data(track.title)
                     return await cls.get_related_tracks(track, bot)
         except Exception:
             return None
@@ -366,8 +366,12 @@ class YTDLSource(discord.AudioSource):
         return self.direct
 
     @classmethod
-    async def get_tracks(cls, ctx: commands.Context, search, amount, provider, loop=None) -> AsyncGenerator[Self, None]:
-        data = await cls.__get_raw_data(search, loop, ytdl_cls=cls.maybe_new_extractor(provider, amount), process=False)
+    async def get_tracks(
+        cls, ctx: commands.Context, search, amount, provider, loop=None, process=True
+    ) -> AsyncGenerator[Self, None]:
+        data = await cls.__get_raw_data(
+            search, loop, ytdl_cls=cls.maybe_new_extractor(provider, amount), process=process
+        )
         if not data:
             return
 
@@ -379,7 +383,7 @@ class YTDLSource(discord.AudioSource):
 
     @classmethod
     async def get_track(cls, ctx: commands.Context, search, loop=None):
-        return await anext(cls.get_tracks(ctx, search, 5, search, loop))
+        return await anext(cls.get_tracks(ctx, search, 5, search, loop, process=False))
 
     @classmethod
     def info_wrapper(cls, track, author, extra_info=None):

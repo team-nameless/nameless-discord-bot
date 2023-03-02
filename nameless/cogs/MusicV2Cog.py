@@ -7,7 +7,7 @@ import random
 import threading
 from collections import deque
 from functools import partial
-from typing import IO, Any, AsyncGenerator, Dict, List, Optional, Self, Union  # type: ignore
+from typing import IO, Any, AsyncGenerator, Dict, List, Optional, Union
 
 import discord
 import DiscordUtils
@@ -22,7 +22,6 @@ from nameless import Nameless, shared_vars
 from nameless.cogs.checks import MusicCogCheck
 from nameless.commons import Utility
 from NamelessConfig import NamelessConfig
-
 
 __all__ = ["MusicV2Cog"]
 
@@ -301,7 +300,7 @@ class YTDLSource(discord.AudioSource):
         return data
 
     @classmethod
-    async def get_related_tracks(cls, track, bot: Nameless) -> Self:
+    async def get_related_tracks(cls, track, bot: Nameless):
         http_session = bot.http._HTTPClient__session  # type: ignore
 
         async def _requests(url, *args, **kwargs) -> Optional[dict]:
@@ -370,7 +369,7 @@ class YTDLSource(discord.AudioSource):
     @classmethod
     async def get_tracks(
         cls, ctx: commands.Context, search, amount, provider, loop=None, process=True
-    ) -> AsyncGenerator[Self, None]:
+    ) -> AsyncGenerator:
         data = await cls.__get_raw_data(
             search, loop, ytdl_cls=cls.maybe_new_extractor(provider, amount), process=process
         )

@@ -460,7 +460,7 @@ class MainPlayer:
             raise AttributeError(f"Try to access guild attribute, get {self._guild.__class__.__name__} instead")
 
         self.task: asyncio.Task = ctx.bot.loop.create_task(self.create())
-        setattr(self._guild, "is_queue_empty", self.is_queue_empty)
+        setattr(self._guild.voice_client, "is_queue_empty", self.is_queue_empty)
 
     @staticmethod
     def build_embed(track: YTDLSource, header: str):

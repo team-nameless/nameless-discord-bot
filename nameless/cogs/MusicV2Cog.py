@@ -270,13 +270,14 @@ class FFAudioProcess(discord.FFmpegOpusAudio):
 
 
 class YTDLSource(discord.AudioSource):
-    __slots__ = ("requester", "title", "author", "length", "extractor", "direct", "uri", "thumbnail")
+    __slots__ = ("requester", "title", "author", "length", "extractor", "direct", "uri", "thumbnail", "cleaned")
 
     def __init__(self, data, requester, *args, **kwargs):
         if source := kwargs.get("source", None):
             self.source: FFAudioProcess = source
 
         self.requester: discord.Member = requester
+        self.cleaned = False
         self.id = data.get("id", 0)
         self.length = data.get("duration", 0)
         self.direct = kwargs.get("direct", False)
@@ -413,6 +414,8 @@ class YTDLSource(discord.AudioSource):
         if source := getattr(self, "source", None):  # type: ignore
             source.all_cleanup()
 
+        self.cleaned = True
+
 
 class MainPlayer:
     __slots__ = (
@@ -498,7 +501,7 @@ class MainPlayer:
         while not self.client.is_closed():
             try:
                 self.next.clear()
-                if not self.repeat or self.track is None:
+                if not self.repeat or not self.track:
                     self.track = await self.queue.get()
 
                     if self.allow_np_msg:
@@ -533,13 +536,13 @@ class MainPlayer:
                 await self.next.wait()
 
             if not self.repeat:
-                if self.play_related_tracks:
+                if self.play_related_tracks and self.queue.empty():
                     data = await self.track.get_related_tracks(self.track, self.client)
                     await self.queue.put(data)
-                else:
-                    self.track.cleanup()
-                    self.track = None
-                    self.loop_play_count = 0
+
+                self.loop_play_count = 0
+                self.track.cleanup()
+                self.track = None
 
             if not self._guild.voice_client:  # random check
                 return self.destroy(self._guild)

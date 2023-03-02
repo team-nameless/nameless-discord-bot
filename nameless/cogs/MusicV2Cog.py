@@ -7,7 +7,7 @@ import random
 import threading
 from collections import deque
 from functools import partial
-from typing import IO, Any, AsyncGenerator, Dict, List, Optional, Union
+from typing import IO, Any, AsyncGenerator, Dict, List, Optional, Self, Union  # type: ignore
 
 import discord
 import DiscordUtils
@@ -22,7 +22,6 @@ from nameless import Nameless, shared_vars
 from nameless.cogs.checks import MusicCogCheck
 from nameless.commons import Utility
 from NamelessConfig import NamelessConfig
-
 
 __all__ = ["MusicV2Cog"]
 
@@ -272,17 +271,18 @@ class FFAudioProcess(discord.FFmpegOpusAudio):
 class YTDLSource(discord.AudioSource):
     __slots__ = ("requester", "title", "author", "length", "extractor", "direct", "uri", "thumbnail")
 
-    def __init__(self, data, requester, source=None):
-        if source:
+    def __init__(self, data, requester, *args, **kwargs):
+        if source := kwargs.get("source", None):
             self.source: FFAudioProcess = source
 
         self.requester: discord.Member = requester
-        self.title = data.get("title", "Unknown title")
-        self.author = data.get("uploader") or data.get("channel", "Unknown artits")
+        self.id = data.get("id", 0)
         self.length = data.get("duration", 0)
-        self.direct = data.get("direct", False)
+        self.direct = kwargs.get("direct", False)
         self.thumbnail = data.get("thumbnail", None)
-        self.extractor = data.get("extractor", "None")
+        self.title = data.get("title", "Unknown title")
+        self.extractor = data.get("extractor") or kwargs.get("extractor", "None")
+        self.author = data.get("uploader") or data.get("channel", "Unknown artits")
 
         if "search" in self.extractor:
             self.uri = data.get("url")
@@ -290,13 +290,55 @@ class YTDLSource(discord.AudioSource):
             self.uri = data.get("webpage_url")
 
     @staticmethod
-    async def __get_raw_data(search, loop=None, ytdl_cls=ytdl) -> Dict:
+    async def __get_raw_data(search, loop=None, ytdl_cls=ytdl, **kwargs) -> Dict:
         loop = loop or asyncio.get_event_loop()
 
-        to_run = partial(ytdl_cls.extract_info, url=search, download=False)
+        to_run = partial(ytdl_cls.extract_info, url=search, download=False, **kwargs)
         data: Dict = await loop.run_in_executor(None, to_run)  # type: ignore
 
         return data
+
+    @classmethod
+    async def get_related_tracks(cls, track, bot: Nameless) -> Self:
+        http_session = bot.http._HTTPClient__session  # type: ignore
+
+        async def _requests(url, *args, **kwargs) -> Optional[dict]:
+            async with http_session.get(url, *args, **kwargs) as resp:
+                if resp.status == 200:
+                    return await resp.json()
+                raise asyncio.InvalidStateError(f"Failed to get related tracks: Get {resp.status}")
+
+        try:
+            match track.extractor:
+                case "youtube":
+                    data = await _requests(f"https://yt.funami.tech/api/v1/videos/{track.id}?fields=recommendedVideos")
+                    data = await cls.__get_raw_data(
+                        f"https://www.youtube.com/watch?v={data['recommendedVideos'][0]['videoId']}", process=False
+                    )
+                    return cls.info_wrapper(data, bot.user)
+
+                case "soundcloud":
+                    if (sc := getattr(NamelessConfig, "SOUNDCLOUD", None)) and (sc["user_id"] or sc["client_id"]):
+                        data = await cls.__get_raw_data(track.title)
+                        return await cls.get_related_tracks(track, bot)
+
+                    data = await _requests(
+                        f"https://api-v2.soundcloud.com/tracks/{track.id}/related",
+                        params={
+                            "user_id": NamelessConfig.SOUNDCLOUD["user_id"],
+                            "client_id": NamelessConfig.SOUNDCLOUD["client_id"],
+                            "limit": "1",
+                            "offset": "0",
+                        },
+                    )
+                    data = await cls.__get_raw_data(data[0]["permalink_url"])
+                    return cls.info_wrapper(data, bot.user)
+
+                case _:
+                    data = await cls.__get_raw_data(track.title, process=False)
+                    return await cls.get_related_tracks(track, bot)
+        except Exception:
+            return None
 
     @staticmethod
     def maybe_new_extractor(provider, amount) -> YoutubeDL:
@@ -324,25 +366,26 @@ class YTDLSource(discord.AudioSource):
         return self.direct
 
     @classmethod
-    async def get_tracks(cls, ctx: commands.Context, search, amount, provider, loop=None) -> AsyncGenerator:
-        data = await cls.__get_raw_data(search, loop, ytdl_cls=cls.maybe_new_extractor(provider, amount))
+    async def get_tracks(cls, ctx: commands.Context, search, amount, provider, loop=None) -> AsyncGenerator[Self, None]:
+        data = await cls.__get_raw_data(search, loop, ytdl_cls=cls.maybe_new_extractor(provider, amount), process=False)
         if not data:
             return
 
         if entries := data.get("entries", None):
             for track in entries:
-                track.update({"extractor": data.get("extractor"), "direct": data.get("direct")})
-                yield cls.info_wrapper(track, ctx.author)
+                yield cls.info_wrapper(track, ctx.author, extra_info=data)
         else:
-            yield cls(data, ctx.author)
+            yield cls.info_wrapper(data, ctx.author)
 
     @classmethod
     async def get_track(cls, ctx: commands.Context, search, loop=None):
         return await anext(cls.get_tracks(ctx, search, 5, search, loop))
 
     @classmethod
-    def info_wrapper(cls, *args, **kwargs):
-        return cls(*args, **kwargs)
+    def info_wrapper(cls, track, author, extra_info=None):
+        if extra_info:
+            return cls(track, author, extractor=extra_info.get("extractor"), direct=extra_info.get("direct"))
+        return cls(track, author, extractor=track.get("extractor"), direct=track.get("direct"))
 
     @classmethod
     async def generate_stream(cls, data, loop=None):
@@ -382,6 +425,7 @@ class MainPlayer:
         "task",
         "loop_play_count",
         "allow_np_msg",
+        "play_related_tracks",
     )
 
     def __init__(self, ctx: commands.Context, cog) -> None:
@@ -397,9 +441,11 @@ class MainPlayer:
         self.volume = 0.5
         self.duration = 0
         self.position = 0
+
         self.repeat = False
-        self.loop_play_count = 0
         self.allow_np_msg = True
+        self.loop_play_count = 0
+        self.play_related_tracks = True
 
         if not self._guild and not isinstance(self._guild, discord.Guild):
             logging.error("Wait what? There is no guild here!")
@@ -463,10 +509,11 @@ class MainPlayer:
                     self.track, after=lambda _: self.client.loop.call_soon_threadsafe(self.next.set)
                 )
 
-            except AttributeError:
+            except AttributeError as err:
                 logging.error(
                     "We no longer connect to guild %s, but somehow we still in. Time to destroy!", self._guild.id
                 )
+                logging.error("AttributeError raised, error was: %s", err)
                 return self.destroy(self._guild)
 
             except Exception as e:
@@ -481,9 +528,13 @@ class MainPlayer:
                 await self.next.wait()
 
             if not self.repeat:
-                self.track.cleanup()
-                self.track = None
-                self.loop_play_count = 0
+                if self.play_related_tracks:
+                    data = await self.track.get_related_tracks(self.track, self.client)
+                    await self.queue.put(data)
+                else:
+                    self.track.cleanup()
+                    self.track = None
+                    self.loop_play_count = 0
 
             if not self._guild.voice_client:  # random check
                 return self.destroy(self._guild)
@@ -865,6 +916,18 @@ class MusicV2Cog(commands.Cog):
                 else None,
             )
         )
+
+    @music.command()
+    @commands.guild_only()
+    @commands.check(MusicCogCheck.user_and_bot_in_voice)
+    async def autoplay(self, ctx: commands.Context):
+        """Automatically play the next song in the queue"""
+        await ctx.defer()
+
+        player: MainPlayer = self.get_player(ctx)
+        player.play_related_tracks = not player.play_related_tracks
+
+        await ctx.send(f"Autoplay is now {'on' if player.play_related_tracks else 'off'}")
 
     @music.group(fallback="view")
     @commands.guild_only()

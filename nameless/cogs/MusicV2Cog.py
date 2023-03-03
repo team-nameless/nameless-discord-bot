@@ -314,7 +314,8 @@ class YTDLSource(discord.AudioSource):
                 case "youtube":
                     data = await _requests(f"https://yt.funami.tech/api/v1/videos/{track.id}?fields=recommendedVideos")
                     data = await cls.__get_raw_data(
-                        f"https://www.youtube.com/watch?v={data['recommendedVideos'][0]['videoId']}", process=False
+                        f"https://www.youtube.com/watch?v={random.choice(data['recommendedVideos'])['videoId']}",
+                        process=False,
                     )
                     return cls.info_wrapper(data, bot.user)
 

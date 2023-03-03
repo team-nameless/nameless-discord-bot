@@ -23,7 +23,6 @@ from nameless.cogs.checks import MusicCogCheck
 from nameless.commons import Utility
 from NamelessConfig import NamelessConfig
 
-
 __all__ = ["MusicV2Cog"]
 
 PROVIDER_MAPPING = {
@@ -434,6 +433,7 @@ class MainPlayer:
         "loop_play_count",
         "allow_np_msg",
         "play_related_tracks",
+        "stopped",
     )
 
     def __init__(self, ctx: commands.Context, cog) -> None:
@@ -451,6 +451,7 @@ class MainPlayer:
         self.position = 0
 
         self.repeat = False
+        self.stopped = False
         self.allow_np_msg = True
         self.loop_play_count = 0
         self.play_related_tracks = True
@@ -504,6 +505,7 @@ class MainPlayer:
                 self.next.clear()
                 if not self.repeat or not self.track:
                     self.track = await self.queue.get()
+                    self.stopped = False
 
                     if self.allow_np_msg:
                         await self._channel.send(embed=self.build_embed(self.track, "Now playing"))
@@ -537,7 +539,7 @@ class MainPlayer:
                 await self.next.wait()
 
             if not self.repeat:
-                if self.play_related_tracks and self.queue.empty():
+                if self.play_related_tracks and self.queue.empty() and not self.stopped:
                     data = await self.track.get_related_tracks(self.track, self.client)
                     await self.queue.put(data)
 
@@ -826,8 +828,10 @@ class MusicV2Cog(commands.Cog):
         await ctx.defer()
 
         vc: VoiceClient = ctx.voice_client  # type: ignore
+        player = self.get_player(ctx)
 
         vc.stop()
+        player.stopped = True
         await ctx.send("Stopped")
 
     @music.command()

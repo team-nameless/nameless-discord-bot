@@ -329,11 +329,11 @@ class YTDLSource(discord.AudioSource):
                         params={
                             "user_id": NamelessConfig.SOUNDCLOUD["user_id"],
                             "client_id": NamelessConfig.SOUNDCLOUD["client_id"],
-                            "limit": "1",
+                            "limit": "5",
                             "offset": "0",
                         },
                     )
-                    data = await cls.__get_raw_data(data[0]["permalink_url"])
+                    data = await cls.__get_raw_data(random.choice(data)["permalink_url"])  # type: ignore
                     return cls.info_wrapper(data, bot.user)
 
                 case _:

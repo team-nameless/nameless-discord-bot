@@ -8,30 +8,30 @@ from discord.ext import commands
 
 import nameless
 from nameless.cogs.checks import BaseCheck
+from nameless.customs import GreeterModal
 from nameless.shared_vars import crud_database
-from NamelessConfig import NamelessConfig
 
 
 __all__ = ["ConfigCog"]
 
 
-class ConfigCog(commands.Cog):
+class ConfigCog(commands.GroupCog, name="config"):
     def __init__(self, bot: nameless.Nameless):
+        super().__init__()
         self.bot = bot
 
-    @commands.hybrid_group(fallback="view")
-    @commands.guild_only()
+    @app_commands.command()
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
-    @commands.has_guild_permissions(manage_guild=True)
-    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
-    async def config(self, ctx: commands.Context):
+    async def view(self, interaction: discord.Interaction):
         """View configured properties"""
-        await ctx.defer()
-        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
+        await interaction.response.defer()
 
-        wc_chn = ctx.guild.get_channel(db_guild.welcome_channel_id)  # pyright: ignore
-        gb_chn = ctx.guild.get_channel(db_guild.goodbye_channel_id)  # pyright: ignore
-        mute_role = ctx.guild.get_role(db_guild.mute_role_id)  # pyright: ignore
+        db_guild = crud_database.get_or_create_guild_record(interaction.guild)
+
+        wc_chn = interaction.guild.get_channel(db_guild.welcome_channel_id)  # pyright: ignore
+        gb_chn = interaction.guild.get_channel(db_guild.goodbye_channel_id)  # pyright: ignore
+        mute_role = interaction.guild.get_role(db_guild.mute_role_id)  # pyright: ignore
         reaction = [":x:", ":white_check_mark:"]
         dm = db_guild.is_dm_preferred
 
@@ -40,8 +40,8 @@ class ConfigCog(commands.Cog):
                 color=discord.Color.orange(),
                 timestamp=datetime.datetime.now(),
             )
-            .set_thumbnail(url=ctx.guild.icon.url)
-            .set_author(icon_url=ctx.bot.user.display_avatar.url, name="Configured properties")
+            .set_thumbnail(url=interaction.guild.icon.url)
+            .set_author(icon_url=interaction.client.user.display_avatar.url, name="Configured properties")
         )
 
         embed.add_field(
@@ -60,7 +60,7 @@ class ConfigCog(commands.Cog):
             else "Unset",
         ).add_field(
             name=f"Goodbye message {reaction[db_guild.is_goodbye_enabled]}",
-            value=f"**[Destination]**{gb_chn.mention if gb_chn and not dm else 'DM' if dm else 'Nowhere'}\n"
+            value=f"**[Destination]** {gb_chn.mention if gb_chn and not dm else 'DM' if dm else 'Nowhere'}\n"
             "**[Content]**\n" + db_guild.goodbye_message
             if db_guild.goodbye_message
             else "Unset",
@@ -79,147 +79,133 @@ class ConfigCog(commands.Cog):
             name="Max warning count", value=db_guild.max_warn_count
         ).add_field(
             name="Mute role", value=mute_role.mention if mute_role else "Unset"
-        ).add_field(
-            name="Send DM to violator", value="Idk"
         )
 
-        await ctx.send(embeds=[embed])
+        await interaction.followup.send(embeds=[embed])
 
-    @config.command()
-    @commands.guild_only()
+    @app_commands.command()
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
-    @commands.has_guild_permissions(manage_guild=True)
-    @app_commands.describe(message="New welcome message, max. 500 characters")
-    @commands.check(BaseCheck.require_intents([discord.Intents.members]))
-    async def set_welcome_message(
-        self,
-        ctx: commands.Context,
-        message: str,
-    ):
-        """Change welcome message"""
-        await ctx.defer()
+    @app_commands.describe(edit_text="Whether you want to edit on the old message.")
+    @app_commands.check(BaseCheck.require_interaction_intents([discord.Intents.members]))
+    async def set_welcome_message(self, interaction: discord.Interaction, edit_text: bool = True):
+        """Change greeter welcome message"""
+        db_guild = crud_database.get_or_create_guild_record(interaction.guild)
 
-        if len(message) > 500:
-            await ctx.send("You can not use more than 500 characters for it!")
-            return
+        modal = GreeterModal(db_guild.welcome_message if edit_text else None)
+        modal.text.label = "Greeter welcome text"
 
-        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
+        await interaction.response.send_modal(modal)
+        await modal.wait()
 
-        db_guild.welcome_message = message
+        db_guild.welcome_message = modal.text.value
         crud_database.save_changes()
-        await ctx.send("Done updating welcome message")
 
-    @config.command()
-    @commands.guild_only()
+        await interaction.followup.send("Updated the new welcome message successfully!")
+        await interaction.followup.send(f"Your new welcome text:\n\n{db_guild.welcome_message}")
+
+    @app_commands.command()
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
-    @commands.has_guild_permissions(manage_guild=True)
-    @app_commands.describe(message="New goodbye message, max. 500 characters")
-    @commands.check(BaseCheck.require_intents([discord.Intents.members]))
-    async def set_goodbye_message(
-        self,
-        ctx: commands.Context,
-        message: str,
-    ):
+    @app_commands.describe(edit_text="Whether you want to edit on the old message.")
+    @app_commands.check(BaseCheck.require_interaction_intents([discord.Intents.members]))
+    async def set_goodbye_message(self, interaction: discord.Interaction, edit_text: bool = True):
         """Change goodbye message"""
-        await ctx.defer()
+        db_guild = crud_database.get_or_create_guild_record(interaction.guild)
 
-        if len(message) > 500:
-            await ctx.send("You can not use more than 500 characters for it!")
-            return
+        modal = GreeterModal(db_guild.goodbye_message if edit_text else None)
+        modal.text.label = "Greeter goodbye text"
 
-        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
-        db_guild.goodbye_message = message
-        await ctx.send("Done updating goodbye message")
+        await interaction.response.send_modal(modal)
+        await modal.wait()
 
-    @config.command()
-    @commands.guild_only()
+        db_guild.goodbye_message = modal.text.value
+        crud_database.save_changes()
+
+        await interaction.followup.send("Updated the new goodbye message successfully!")
+        await interaction.followup.send(f"Your new goodbye text:\n\n{db_guild.goodbye_message}")
+
+    @app_commands.command()
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
-    @commands.has_guild_permissions(manage_guild=True)
     @app_commands.describe(dest_channel="Goodbye message delivery channel")
-    @commands.check(BaseCheck.require_intents([discord.Intents.members]))
+    @app_commands.check(BaseCheck.require_interaction_intents([discord.Intents.members]))
     async def set_goodbye_channel(
         self,
-        ctx: commands.Context,
+        interaction: discord.Interaction,
         dest_channel: Union[discord.TextChannel, discord.Thread],
     ):
         """Change goodbye message delivery channel"""
-        await ctx.defer()
-        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
+        await interaction.response.defer()
+        db_guild = crud_database.get_or_create_guild_record(interaction.guild)
         db_guild.goodbye_channel_id = dest_channel.id
-        await ctx.send(f"Done updating goodbye channel to {dest_channel.mention}")
+        await interaction.followup.send(f"Done updating goodbye channel to {dest_channel.mention}")
 
-    @config.command()
-    @commands.guild_only()
+    @app_commands.command()
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
-    @commands.has_guild_permissions(manage_guild=True)
     @app_commands.describe(dest_channel="Welcome message delivery channel")
-    @commands.check(BaseCheck.require_intents([discord.Intents.members]))
+    @app_commands.check(BaseCheck.require_interaction_intents([discord.Intents.members]))
     async def set_welcome_channel(
         self,
-        ctx: commands.Context,
+        interaction: discord.Interaction,
         dest_channel: Union[discord.TextChannel, discord.Thread],
     ):
         """Change welcome message delivery channel"""
-        await ctx.defer()
-        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
+        await interaction.response.defer()
+        db_guild = crud_database.get_or_create_guild_record(interaction.guild)
         db_guild.welcome_channel_id = dest_channel.id
-        await ctx.send(f"Done updating welcome channel to {dest_channel.mention}")
+        await interaction.followup.send(f"Done updating welcome channel to {dest_channel.mention}")
 
-    @config.command()
-    @commands.guild_only()
+    @app_commands.command()
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
-    @commands.has_guild_permissions(manage_guild=True)
-    @commands.check(BaseCheck.require_intents([discord.Intents.members]))
-    async def toggle_welcome(self, ctx: commands.Context):
+    @app_commands.check(BaseCheck.require_interaction_intents([discord.Intents.members]))
+    async def toggle_welcome(self, interaction: discord.Interaction):
         """Toggle welcome message delivery allowance"""
-        await ctx.defer()
-        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
+        await interaction.response.defer()
+        db_guild = crud_database.get_or_create_guild_record(interaction.guild)
         db_guild.is_welcome_enabled = not db_guild.is_welcome_enabled
-        await ctx.send(f"Welcome message delivery: {'on' if db_guild.is_welcome_enabled else 'off'}")
+        await interaction.followup.send(f"Welcome message delivery: {'on' if db_guild.is_welcome_enabled else 'off'}")
 
-    @config.command()
-    @commands.guild_only()
+    @app_commands.command()
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
-    @commands.has_guild_permissions(manage_guild=True)
-    @commands.check(BaseCheck.require_intents([discord.Intents.members]))
-    async def toggle_goodbye(self, ctx: commands.Context):
+    @app_commands.check(BaseCheck.require_interaction_intents([discord.Intents.members]))
+    async def toggle_goodbye(self, interaction: discord.Interaction):
         """Toggle goodbye message delivery allowance"""
-        await ctx.defer()
-        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
+        await interaction.response.defer()
+        db_guild = crud_database.get_or_create_guild_record(interaction.guild)
         db_guild.is_goodbye_enabled = not db_guild.is_goodbye_enabled
-        await ctx.send(f"Goodbye message delivery: {'on' if db_guild.is_goodbye_enabled else 'off'}")
+        await interaction.followup.send(f"Goodbye message delivery: {'on' if db_guild.is_goodbye_enabled else 'off'}")
 
-    @config.command()
-    @commands.guild_only()
+    @app_commands.command()
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
-    @commands.has_guild_permissions(manage_guild=True)
-    @commands.check(BaseCheck.require_intents([discord.Intents.members]))
-    async def toggle_bot_greeter(self, ctx: commands.Context):
+    @app_commands.check(BaseCheck.require_interaction_intents([discord.Intents.members]))
+    async def toggle_bot_greeter(self, interaction: discord.Interaction):
         """Toggle greeting delivery allowance to BOTs"""
-        await ctx.defer()
-        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
+        await interaction.response.defer()
+        db_guild = crud_database.get_or_create_guild_record(interaction.guild)
         db_guild.is_bot_greeting_enabled = not db_guild.is_bot_greeting_enabled
-        await ctx.send(f"Bot greeter delivery: {'on' if db_guild.is_bot_greeting_enabled else 'off'}")
+        await interaction.followup.send(f"BOTs greeter delivery: {'on' if db_guild.is_bot_greeting_enabled else 'off'}")
 
-    @config.command()
-    @commands.guild_only()
+    @app_commands.command()
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
-    @commands.has_guild_permissions(manage_guild=True)
-    @commands.check(BaseCheck.require_intents([discord.Intents.members]))
-    async def toggle_dm_instead_of_channel(self, ctx: commands.Context):
+    @app_commands.check(BaseCheck.require_interaction_intents([discord.Intents.members]))
+    async def toggle_dm_instead_of_channel(self, interaction: discord.Interaction):
         """Toggle greeting delivery to user's DM instead of the channel."""
-        await ctx.defer()
-        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
+        await interaction.response.defer()
+        db_guild = crud_database.get_or_create_guild_record(interaction.guild)
         db_guild.is_dm_preferred = not db_guild.is_dm_preferred
-        await ctx.send(f"DM greeter delivery: {'on' if db_guild.is_dm_preferred else 'off'}")
+        await interaction.followup.send(f"DM greeter delivery: {'on' if db_guild.is_dm_preferred else 'off'}")
 
-    @config.command()
-    @commands.guild_only()
+    @app_commands.command()
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
-    @commands.has_guild_permissions(manage_guild=True)
-    async def placeholders(self, ctx: commands.Context):
+    async def view_placeholders(self, interaction: discord.Interaction):
         """View available placeholders"""
-        await ctx.defer()
         placeholders = {
             "{guild}": "The name of the guild.\nAvailability: Welcome+Goodbye.",
             "{@user}": "Mention that user.\nAvailability: Welcome.",
@@ -227,25 +213,26 @@ class ConfigCog(commands.Cog):
             "{tag}": "The 4-digit after #.\nAvailability: Welcome+Goodbye.",
         }
 
-        await ctx.send("\n".join(f"**{key}**\n{value}\n" for key, value in placeholders.items()))
+        await interaction.response.send("\n".join(f"**{key}**\n{value}\n" for key, value in placeholders.items()))
 
-    @config.command()
-    @commands.guild_only()
+    @app_commands.command()
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
-    @commands.has_guild_permissions(manage_guild=True)
-    async def toggle_native_timeout(self, ctx: commands.Context):
+    async def toggle_native_timeout(self, interaction: discord.Interaction):
         """Toggle using native 'Timeout' feature instead of using 'Mute role'"""
-        await ctx.defer()
-        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
+        await interaction.response.defer()
+        db_guild = crud_database.get_or_create_guild_record(interaction.guild)
         db_guild.is_timeout_preferred = not db_guild.is_timeout_preferred
-        await ctx.send(f"Use native `Timeout` feature: {'on' if db_guild.is_timeout_preferred else 'off'}")
+        await interaction.followup.send(
+            f"Use native `Timeout` feature: {'on' if db_guild.is_timeout_preferred else 'off'}"
+        )
 
 
 async def setup(bot: nameless.Nameless):
     await bot.add_cog(ConfigCog(bot))
-    logging.info("Cog of %s added!", __name__)
+    logging.info("%s added!", __name__)
 
 
 async def teardown(bot: nameless.Nameless):
     await bot.remove_cog("ConfigCog")
-    logging.warning("Cog of %s removed!", __name__)
+    logging.warning("%s removed!", __name__)

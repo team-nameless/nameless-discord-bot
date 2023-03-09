@@ -104,10 +104,11 @@ class Nameless(commands.AutoShardedBot):
         logging.info("Registering commands")
         await self.__register_all_cogs()
 
-        if ids := getattr(NamelessConfig, "GUILD_IDs", []):
+        if ids := getattr(NamelessConfig, "GUILDS", []):
             for _id in ids:
                 logging.info("Syncing commands with guild ID %d", _id)
                 sf = discord.Object(_id)
+                self.tree.copy_global_to(guild=sf)
                 await self.tree.sync(guild=sf)
         else:
             logging.info("Syncing commands globally")

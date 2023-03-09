@@ -1,8 +1,9 @@
 sqlalchemy
-ossapi==2.6.0
+ossapi
 discord.py
 discord.py[speed]
 DiscordUtils
+reactionmenu
 wavelink
 alembic
 packaging

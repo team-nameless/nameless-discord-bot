@@ -7,17 +7,18 @@ from discord import Color, app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
 from DiscordUtils import Pagination
-from ossapi import GameMode, OssapiV2, Score, ScoreType, User, UserLookupKey
+from ossapi import GameMode, Ossapi, Score, ScoreType, User, UserLookupKey
+from reactionmenu import ViewButton, ViewMenu
 
 from nameless import Nameless, shared_vars
-from nameless.customs.DiscordWaiter import DiscordWaiter
+from nameless.ui_kit import OsuFailInclusionPrompt
 from NamelessConfig import NamelessConfig
 
 
 __all__ = ["OsuCog"]
 
 osu_modes = ["osu", "taiko", "fruits", "mania"]
-request_types = ["profile", "firsts", "recents", "bests"]
+request_types = ["profile", "first_place_scores", "recent_scores", "best_scores"]
 
 
 def convert_to_game_mode(mode: str) -> GameMode:
@@ -30,99 +31,90 @@ def convert_to_game_mode(mode: str) -> GameMode:
         GameMode: GameMode for ossapi
     """
     m: Dict[str, GameMode] = {
-        "osu": GameMode.STD,
+        "osu": GameMode.OSU,
         "taiko": GameMode.TAIKO,
-        "fruits": GameMode.CTB,
+        "fruits": GameMode.CATCH,
         "mania": GameMode.MANIA,
     }
 
     return m[mode.lower()]
 
 
-class FailInclusionConfirmationView(discord.ui.View):
-    def __init__(self):
-        super().__init__()
-        self.is_confirmed = False
-
-    @discord.ui.button(label="Yep!", style=discord.ButtonStyle.green)  # pyright: ignore
-    async def confirm(self, button: discord.ui.Button, interaction: discord.Interaction):
-        self.is_confirmed = True
-        self.stop()
-
-    @discord.ui.button(label="Nope!", style=discord.ButtonStyle.red)  # pyright: ignore
-    async def cancel(self, button: discord.ui.Button, interaction: discord.Interaction):
-        self.stop()
-
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        await interaction.response.defer()
-        return await super().interaction_check(interaction)
-
-
-class OsuCog(commands.Cog):
+class OsuCog(commands.GroupCog, name="osu"):
     def __init__(self, bot: Nameless):
         self.bot = bot
-        self.api = OssapiV2(
+        self.api = Ossapi(
             NamelessConfig.OSU["client_id"],
             NamelessConfig.OSU["client_secret"],
         )
 
-    @commands.hybrid_group(fallback="get")
-    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
-    async def osu(self, ctx: commands.Context, member: Optional[discord.Member]):
+    @app_commands.command()
+    @app_commands.describe(member="The member to view, or you by default.")
+    async def profile(self, interaction: discord.Interaction, member: Optional[discord.Member]):
         """View someone's osu! *linked* profile"""
-        await ctx.defer()
-        db_user = shared_vars.crud_database.get_or_create_user_record(member if member else ctx.author)
+        await interaction.response.defer()
+        db_user = shared_vars.crud_database.get_or_create_user_record(member if member else interaction.user)
 
         if not db_user.osu_username:
-            await ctx.send("This user did not link with me")
+            if member is None:
+                await interaction.followup.send(
+                    "You did not linked with me. "
+                    "There is `osu update` command and I would be happy if you linked your "
+                    "profile details to me <3. Do not worry, I will not ask for password."
+                )
+            else:
+                await interaction.followup.send(
+                    "This user did not linked with me. "
+                    "Can you please tell them to do so? It would be very kind of you :3"
+                )
             return
 
         embed = (
             discord.Embed(
-                description="Your linked osu! auto search with me",
+                description="Your linked osu! profile details with me",
                 timestamp=datetime.datetime.now(),
                 colour=Color.brand_red(),
             )
-            .set_image(url=ctx.author.display_avatar.url)
+            .set_image(url=interaction.user.display_avatar.url)
             .add_field(name="Username", value=db_user.osu_username, inline=True)
             .add_field(name="Mode", value=db_user.osu_mode, inline=True)
         )
-        await ctx.send(embeds=[embed])
+        await interaction.followup.send(embeds=[embed])
 
-    @osu.command()
-    @app_commands.describe(username="Your osu! username", mode="Your osu! mode")
+    @app_commands.command()
+    @app_commands.describe(username="Your new osu! username", mode="Your new osu! mode")
     @app_commands.choices(mode=[Choice(name=k, value=k) for k in osu_modes])
-    async def update(self, ctx: commands.Context, username: str, mode: str = "Osu"):
-        """Update your auto search"""
-        await ctx.defer()
-        db_user = shared_vars.crud_database.get_or_create_user_record(ctx.author)
+    async def update(self, interaction: discord.Interaction, username: str, mode: str = "osu"):
+        """Update your linked profile with me"""
+        await interaction.response.defer()
+        db_user = shared_vars.crud_database.get_or_create_user_record(interaction.user)
         db_user.osu_username, db_user.osu_mode = username, mode.title()
 
-        await ctx.send("Updated")
+        await interaction.followup.send("Successfully updated your profile details with me! Yay!")
 
-    @osu.command()
-    @commands.guild_only()
-    @app_commands.describe(member="Target member", username="osu! username", mode="osu! mode")
+    @app_commands.command()
+    @app_commands.describe(member="Target member", username="Their osu! username", mode="Their osu! mode")
     @app_commands.choices(mode=[Choice(name=k, value=k) for k in osu_modes])
-    @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
     async def force_update(
         self,
-        ctx: commands.Context,
+        interaction: discord.Interaction,
         member: discord.Member,
         username: str,
-        mode: str = "Osu",
+        mode: str = "osu",
     ):
-        """Force database to update a member's auto search"""
-        await ctx.defer()
+        """Force database to update a member's auto search. For guild managers."""
+        await interaction.response.defer()
         db_user = shared_vars.crud_database.get_or_create_user_record(member)
         db_user.osu_username, db_user.osu_mode = username, mode.title()
 
-        await ctx.send("Updated")
+        await interaction.followup.send(
+            f"Successfully updated the profile details of " f"**{member.display_name}#{member.discriminator}**!"
+        )
 
     async def __generic_check(
         self,
-        ctx: commands.Context,
+        interaction: discord.Interaction,
         request: str,
         username: str,
         mode: str,
@@ -130,20 +122,20 @@ class OsuCog(commands.Cog):
         count: int,
         is_from_context: bool = False,
     ):
-        m = await ctx.send("Processing")
+        m: discord.WebhookMessage = await interaction.followup.send("Processing....")
 
         the_mode = None if mode == "default" else convert_to_game_mode(mode)
 
-        osu_user: User = self.api.user(username, the_mode, key=UserLookupKey.USERNAME)
+        osu_user: User = self.api.user(username, mode=the_mode, key=UserLookupKey.USERNAME)
 
         if not osu_user:
-            await m.edit(content="Unable to find the user!")
+            await m.edit(content="I can not find the user on Bancho!")
             return
 
         user_stats = osu_user.statistics
 
         if not user_stats:
-            await m.edit(content="Something went wrong!")
+            await m.edit(content=f"I can not retrieve the statistics of **{username}** in `{the_mode}`!")
             return
 
         if request == "profile":
@@ -160,7 +152,7 @@ class OsuCog(commands.Cog):
                     icon_url=f"https://flagcdn.com/h20/{osu_user.country_code.lower()}.jpg",
                 )
                 .set_thumbnail(url=osu_user.avatar_url)
-                .set_footer(text=f"Requested by {ctx.author}")
+                .set_footer(text=f"Requested by {interaction.user}")
                 .add_field(
                     name="Account creation time",
                     value=f"<t:{int(osu_user.join_date.timestamp())}:F>",
@@ -202,46 +194,26 @@ class OsuCog(commands.Cog):
         else:
             request_type: ScoreType = ScoreType.BEST
 
-            if request == "bests":
-                request_type = ScoreType.BEST
-            elif request == "firsts":
+            if request == "first_place_scores":
                 request_type = ScoreType.FIRSTS
-            elif request == "recents":
+            elif request == "recent_scores":
                 request_type = ScoreType.RECENT
 
-            # prompt: str
-
-            # limit count
-            if not is_from_context and ctx.bot.intents.message_content:
-                m = await m.edit(content="How many records do you want to get?")
-
-                try:
-                    msg: discord.Message = await self.bot.wait_for(
-                        "message", check=DiscordWaiter.message_waiter(ctx), timeout=30
-                    )
-
-                    count = int(msg.content)
-                    await msg.delete(delay=1.0)
-                except TimeoutError:
-                    await m.edit(content="Timed out")
-                    return
-                except ValueError:
-                    await ctx.send("Invalid number provided. Please correct then run again.")
-                    return
-
             # fail inclusion prompt
-            if not is_from_context and request == "recents" and ctx.bot.intents.message_content:
-                view = FailInclusionConfirmationView()
-                m = await m.edit(content="Do you want to include fail scores?", view=view)
+            if not is_from_context and request == "recent_scores" and interaction.client.intents.message_content:
+                fail_prompt = OsuFailInclusionPrompt()
+                m = await m.edit(content="Do you want to include fail scores?", view=fail_prompt)
 
-                if await view.wait():
+                if await fail_prompt.wait():
                     await m.edit(content="Timed out", view=None)
                     return
 
-                view.stop()
-                include_fails = view.is_confirmed
+                fail_prompt.stop()
+                include_fails = fail_prompt.is_confirmed
 
-            scores: List[Score] = self.api.user_scores(osu_user.id, request_type, include_fails, the_mode, count)
+            scores: List[Score] = self.api.user_scores(
+                osu_user.id, request_type, include_fails=include_fails, mode=the_mode, limit=count
+            )
 
             if len(scores) == 0:
                 await m.edit(content="No suitable scores found", view=None)
@@ -278,7 +250,7 @@ class OsuCog(commands.Cog):
                     .add_field(name="Accuracy", value=f"{round(score.accuracy * 100, 2)}%")
                     .add_field(
                         name="Max combo",
-                        value=f"{score.max_combo}x/{beatmap.max_combo if beatmap else '???'}x",
+                        value=f"{score.max_combo}x/{beatmap.max_combo if beatmap and beatmap.max_combo else '???'}x",
                     )
                     .add_field(
                         name="Hit count",
@@ -302,77 +274,91 @@ class OsuCog(commands.Cog):
                 embeds.append(embed)
 
             if not is_from_context or len(embeds) != 1:
-                paginator = Pagination.AutoEmbedPaginator(ctx)
-                await paginator.run(embeds)
+                view_menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed)
+                view_menu.add_pages(embeds)
+
+                view_menu.add_button(ViewButton.back())
+                view_menu.add_button(ViewButton.next())
+
+                await view_menu.start()
             else:
-                # Since we are in context menu command
-                # Or either the embed list is so small
                 await m.edit(embed=embeds[0], view=None)
 
-    @osu.command()
-    @commands.guild_only()
+    @app_commands.command()
+    @app_commands.guild_only()
     @app_commands.describe(
-        member="Target member",
-        request="Request type",
-        mode="osu! mode",
-        include_fail="Whether to include fail records (only in 'recents')",
-        count="Records count (only in records queries)",
+        member="Target member, you by default.",
+        request_type="Request type",
+        game_mode="osu! game mode",
+        include_fail="Whether to include fail records (only in 'recent_scores')",
+        count="Records count (when you request for scores)",
     )
     @app_commands.choices(
-        mode=[Choice(name=k, value=k) for k in [*osu_modes, "default"]],
-        request=[Choice(name=k, value=k) for k in request_types],
+        game_mode=[Choice(name=k, value=k) for k in [*osu_modes, "default"]],
+        request_type=[Choice(name=k, value=k) for k in request_types],
     )
-    async def check_member(
+    async def details(
         self,
-        ctx: commands.Context,
+        interaction: discord.Interaction,
         member: discord.Member,
-        request: str = "profile",
-        mode: str = "default",
+        request_type: str = "profile",
+        game_mode: str = "default",
         include_fail: bool = True,
         count: int = 1,
     ):
-        """Check osu! profile of a member"""
-        await ctx.defer()
+        """View osu! specific detail(s) of a member."""
+        await interaction.response.defer()
         db_user = shared_vars.crud_database.get_or_create_user_record(member)
 
-        if db_user.osu_username == "":
-            await ctx.send(content="This user did not linked to me")
+        if not db_user.osu_username:
+            if member is None:
+                await interaction.followup.send(
+                    "You did not linked with me. "
+                    "There is `osu update` command and I would be happy if you linked your "
+                    "profile details to me <3. Do not worry, I will not ask for password."
+                )
+            else:
+                await interaction.followup.send(
+                    "This user did not linked with me. "
+                    "Can you please tell them to do so? It would be very kind of you :3"
+                )
+
             return
 
         await self.__generic_check(
-            ctx,
-            request,
+            interaction,
+            request_type,
             db_user.osu_username,
-            db_user.osu_mode if mode == "default" else mode,
+            db_user.osu_mode if game_mode == "default" else game_mode,
             include_fail,
             count,
         )
 
-    @osu.command()
+    @app_commands.command()
     @commands.guild_only()
     @app_commands.describe(
         username="osu! username",
-        request="Request type",
-        mode="osu! mode",
-        include_fail="Whether to include fail records (defaults to True, only in 'recents')",
+        request_type="Request type",
+        game_mode="osu! game mode",
+        include_fail="Whether to include fail records (defaults to True, only in 'recent_scores')",
         count="Records count (only in records queries)",
     )
     @app_commands.choices(
-        mode=[Choice(name=k, value=k) for k in [*osu_modes, "default"]],
-        request=[Choice(name=k, value=k) for k in request_types],
+        game_mode=[Choice(name=k, value=k) for k in [*osu_modes, "default"]],
+        request_type=[Choice(name=k, value=k) for k in request_types],
     )
-    async def check_custom(
+    async def details_custom(
         self,
-        ctx: commands.Context,
+        interaction: discord.Interaction,
         username: str,
-        request: str = "profile",
-        mode: str = "default",
+        request_type: str = "profile",
+        game_mode: str = "default",
         include_fail: bool = True,
         count: int = 1,
     ):
-        """Check a custom osu! profile"""
-        await ctx.defer()
-        await self.__generic_check(ctx, request, username, mode, include_fail, count)
+        """View osu! specific detail(s) of a custom osu! profile"""
+        await interaction.response.defer()
+        await self.__generic_check(interaction, request_type, username, game_mode, include_fail, count)
 
 
 async def setup(bot: Nameless):

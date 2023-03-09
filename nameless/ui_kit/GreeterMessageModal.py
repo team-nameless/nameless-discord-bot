@@ -2,10 +2,10 @@ import discord
 from discord import ui
 
 
-__all__ = ["GreeterModal"]
+__all__ = ["GreeterMessageModal"]
 
 
-class GreeterModal(ui.Modal, title="New greeter text"):
+class GreeterMessageModal(ui.Modal, title="New greeter text"):
     def __init__(self, initial_text: str | None = None):
         super().__init__()
 

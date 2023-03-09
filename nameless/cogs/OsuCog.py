@@ -6,7 +6,6 @@ import discord
 from discord import Color, app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
-from DiscordUtils import Pagination
 from ossapi import GameMode, Ossapi, Score, ScoreType, User, UserLookupKey
 from reactionmenu import ViewButton, ViewMenu
 
@@ -122,7 +121,7 @@ class OsuCog(commands.GroupCog, name="osu"):
         count: int,
         is_from_context: bool = False,
     ):
-        m: discord.WebhookMessage = await interaction.followup.send("Processing....")
+        m: discord.WebhookMessage = await interaction.followup.send("Processing....")  # pyright: ignore
 
         the_mode = None if mode == "default" else convert_to_game_mode(mode)
 

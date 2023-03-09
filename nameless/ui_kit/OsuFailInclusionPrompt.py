@@ -1,5 +1,6 @@
 import discord
 
+
 __all__ = ["OsuFailInclusionPrompt"]
 
 

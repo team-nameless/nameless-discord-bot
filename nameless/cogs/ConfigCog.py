@@ -8,8 +8,8 @@ from discord.ext import commands
 
 import nameless
 from nameless.cogs.checks import BaseCheck
-from nameless.ui_kit import GreeterMessageModal
 from nameless.shared_vars import crud_database
+from nameless.ui_kit import GreeterMessageModal
 
 
 __all__ = ["ConfigCog"]
@@ -213,7 +213,9 @@ class ConfigCog(commands.GroupCog, name="config"):
             "{tag}": "The 4-digit after #.\nAvailability: Welcome+Goodbye.",
         }
 
-        await interaction.response.send("\n".join(f"**{key}**\n{value}\n" for key, value in placeholders.items()))
+        await interaction.response.send_message(
+            "\n".join(f"**{key}**\n{value}\n" for key, value in placeholders.items())
+        )
 
     @app_commands.command()
     @app_commands.guild_only()

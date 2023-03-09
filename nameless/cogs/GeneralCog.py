@@ -186,7 +186,7 @@ class GeneralCog(commands.GroupCog):
             )
         )
 
-        await interaction.response.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
 
 async def setup(bot: Nameless):

@@ -28,6 +28,7 @@ cogs_regex = re.compile(r"^(?!_.).*Cog.py")
 loaded_cogs_list: list[str] = []
 unloaded_cogs_list: list[str] = []
 
+
 @functools.lru_cache
 def get_current_nameless_version() -> str:
     current_file_directory: str = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))

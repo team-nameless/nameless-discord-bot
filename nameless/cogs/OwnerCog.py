@@ -35,7 +35,7 @@ class OwnerCog(commands.Cog):
 
     @commands.is_owner()
     @commands.hybrid_command()
-    @app_commands.autocomplete(module_name=Autocomplete.load_module_complete)
+    @app_commands.autocomplete(module_name=Autocomplete.module_complete)
     @app_commands.describe(module_name="The Python-qualified module name")
     async def reload(self, ctx: commands.Context, module_name: str):
         """Reload a module"""

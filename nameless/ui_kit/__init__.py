@@ -1,2 +1,2 @@
 from .GreeterMessageModal import *
-from .OsuFailInclusionPrompt import *
+from .YesNoButtonPrompt import *

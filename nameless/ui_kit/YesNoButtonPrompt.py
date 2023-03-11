@@ -1,10 +1,10 @@
 import discord
 
 
-__all__ = ["OsuFailInclusionPrompt"]
+__all__ = ["YesNoButtonPrompt"]
 
 
-class OsuFailInclusionPrompt(discord.ui.View):
+class YesNoButtonPrompt(discord.ui.View):
     def __init__(self):
         super().__init__()
         self.is_confirmed = False

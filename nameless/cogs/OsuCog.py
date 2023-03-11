@@ -10,7 +10,7 @@ from ossapi import GameMode, Ossapi, Score, ScoreType, User, UserLookupKey
 from reactionmenu import ViewButton, ViewMenu
 
 from nameless import Nameless, shared_vars
-from nameless.ui_kit import OsuFailInclusionPrompt
+from nameless.ui_kit import YesNoButtonPrompt
 from NamelessConfig import NamelessConfig
 
 
@@ -200,7 +200,7 @@ class OsuCog(commands.GroupCog, name="osu"):
 
             # fail inclusion prompt
             if not is_from_context and request == "recent_scores" and interaction.client.intents.message_content:
-                fail_prompt = OsuFailInclusionPrompt()
+                fail_prompt = YesNoButtonPrompt()
                 m = await m.edit(content="Do you want to include fail scores?", view=fail_prompt)
 
                 if await fail_prompt.wait():

@@ -14,7 +14,7 @@ from NamelessConfig import NamelessConfig
 __all__ = ["GeneralCog"]
 
 
-class GeneralCog(commands.GroupCog):
+class GeneralCog(commands.Cog):
     def __init__(self, bot: Nameless) -> None:
         super().__init__()
         self.bot = bot
@@ -186,7 +186,7 @@ class GeneralCog(commands.GroupCog):
             )
         )
 
-        await interaction.response.send_message(embed=embed)
+        await interaction.followup.send(embed=embed)
 
 
 async def setup(bot: Nameless):

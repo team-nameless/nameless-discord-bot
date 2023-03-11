@@ -364,11 +364,11 @@ class OsuCog(commands.GroupCog, name="osu"):
 async def setup(bot: Nameless):
     if (osu := getattr(NamelessConfig, "OSU", None)) and osu.get("client_id", "") and osu.get("client_secret", ""):
         await bot.add_cog(OsuCog(bot))
-        logging.info("Cog of %s added!", __name__)
+        logging.info("%s cog added!", __name__)
     else:
         raise commands.ExtensionFailed(__name__, ValueError("osu! configuration values are not properly provided!"))
 
 
 async def teardown(bot: Nameless):
     await bot.remove_cog("OsuCog")
-    logging.warning("Cog of %s removed!", __name__)
+    logging.warning("%s cog removed!", __name__)

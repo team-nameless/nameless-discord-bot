@@ -9,7 +9,8 @@ from discord.ext import commands
 from ossapi import GameMode, Ossapi, Score, ScoreType, User, UserLookupKey
 from reactionmenu import ViewButton, ViewMenu
 
-from nameless import Nameless, shared_vars
+from nameless import Nameless
+from nameless.database import CRUD
 from nameless.ui_kit import YesNoButtonPrompt
 from NamelessConfig import NamelessConfig
 
@@ -52,7 +53,7 @@ class OsuCog(commands.GroupCog, name="osu"):
     async def profile(self, interaction: discord.Interaction, member: Optional[discord.Member]):
         """View someone's osu! *linked* profile"""
         await interaction.response.defer()
-        db_user = shared_vars.crud_database.get_or_create_user_record(member if member else interaction.user)
+        db_user = CRUD.get_or_create_user_record(member if member else interaction.user)
 
         if not db_user.osu_username:
             if member is None:
@@ -86,7 +87,7 @@ class OsuCog(commands.GroupCog, name="osu"):
     async def update(self, interaction: discord.Interaction, username: str, mode: str = "osu"):
         """Update your linked profile with me"""
         await interaction.response.defer()
-        db_user = shared_vars.crud_database.get_or_create_user_record(interaction.user)
+        db_user = CRUD.get_or_create_user_record(interaction.user)
         db_user.osu_username, db_user.osu_mode = username, mode.title()
 
         await interaction.followup.send("Successfully updated your profile details with me! Yay!")
@@ -104,7 +105,7 @@ class OsuCog(commands.GroupCog, name="osu"):
     ):
         """Force database to update a member's auto search. For guild managers."""
         await interaction.response.defer()
-        db_user = shared_vars.crud_database.get_or_create_user_record(member)
+        db_user = CRUD.get_or_create_user_record(member)
         db_user.osu_username, db_user.osu_mode = username, mode.title()
 
         await interaction.followup.send(
@@ -307,7 +308,7 @@ class OsuCog(commands.GroupCog, name="osu"):
     ):
         """View osu! specific detail(s) of a member."""
         await interaction.response.defer()
-        db_user = shared_vars.crud_database.get_or_create_user_record(member)
+        db_user = CRUD.get_or_create_user_record(member)
 
         if not db_user.osu_username:
             if member is None:

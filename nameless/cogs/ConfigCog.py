@@ -8,7 +8,7 @@ from discord.ext import commands
 
 import nameless
 from nameless.cogs.checks import BaseCheck
-from nameless.shared_vars import crud_database
+from nameless.database import CRUD
 from nameless.ui_kit import GreeterMessageModal
 
 
@@ -27,7 +27,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         """View configured properties"""
         await interaction.response.defer()
 
-        db_guild = crud_database.get_or_create_guild_record(interaction.guild)
+        db_guild = CRUD.get_or_create_guild_record(interaction.guild)
 
         wc_chn = interaction.guild.get_channel(db_guild.welcome_channel_id)  # pyright: ignore
         gb_chn = interaction.guild.get_channel(db_guild.goodbye_channel_id)  # pyright: ignore
@@ -90,7 +90,7 @@ class ConfigCog(commands.GroupCog, name="config"):
     @app_commands.check(BaseCheck.require_interaction_intents([discord.Intents.members]))
     async def set_welcome_message(self, interaction: discord.Interaction, edit_text: bool = True):
         """Change greeter welcome message"""
-        db_guild = crud_database.get_or_create_guild_record(interaction.guild)
+        db_guild = CRUD.get_or_create_guild_record(interaction.guild)
 
         modal = GreeterMessageModal(db_guild.welcome_message if edit_text else None)
         modal.text.label = "Greeter welcome text"
@@ -99,7 +99,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         await modal.wait()
 
         db_guild.welcome_message = modal.text.value
-        crud_database.save_changes()
+        CRUD.save_changes()
 
         await interaction.followup.send("Updated the new welcome message successfully!")
         await interaction.followup.send(f"Your new welcome text:\n\n{db_guild.welcome_message}")
@@ -111,7 +111,7 @@ class ConfigCog(commands.GroupCog, name="config"):
     @app_commands.check(BaseCheck.require_interaction_intents([discord.Intents.members]))
     async def set_goodbye_message(self, interaction: discord.Interaction, edit_text: bool = True):
         """Change goodbye message"""
-        db_guild = crud_database.get_or_create_guild_record(interaction.guild)
+        db_guild = CRUD.get_or_create_guild_record(interaction.guild)
 
         modal = GreeterMessageModal(db_guild.goodbye_message if edit_text else None)
         modal.text.label = "Greeter goodbye text"
@@ -120,7 +120,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         await modal.wait()
 
         db_guild.goodbye_message = modal.text.value
-        crud_database.save_changes()
+        CRUD.save_changes()
 
         await interaction.followup.send("Updated the new goodbye message successfully!")
         await interaction.followup.send(f"Your new goodbye text:\n\n{db_guild.goodbye_message}")
@@ -137,7 +137,7 @@ class ConfigCog(commands.GroupCog, name="config"):
     ):
         """Change goodbye message delivery channel"""
         await interaction.response.defer()
-        db_guild = crud_database.get_or_create_guild_record(interaction.guild)
+        db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.goodbye_channel_id = dest_channel.id
         await interaction.followup.send(f"Done updating goodbye channel to {dest_channel.mention}")
 
@@ -153,7 +153,7 @@ class ConfigCog(commands.GroupCog, name="config"):
     ):
         """Change welcome message delivery channel"""
         await interaction.response.defer()
-        db_guild = crud_database.get_or_create_guild_record(interaction.guild)
+        db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.welcome_channel_id = dest_channel.id
         await interaction.followup.send(f"Done updating welcome channel to {dest_channel.mention}")
 
@@ -164,7 +164,7 @@ class ConfigCog(commands.GroupCog, name="config"):
     async def toggle_welcome(self, interaction: discord.Interaction):
         """Toggle welcome message delivery allowance"""
         await interaction.response.defer()
-        db_guild = crud_database.get_or_create_guild_record(interaction.guild)
+        db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.is_welcome_enabled = not db_guild.is_welcome_enabled
         await interaction.followup.send(f"Welcome message delivery: {'on' if db_guild.is_welcome_enabled else 'off'}")
 
@@ -175,7 +175,7 @@ class ConfigCog(commands.GroupCog, name="config"):
     async def toggle_goodbye(self, interaction: discord.Interaction):
         """Toggle goodbye message delivery allowance"""
         await interaction.response.defer()
-        db_guild = crud_database.get_or_create_guild_record(interaction.guild)
+        db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.is_goodbye_enabled = not db_guild.is_goodbye_enabled
         await interaction.followup.send(f"Goodbye message delivery: {'on' if db_guild.is_goodbye_enabled else 'off'}")
 
@@ -186,7 +186,7 @@ class ConfigCog(commands.GroupCog, name="config"):
     async def toggle_bot_greeter(self, interaction: discord.Interaction):
         """Toggle greeting delivery allowance to BOTs"""
         await interaction.response.defer()
-        db_guild = crud_database.get_or_create_guild_record(interaction.guild)
+        db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.is_bot_greeting_enabled = not db_guild.is_bot_greeting_enabled
         await interaction.followup.send(f"BOTs greeter delivery: {'on' if db_guild.is_bot_greeting_enabled else 'off'}")
 
@@ -197,7 +197,7 @@ class ConfigCog(commands.GroupCog, name="config"):
     async def toggle_dm_instead_of_channel(self, interaction: discord.Interaction):
         """Toggle greeting delivery to user's DM instead of the channel."""
         await interaction.response.defer()
-        db_guild = crud_database.get_or_create_guild_record(interaction.guild)
+        db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.is_dm_preferred = not db_guild.is_dm_preferred
         await interaction.followup.send(f"DM greeter delivery: {'on' if db_guild.is_dm_preferred else 'off'}")
 
@@ -223,7 +223,7 @@ class ConfigCog(commands.GroupCog, name="config"):
     async def toggle_native_timeout(self, interaction: discord.Interaction):
         """Toggle using native 'Timeout' feature instead of using 'Mute role'"""
         await interaction.response.defer()
-        db_guild = crud_database.get_or_create_guild_record(interaction.guild)
+        db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.is_timeout_preferred = not db_guild.is_timeout_preferred
         await interaction.followup.send(
             f"Use native `Timeout` feature: {'on' if db_guild.is_timeout_preferred else 'off'}"

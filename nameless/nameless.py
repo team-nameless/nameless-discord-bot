@@ -161,7 +161,7 @@ class Nameless(commands.AutoShardedBot):
         )
 
     async def on_member_join(self, member: discord.Member):
-        db_guild = shared_vars.crud_database.get_or_create_guild_record(member.guild)
+        db_guild = CRUD.get_or_create_guild_record(member.guild)
 
         if db_guild.is_welcome_enabled:
             if db_guild.welcome_message != "":
@@ -176,7 +176,7 @@ class Nameless(commands.AutoShardedBot):
                 await self.send_greeter(db_guild.goodbye_message, member, send_target)
 
     async def on_member_remove(self, member: discord.Member):
-        db_guild = shared_vars.crud_database.get_or_create_guild_record(member.guild)
+        db_guild = CRUD.get_or_create_guild_record(member.guild)
 
         if db_guild.is_goodbye_enabled:
             if db_guild.goodbye_message != "":
@@ -271,7 +271,7 @@ class Nameless(commands.AutoShardedBot):
         logging.info("Populating nameless/shared_vars.py")
 
         shared_vars.start_time = datetime.now()
-        shared_vars.crud_database = CRUD()
+        # shared_vars.crud_database = CRUD()
 
         meta = getattr(NamelessConfig, "META", {})
 

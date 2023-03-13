@@ -575,6 +575,8 @@ class MusicV2Cog(commands.Cog):
         try:
             player = self.players[guild_id]
             player._guild.voice_client.stop()  # type: ignore
+            player.task.cancel()
+
             if not player.next.is_set():
                 player.next.set()
 
@@ -582,7 +584,6 @@ class MusicV2Cog(commands.Cog):
             if player.track:  # edge-case
                 player.track.cleanup()
 
-            player.task.cancel()
             del self.players[guild_id]
 
         except asyncio.CancelledError:
@@ -681,9 +682,7 @@ class MusicV2Cog(commands.Cog):
         after: discord.VoiceState,
     ):
         """Handle voice state updates, auto-disconnect the bot, or maybe add a logging system in here :eyes:"""
-        try:
-            self.players[member.guild.id]
-        except KeyError:  # We're not in this channel? Let's return the function
+        if not self.players.get(member.guild.id):  # We're not in this channel? Let's return the function
             return
 
         vc = member.guild.voice_client.channel
@@ -693,7 +692,11 @@ class MusicV2Cog(commands.Cog):
                     "Guild player %s still connected even if it is removed from voice, disconnecting",
                     member.guild.id,
                 )
-                await self.cleanup(member.guild.id)
+                return await self.cleanup(member.guild.id)
+
+        if member.id == self.bot.user.id:  # type: ignore  # We been kicked out of the voice chat
+            if not after.channel:
+                return await self.cleanup(member.guild.id)
 
     async def __internal_play(self, ctx: commands.Context, url: str, is_radio: bool = False):
         if is_radio:
@@ -1024,8 +1027,9 @@ class MusicV2Cog(commands.Cog):
 
         await m.edit(content=f"Added {len(soon_to_add_queue)} tracks into the queue", view=None)
 
-        embeds = [player.build_embed(track, f"Requested by {track.requester}") for track in soon_to_add_queue]
-        self.bot.loop.create_task(self.show_paginated_tracks(ctx, embeds, timeout=15))
+        if len(soon_to_add_queue) <= 25:
+            embeds = [player.build_embed(track, f"Requested by {track.requester}") for track in soon_to_add_queue]
+            self.bot.loop.create_task(self.show_paginated_tracks(ctx, embeds, timeout=15))
 
     @queue.command()
     @commands.guild_only()

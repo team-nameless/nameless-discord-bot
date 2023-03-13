@@ -2,7 +2,6 @@ from typing import Callable, List
 
 from discord.ext import commands
 
-
 __all__ = ["BaseCheck"]
 
 

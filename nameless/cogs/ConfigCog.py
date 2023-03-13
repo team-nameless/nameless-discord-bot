@@ -11,7 +11,6 @@ from nameless.cogs.checks import BaseCheck
 from nameless.shared_vars import crud_database
 from NamelessConfig import NamelessConfig
 
-
 __all__ = ["ConfigCog"]
 
 

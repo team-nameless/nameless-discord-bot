@@ -13,7 +13,6 @@ from nameless import Nameless, shared_vars
 from nameless.customs.DiscordWaiter import DiscordWaiter
 from NamelessConfig import NamelessConfig
 
-
 __all__ = ["OsuCog"]
 
 osu_modes = ["osu", "taiko", "fruits", "mania"]

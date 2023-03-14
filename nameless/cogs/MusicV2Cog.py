@@ -23,7 +23,6 @@ from nameless.cogs.checks import MusicCogCheck
 from nameless.commons import Utility
 from NamelessConfig import NamelessConfig
 
-
 __all__ = ["MusicV2Cog"]
 
 PROVIDER_MAPPING = {
@@ -270,7 +269,7 @@ class FFAudioProcess(discord.FFmpegOpusAudio):
 
 
 class YTDLSource(discord.AudioSource):
-    __slots__ = ("requester", "title", "author", "length", "extractor", "direct", "uri", "thumbnail", "cleaned")
+    __slots__ = ("requester", "title", "author", "duration", "extractor", "direct", "uri", "thumbnail", "cleaned")
 
     def __init__(self, data, requester, *args, **kwargs):
         if source := kwargs.get("source", None):
@@ -279,7 +278,7 @@ class YTDLSource(discord.AudioSource):
         self.requester: discord.Member = requester
         self.cleaned = False
         self.id = data.get("id", 0)
-        self.length = data.get("duration", 0)
+        self.duration = data.get("duration", 0)
         self.direct = kwargs.get("direct", False)
         self.thumbnail = data.get("thumbnail", None)
         self.title = data.get("title", "Unknown title")
@@ -428,7 +427,7 @@ class MainPlayer:
         "next",
         "track",
         "volume",
-        "duration",
+        "total_duration",
         "position",
         "repeat",
         "task",
@@ -449,14 +448,14 @@ class MainPlayer:
 
         self.track: YTDLSource = None  # type: ignore
         self.volume = 0.5
-        self.duration = 0
         self.position = 0
+        self.total_duration = 0
 
         self.repeat = False
         self.stopped = False
         self.allow_np_msg = True
         self.loop_play_count = 0
-        self.play_related_tracks = True
+        self.play_related_tracks = False
 
         if not self._guild and not isinstance(self._guild, discord.Guild):
             logging.error("Wait what? There is no guild here!")
@@ -513,7 +512,7 @@ class MainPlayer:
                         await self._channel.send(embed=self.build_embed(self.track, "Now playing"))
                     self.track = await YTDLSource.generate_stream(self.track)
                     # self.track.volume = self.volume
-                    self.duration -= self.track.length
+                    self.total_duration -= self.track.duration
                 else:
                     self.loop_play_count += 1
                     self.track.source.to_start()
@@ -1025,6 +1024,9 @@ class MusicV2Cog(commands.Cog):
         else:
             soon_to_add_queue = tracks
             await player.queue.put(tracks[0])
+
+        for track in soon_to_add_queue:
+            player.total_duration += track.duration
 
         await m.edit(content=f"Added {len(soon_to_add_queue)} tracks into the queue", view=None)
 

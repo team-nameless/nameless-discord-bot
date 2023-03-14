@@ -426,7 +426,6 @@ class MainPlayer:
         "queue",
         "next",
         "track",
-        "volume",
         "total_duration",
         "position",
         "repeat",
@@ -447,7 +446,6 @@ class MainPlayer:
         self.next = asyncio.Event()
 
         self.track: YTDLSource = None  # type: ignore
-        self.volume = 0.5
         self.position = 0
         self.total_duration = 0
 
@@ -459,7 +457,7 @@ class MainPlayer:
 
         if not self._guild and not isinstance(self._guild, discord.Guild):
             logging.error("Wait what? There is no guild here!")
-            raise AttributeError(f"Try to access guild attribute, get {self._guild.__class__.__name__} instead")
+            raise AttributeError(f"Try to access guild attribute, got {self._guild.__class__.__name__} instead")
 
         self.task: asyncio.Task = ctx.bot.loop.create_task(self.create())
         setattr(self._guild.voice_client, "is_queue_empty", self.is_queue_empty)
@@ -511,7 +509,6 @@ class MainPlayer:
                     if self.allow_np_msg:
                         await self._channel.send(embed=self.build_embed(self.track, "Now playing"))
                     self.track = await YTDLSource.generate_stream(self.track)
-                    # self.track.volume = self.volume
                     self.total_duration -= self.track.duration
                 else:
                     self.loop_play_count += 1

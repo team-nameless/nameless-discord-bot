@@ -190,7 +190,15 @@ class TrackPickDropdown(discord.ui.Select):
             v.stop()
 
 
-class FFAudioProcess(discord.FFmpegOpusAudio):
+class FFAudioProcessNoCache(BaseException):
+    pass
+
+
+class FFAudioProcessSeekError(BaseException):
+    pass
+
+
+class FFOpusAudioProcess(discord.FFmpegOpusAudio):
     FRAME_SIZE = 3840  # each frame is about 20ms 16bit 48KHz 2ch PCM
     ONE_SEC_FRAME_SIZE = FRAME_SIZE * 50
 
@@ -199,24 +207,27 @@ class FFAudioProcess(discord.FFmpegOpusAudio):
         source: Union[str, io.BufferedIOBase],
         *,
         bitrate: Optional[int] = None,
+        codec: str = "opus",
         executable: str = "ffmpeg",
         pipe: bool = False,
         stderr: Optional[IO[bytes]] = None,
         before_options: Optional[str] = None,
         options: Optional[str] = None,
+        can_cache: bool = True,
     ) -> None:
         self.lock = threading.Lock()
 
         self.stream: deque = deque()
         self.stream_idx = 0
 
+        self.can_cache = can_cache
         self.is_seek = False
         self.cache_done = False
 
         super().__init__(
             source=source,
             bitrate=bitrate,
-            codec="opus",
+            codec=codec,
             executable=executable,
             pipe=pipe,
             stderr=stderr,
@@ -225,6 +236,9 @@ class FFAudioProcess(discord.FFmpegOpusAudio):
         )
 
     def read(self):
+        if not self.can_cache:
+            return next(self._packet_iter, b"")
+
         data = b""
         if not self.cache_done:
             data = next(self._packet_iter, b"")
@@ -239,6 +253,10 @@ class FFAudioProcess(discord.FFmpegOpusAudio):
         return data
 
     def seek(self, index_offset: int):
+        if not self.can_cache:
+            raise FFAudioProcessSeekError(
+                "Can't seek because there is no cache avaliable for song that over 10mins in duration"
+            )
         if self.stream is MISSING or self._process is MISSING:  # return if trying to seek on a clean stream
             return
 
@@ -256,6 +274,9 @@ class FFAudioProcess(discord.FFmpegOpusAudio):
             self.stream_idx = max(index_offset, 0)
 
     def to_start(self):
+        if not self.can_cache:
+            raise FFAudioProcessNoCache("Can't use cache and seek on audio that have over 10mins of duration")
+
         with self.lock:
             self.stream_idx = 0
 
@@ -273,7 +294,7 @@ class YTDLSource(discord.AudioSource):
 
     def __init__(self, data, requester, *args, **kwargs):
         if source := kwargs.get("source", None):
-            self.source: FFAudioProcess = source
+            self.source: FFOpusAudioProcess = source
 
         self.requester: discord.Member = requester
         self.cleaned = False
@@ -369,7 +390,7 @@ class YTDLSource(discord.AudioSource):
 
     @classmethod
     async def get_tracks(
-        cls, ctx: commands.Context, search, amount, provider, loop=None, process=True
+        cls, ctx: commands.Context, search, amount, provider, loop=None, process=False
     ) -> AsyncGenerator:
         data = await cls.__get_raw_data(
             search, loop, ytdl_cls=cls.maybe_new_extractor(provider, amount), process=process
@@ -385,7 +406,7 @@ class YTDLSource(discord.AudioSource):
 
     @classmethod
     async def get_track(cls, ctx: commands.Context, search, loop=None):
-        return await anext(cls.get_tracks(ctx, search, 5, search, loop, process=False))
+        return await anext(cls.get_tracks(ctx, search, 5, search, loop))
 
     @classmethod
     def info_wrapper(cls, track, author, extra_info=None):
@@ -401,7 +422,13 @@ class YTDLSource(discord.AudioSource):
         to_run = partial(ytdl.extract_info, url=data.uri, download=False)
         ret: dict = await loop.run_in_executor(None, to_run)  # type: ignore
 
-        return cls(source=FFAudioProcess(ret["url"], **FFMPEG_OPTS), data=ret, requester=requester)
+        return cls(
+            source=FFOpusAudioProcess(
+                ret["url"], **FFMPEG_OPTS, can_cache=True if data.duration < 600 else False, codec=ret["acodec"]
+            ),
+            data=ret,
+            requester=requester,
+        )
 
     def read(self) -> bytes:
         return self.source.read()
@@ -410,7 +437,7 @@ class YTDLSource(discord.AudioSource):
         return self.source.is_opus()
 
     def cleanup(self) -> None:
-        source: FFAudioProcess
+        source: FFOpusAudioProcess
         if source := getattr(self, "source", None):  # type: ignore
             source.all_cleanup()
 
@@ -863,7 +890,7 @@ class MusicV2Cog(commands.Cog):
         await ctx.defer()
 
         player: MainPlayer = self.get_player(ctx)
-        source: FFAudioProcess = player.track.source
+        source: FFOpusAudioProcess = player.track.source
 
         try:
             source.seek(offset)

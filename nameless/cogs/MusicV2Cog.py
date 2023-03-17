@@ -70,7 +70,7 @@ class VoteMenuView(discord.ui.View):
         self.approve_member: List[str] = [ctx.author.mention]
         self.disapprove_member: List[str] = []
 
-        self.message: discord.Message = None  # type: ignore
+        self.message: discord.Message = MISSING
         ctx.bot.loop.create_task(self.update())
 
     def __eb(self):
@@ -442,10 +442,10 @@ class MainPlayer:
         self._channel = ctx.channel
         self._cog = cog
 
-        self.queue = asyncio.Queue()
+        self.queue: asyncio.Queue[YTDLSource] = asyncio.Queue()
         self.next = asyncio.Event()
 
-        self.track: YTDLSource = None  # type: ignore
+        self.track: YTDLSource = MISSING
         self.position = 0
         self.total_duration = 0
 
@@ -539,7 +539,8 @@ class MainPlayer:
             if not self.repeat:
                 if self.play_related_tracks and self.queue.empty() and not self.stopped:
                     data = await self.track.get_related_tracks(self.track, self.client)
-                    await self.queue.put(data)
+                    if data:
+                        await self.queue.put(data)
 
                 self.loop_play_count = 0
                 self.track.cleanup()
@@ -669,7 +670,7 @@ class MusicV2Cog(commands.Cog):
     @staticmethod
     async def show_paginated_tracks(ctx: commands.Context, embeds: List[discord.Embed], **kwargs):
         p = DiscordUtils.Pagination.AutoEmbedPaginator(ctx, **kwargs)
-        await p.run(embeds)
+        await p.run(embeds[:25])
 
     @commands.Cog.listener()
     async def on_voice_state_update(
@@ -903,11 +904,10 @@ class MusicV2Cog(commands.Cog):
         dbg = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
         if not dbg:
             logging.error("Oh no. The database is gone! What do we do now?!!")
-            raise AttributeError
+            raise AttributeError(f"Can't find guild id '{ctx.guild.id}'. Or maybe the database is gone?")
 
-        if player.queue.empty():
-            next_tr = None
-        else:
+        next_tr: Optional[YTDLSource] = None
+        if not player.queue.empty():
             next_tr = player.queue._queue[0]  # type: ignore
 
         await ctx.send(
@@ -1000,33 +1000,33 @@ class MusicV2Cog(commands.Cog):
             return
 
         soon_to_add_queue: List[YTDLSource] = []
-        if len(tracks) > 1:
-            dropdown: Union[discord.ui.Item[discord.ui.View], TrackPickDropdown] = TrackPickDropdown(tracks)
-            view = discord.ui.View().add_item(dropdown)
-            await m.edit(content="Tracks found", view=view)
-
-            if await view.wait():
-                await m.edit(content="Timed out!", view=None, delete_after=30)
-                return
-
-            vals = dropdown.values
-            if not vals or "Nope" in vals:
-                await m.delete()
-                return
-
-            for val in vals:
-                idx = int(val)
-                soon_to_add_queue.append(tracks[idx])
-                await player.queue.put(tracks[idx])
-        else:
+        if ":search" in tracks[0].extractor:
             soon_to_add_queue = tracks
-            await player.queue.put(tracks[0])
+        else:
+            if len(tracks) > 1:
+                dropdown: Union[discord.ui.Item[discord.ui.View], TrackPickDropdown] = TrackPickDropdown(tracks)
+                view = discord.ui.View().add_item(dropdown)
+                await m.edit(content="Tracks found", view=view)
 
-        for track in soon_to_add_queue:
-            player.total_duration += track.duration
+                if await view.wait():
+                    await m.edit(content="Timed out!", view=None, delete_after=30)
+                    return
 
+                vals = dropdown.values
+                if not vals or "Nope" in vals:
+                    await m.delete()
+                    return
+
+                for val in vals:
+                    idx = int(val)
+                    soon_to_add_queue.append(tracks[idx])
+                    await player.queue.put(tracks[idx])
+            else:
+                soon_to_add_queue = tracks
+                await player.queue.put(tracks[0])
+
+        player.total_duration += sum(tr.duration for tr in soon_to_add_queue)
         await m.edit(content=f"Added {len(soon_to_add_queue)} tracks into the queue", view=None)
-
         if len(soon_to_add_queue) <= 25:
             embeds = [player.build_embed(track, f"Requested by {track.requester}") for track in soon_to_add_queue]
             self.bot.loop.create_task(self.show_paginated_tracks(ctx, embeds, timeout=15))

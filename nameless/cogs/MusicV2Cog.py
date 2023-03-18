@@ -424,9 +424,7 @@ class YTDLSource(discord.AudioSource):
         ret: dict = await loop.run_in_executor(None, to_run)  # type: ignore
 
         return cls(
-            source=FFOpusAudioProcess(
-                ret["url"], **FFMPEG_OPTS, can_cache=True if data.duration < 600 else False, codec=ret["acodec"]
-            ),
+            source=FFOpusAudioProcess(ret["url"], **FFMPEG_OPTS, can_cache=data.duration < 600, codec=ret["acodec"]),
             data=ret,
             requester=requester,
         )
@@ -540,7 +538,10 @@ class MainPlayer:
                     self.total_duration -= self.track.duration
                 else:
                     self.loop_play_count += 1
-                    self.track.source.to_start()
+                    try:
+                        self.track.source.to_start()
+                    except FFAudioProcessNoCache:
+                        self.track = await YTDLSource.generate_stream(self.track)
 
                 self._guild.voice_client.play(  # type: ignore
                     self.track, after=lambda _: self.client.loop.call_soon_threadsafe(self.next.set)
@@ -901,6 +902,7 @@ class MusicV2Cog(commands.Cog):
                 await ctx.send("✅")
         except Exception as err:
             await ctx.send(f"{err.__class__.__name__}: {str(err)}")
+            logging.error("%s: %s", err.__class__.__name__, str(err))
 
     @music.command()
     @commands.guild_only()

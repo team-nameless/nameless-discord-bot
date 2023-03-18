@@ -24,6 +24,7 @@ from nameless.commons import Utility
 from nameless.database import CRUD
 from NamelessConfig import NamelessConfig
 
+
 __all__ = ["MusicV2Cog"]
 
 PROVIDER_MAPPING = {

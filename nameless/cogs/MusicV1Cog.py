@@ -22,6 +22,7 @@ from nameless.commons import Utility
 from nameless.database import CRUD
 from NamelessConfig import NamelessConfig
 
+
 __all__ = ["MusicV1Cog"]
 
 music_default_sources: List[str] = ["youtube", "soundcloud", "ytmusic"]

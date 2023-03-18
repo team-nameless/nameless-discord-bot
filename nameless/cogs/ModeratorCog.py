@@ -7,9 +7,8 @@ from discord.ext import commands
 
 import nameless
 from nameless.customs.DiscordWaiter import DiscordWaiter
-from nameless.shared_vars import crud_database
+from nameless.database import CRUD
 from NamelessConfig import NamelessConfig
-
 
 __all__ = ["ModeratorCog"]
 
@@ -76,8 +75,8 @@ class ModeratorCog(commands.Cog):
     ):
         await ctx.defer()
 
-        db_user = crud_database.get_or_create_user_record(member)
-        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
+        db_user = CRUD.get_or_create_user_record(member)
+        db_guild = CRUD.get_or_create_guild_record(ctx.guild)
 
         max_warn_count = db_guild.max_warn_count
 
@@ -86,7 +85,7 @@ class ModeratorCog(commands.Cog):
             return
 
         db_user.warn_count += val
-        crud_database.save_changes()
+        CRUD.save_changes()
 
         if db_user.warn_count == 0:
             await zero_fn(ctx, member, reason)
@@ -109,7 +108,7 @@ class ModeratorCog(commands.Cog):
     ):
         await ctx.defer()
 
-        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild = CRUD.get_or_create_guild_record(ctx.guild)
         mute_role = ctx.guild.get_role(db_guild.mute_role_id)
 
         if db_guild.is_timeout_preferred or mute_role is None:
@@ -227,7 +226,7 @@ class ModeratorCog(commands.Cog):
         reason: str = "Good behavior",
     ):
         """Remove warning(s) from a member"""
-        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild = CRUD.get_or_create_guild_record(ctx.guild)
 
         async def zero_fn(_ctx: commands.Context, m: discord.Member, r: str):
             pass
@@ -277,7 +276,7 @@ class ModeratorCog(commands.Cog):
     async def set_max_warn_count(self, ctx: commands.Context, count: commands.Range[int, 1]):
         """Set max warn count for this server"""
         await ctx.defer()
-        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild = CRUD.get_or_create_guild_record(ctx.guild)
         db_guild.max_warn_count = count
 
         await ctx.send(f"Set max warning count to {count}")
@@ -290,7 +289,7 @@ class ModeratorCog(commands.Cog):
     async def set_mute_role(self, ctx: commands.Context, role: discord.Role):
         """Set mute role"""
         await ctx.defer()
-        db_guild = crud_database.get_or_create_guild_record(ctx.guild)
+        db_guild = CRUD.get_or_create_guild_record(ctx.guild)
         db_guild.mute_role_id = role.id
 
         await ctx.send(f"Set mute role to `{role.name}` with ID `{role.id}`")

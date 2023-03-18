@@ -18,11 +18,11 @@ from discord.ext.commands import Range
 from discord.utils import MISSING, escape_markdown
 from yt_dlp import YoutubeDL
 
-from nameless import Nameless, shared_vars
+from nameless import Nameless
 from nameless.cogs.checks import MusicCogCheck
 from nameless.commons import Utility
+from nameless.database import CRUD
 from NamelessConfig import NamelessConfig
-
 
 __all__ = ["MusicV2Cog"]
 
@@ -727,9 +727,9 @@ class MusicV2Cog(commands.Cog):
 
     async def __internal_play(self, ctx: commands.Context, url: str, is_radio: bool = False):
         if is_radio:
-            dbg = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
+            dbg = CRUD.get_or_create_guild_record(ctx.guild)
             dbg.radio_start_time = discord.utils.utcnow()
-            shared_vars.crud_database.save_changes()
+            CRUD.save_changes()
 
         await self.__internal_play2(ctx, url, is_radio)
 
@@ -931,7 +931,7 @@ class MusicV2Cog(commands.Cog):
         track: YTDLSource = player.track
 
         is_stream = track.is_stream()
-        dbg = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
+        dbg = CRUD.get_or_create_guild_record(ctx.guild)
         if not dbg:
             logging.error("Oh no. The database is gone! What do we do now?!!")
             raise AttributeError(f"Can't find guild id '{ctx.guild.id}'. Or maybe the database is gone?")

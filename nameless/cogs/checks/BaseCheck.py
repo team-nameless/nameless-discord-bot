@@ -1,5 +1,6 @@
 from typing import Callable, List
 
+import discord
 from discord.ext import commands
 
 
@@ -13,7 +14,7 @@ class BaseCheck:
         pass
 
     @staticmethod
-    def allow_help_message(check_fn: Callable[[commands.Context], bool]):
+    def allow_display_in_help_message(check_fn: Callable[[commands.Context], bool]):
         """
         Bypasses command-specific checks.
         Note: this is a decorator for a check.
@@ -27,12 +28,30 @@ class BaseCheck:
     @staticmethod
     def require_intents(intents: List):
         """
-        Require this command to have specific intent.
+        Require the bot to have specific intent(s).
         Note: this is a decorator for a command.
         """
 
         async def pred(ctx: commands.Context, /, **kwargs) -> bool:
             set_intents = ctx.bot.intents
+
+            for intent in intents:
+                if (set_intents.value & intent.flag) != intent.flag:
+                    return False
+
+            return True
+
+        return pred
+
+    @staticmethod
+    def require_interaction_intents(intents: List):
+        """
+        Require the bot to have specific intent(s).
+        Note: this is a decorator for an application command.
+        """
+
+        async def pred(interaction: discord.Interaction, /, **kwargs) -> bool:
+            set_intents = interaction.client.intents
 
             for intent in intents:
                 if (set_intents.value & intent.flag) != intent.flag:

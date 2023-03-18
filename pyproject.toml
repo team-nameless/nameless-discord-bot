@@ -1,12 +1,7 @@
 [tool.pyright]
-include = [
-    "nameless",
-    "tests",
-    "NamelessConfig_example.py",
-    "NamelessConfig.py",
-    "main.py",
-]
 exclude = [
+    "venv",
+    ".venv",
     "alembic",
     "**/__pycache__",
 ]

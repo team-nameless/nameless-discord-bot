@@ -77,12 +77,15 @@ class Nameless(commands.AutoShardedBot):
 
             for cog_name in cogs:
                 fail_reason = ""
+                full_qualified_name = f"nameless.cogs.{cog_name}Cog"
 
                 if cog_name + "Cog.py" in allowed_cogs:
                     try:
-                        await self.load_extension(f"nameless.cogs.{cog_name}Cog")
+                        await self.load_extension(full_qualified_name)
+                        shared_vars.loaded_cogs_list.append(full_qualified_name)
                     except commands.ExtensionError as ex:
                         fail_reason = str(ex)
+                        shared_vars.unloaded_cogs_list.append(full_qualified_name)
 
                     can_load = fail_reason == ""
                 else:
@@ -91,6 +94,19 @@ class Nameless(commands.AutoShardedBot):
 
                 if not can_load:
                     logging.error("Unable to load %s! %s", cog_name, fail_reason)
+                    shared_vars.unloaded_cogs_list.append(full_qualified_name)
+
+            # Convert .py files to valid module names
+            loaded_cog_modules = [f"nameless.cogs.{cog.replace('.py', '')}Cog" for cog in cogs]
+            allowed_cog_modules = [f"nameless.cogs.{cog.replace('.py', '')}" for cog in allowed_cogs]
+            excluded_cogs = list(set(set(allowed_cog_modules) - set(loaded_cog_modules)))
+            shared_vars.unloaded_cogs_list.extend(excluded_cogs)
+
+            # An extra set() to exclude cogs ignored by load failure.
+            shared_vars.unloaded_cogs_list = list(set(shared_vars.unloaded_cogs_list))
+
+            logging.debug("Loaded cog list: [ %s ]", ", ".join(shared_vars.loaded_cogs_list))
+            logging.debug("Excluded cog list: [ %s ]", ", ".join(shared_vars.unloaded_cogs_list))
         else:
             logging.warning("NamelessConfig.COGS is None or non-existence, nothing will be loaded.")
 
@@ -104,10 +120,11 @@ class Nameless(commands.AutoShardedBot):
         logging.info("Registering commands")
         await self.__register_all_cogs()
 
-        if ids := getattr(NamelessConfig, "GUILD_IDs", []):
+        if ids := getattr(NamelessConfig, "GUILDS", []):
             for _id in ids:
                 logging.info("Syncing commands with guild ID %d", _id)
                 sf = discord.Object(_id)
+                self.tree.copy_global_to(guild=sf)
                 await self.tree.sync(guild=sf)
         else:
             logging.info("Syncing commands globally")
@@ -144,7 +161,7 @@ class Nameless(commands.AutoShardedBot):
         )
 
     async def on_member_join(self, member: discord.Member):
-        db_guild = shared_vars.crud_database.get_or_create_guild_record(member.guild)
+        db_guild = CRUD.get_or_create_guild_record(member.guild)
 
         if db_guild.is_welcome_enabled:
             if db_guild.welcome_message != "":
@@ -159,7 +176,7 @@ class Nameless(commands.AutoShardedBot):
                 await self.send_greeter(db_guild.goodbye_message, member, send_target)
 
     async def on_member_remove(self, member: discord.Member):
-        db_guild = shared_vars.crud_database.get_or_create_guild_record(member.guild)
+        db_guild = CRUD.get_or_create_guild_record(member.guild)
 
         if db_guild.is_goodbye_enabled:
             if db_guild.goodbye_message != "":
@@ -263,7 +280,7 @@ class Nameless(commands.AutoShardedBot):
         logging.info("Populating nameless/shared_vars.py")
 
         shared_vars.start_time = datetime.now()
-        shared_vars.crud_database = CRUD()
+        # shared_vars.crud_database = CRUD()
 
         meta = getattr(NamelessConfig, "META", {})
 

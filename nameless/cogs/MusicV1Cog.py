@@ -16,11 +16,11 @@ from discord.ext.commands import Range
 from discord.utils import escape_markdown
 from wavelink.ext import spotify
 
-from nameless import Nameless, shared_vars
+from nameless import Nameless
 from nameless.cogs.checks import MusicCogCheck
 from nameless.commons import Utility
+from nameless.database import CRUD
 from NamelessConfig import NamelessConfig
-
 
 __all__ = ["MusicV1Cog"]
 
@@ -368,7 +368,7 @@ class MusicV1Cog(commands.Cog):
         vc: wavelink.Player = ctx.voice_client  # type: ignore
 
         if is_radio:
-            db_guild = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
+            db_guild = CRUD.get_or_create_guild_record(ctx.guild)
             db_guild.radio_start_time = discord.utils.utcnow()
 
         await self.__internal_play2(vc, url, is_radio)
@@ -610,7 +610,7 @@ class MusicV1Cog(commands.Cog):
         track: wavelink.Track = vc.track  # type: ignore
 
         is_stream = track.is_stream()
-        dbg = shared_vars.crud_database.get_or_create_guild_record(ctx.guild)
+        dbg = CRUD.get_or_create_guild_record(ctx.guild)
         # next_tr: Optional[Union[Type[wavelink.Track], wavelink.tracks.Playable]]
 
         try:

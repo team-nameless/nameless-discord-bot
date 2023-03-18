@@ -1,11 +1,13 @@
 sqlalchemy
-ossapi==2.6.0
+ossapi
 discord.py
 discord.py[speed]
 discord.py[voice]
 DiscordUtils
 wavelink==1.3.5
 yt-dlp
+reactionmenu
+wavelink
 alembic
 packaging
 aiohttp

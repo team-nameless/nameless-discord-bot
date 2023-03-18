@@ -8,11 +8,7 @@ from datetime import datetime
 from discord import Permissions
 
 from nameless import customs
-from nameless.database import CRUD
 
-
-# Setup
-crud_database: CRUD
 
 # Logging
 stdout_handler = logging.StreamHandler(sys.stdout)
@@ -22,7 +18,9 @@ additional_handlers: list = []
 # Patterns
 cogs_regex = re.compile(r"^(?!_.).*Cog.py")
 
-# Meta
+# Commands
+loaded_cogs_list: list[str] = []
+unloaded_cogs_list: list[str] = []
 
 
 @functools.lru_cache

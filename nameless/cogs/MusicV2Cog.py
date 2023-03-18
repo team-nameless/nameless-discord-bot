@@ -24,7 +24,6 @@ from nameless.commons import Utility
 from nameless.database import CRUD
 from NamelessConfig import NamelessConfig
 
-
 __all__ = ["MusicV2Cog"]
 
 PROVIDER_MAPPING = {
@@ -58,7 +57,7 @@ class VoteMenuView(discord.ui.View):
         action: str,
         content: str,
         ctx: commands.Context,
-        timeout: Optional[float] = None,
+        timeout: float = 30.0,
     ):
         super().__init__(timeout=timeout)
 

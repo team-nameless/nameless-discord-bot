@@ -16,13 +16,14 @@ from discord.app_commands import Choice
 from discord.ext import commands
 from discord.ext.commands import Range
 from discord.utils import MISSING, escape_markdown
-from yt_dlp import YoutubeDL
+from yt_dlp import DownloadError, YoutubeDL
 
 from nameless import Nameless
 from nameless.cogs.checks import MusicCogCheck
 from nameless.commons import Utility
 from nameless.database import CRUD
 from NamelessConfig import NamelessConfig
+
 
 __all__ = ["MusicV2Cog"]
 
@@ -276,7 +277,7 @@ class FFOpusAudioProcess(discord.FFmpegOpusAudio):
 
     def to_start(self):
         if not self.can_cache:
-            raise FFAudioProcessNoCache("Can't use cache and seek on audio that have over 10mins of duration")
+            raise FFAudioProcessNoCache("Can't use cache and seek on song that have over 10mins of duration")
 
         with self.lock:
             self.stream_idx = 0
@@ -293,19 +294,19 @@ class FFOpusAudioProcess(discord.FFmpegOpusAudio):
 class YTDLSource(discord.AudioSource):
     __slots__ = ("requester", "title", "author", "duration", "extractor", "direct", "uri", "thumbnail", "cleaned")
 
-    def __init__(self, data, requester, *args, **kwargs):
+    def __init__(self, data: dict, requester: discord.Member, *args, **kwargs):
         if source := kwargs.get("source", None):
             self.source: FFOpusAudioProcess = source
 
         self.requester: discord.Member = requester
         self.cleaned = False
-        self.id = data.get("id", 0)
-        self.duration = data.get("duration", 0)
-        self.direct = kwargs.get("direct", False)
-        self.thumbnail = data.get("thumbnail", None)
-        self.title = data.get("title", "Unknown title")
-        self.extractor = data.get("extractor") or kwargs.get("extractor", "None")
-        self.author = data.get("uploader") or data.get("channel", "Unknown artits")
+        self.id: int = data.get("id", 0)
+        self.duration: int = data.get("duration", 0)
+        self.direct: bool = kwargs.get("direct", False)
+        self.thumbnail: Optional[str] = data.get("thumbnail", None)
+        self.title: str = data.get("title", "Unknown title")
+        self.extractor: str = data.get("extractor") or kwargs.get("extractor", "None")
+        self.author: str = data.get("uploader") or data.get("channel", "Unknown artits")
 
         if "search" in self.extractor:
             self.uri = data.get("url")
@@ -321,20 +322,23 @@ class YTDLSource(discord.AudioSource):
 
         return data
 
+    @staticmethod
+    async def _requests(http_session, url, *args, **kwargs) -> Optional[dict]:
+        async with http_session.get(url, *args, **kwargs) as resp:
+            if resp.status == 200:
+                return await resp.json()
+            raise asyncio.InvalidStateError(f"Failed to get {url}: Get {resp.status}")
+
     @classmethod
     async def get_related_tracks(cls, track, bot: Nameless):
         http_session = bot.http._HTTPClient__session  # type: ignore
 
-        async def _requests(url, *args, **kwargs) -> Optional[dict]:
-            async with http_session.get(url, *args, **kwargs) as resp:
-                if resp.status == 200:
-                    return await resp.json()
-                raise asyncio.InvalidStateError(f"Failed to get related tracks: Get {resp.status}")
-
         try:
             match track.extractor:
                 case "youtube":
-                    data = await _requests(f"https://yt.funami.tech/api/v1/videos/{track.id}?fields=recommendedVideos")
+                    data = await cls._requests(
+                        http_session, f"https://yt.funami.tech/api/v1/videos/{track.id}?fields=recommendedVideos"
+                    )
                     data = await cls.__get_raw_data(
                         f"https://www.youtube.com/watch?v={random.choice(data['recommendedVideos'])['videoId']}",
                         process=False,
@@ -346,7 +350,8 @@ class YTDLSource(discord.AudioSource):
                         data = await cls.__get_raw_data(track.title)
                         return await cls.get_related_tracks(track, bot)
 
-                    data = await _requests(
+                    data = await cls._requests(
+                        http_session,
                         f"https://api-v2.soundcloud.com/tracks/{track.id}/related",
                         params={
                             "user_id": NamelessConfig.SOUNDCLOUD["user_id"],
@@ -391,7 +396,7 @@ class YTDLSource(discord.AudioSource):
 
     @classmethod
     async def get_tracks(
-        cls, ctx: commands.Context, search, amount, provider, loop=None, process=False
+        cls, ctx: commands.Context, search, amount=5, provider="youtube", loop=None, process=True
     ) -> AsyncGenerator:
         data = await cls.__get_raw_data(
             search, loop, ytdl_cls=cls.maybe_new_extractor(provider, amount), process=process
@@ -406,8 +411,8 @@ class YTDLSource(discord.AudioSource):
             yield cls.info_wrapper(data, ctx.author)
 
     @classmethod
-    async def get_track(cls, ctx: commands.Context, search, loop=None):
-        return await anext(cls.get_tracks(ctx, search, 5, search, loop))
+    async def get_track(cls, ctx: commands.Context, search, amount=5, provider="youtube", loop=None):
+        return await anext(cls.get_tracks(ctx, search, amount, provider, loop))
 
     @classmethod
     def info_wrapper(cls, track, author, extra_info=None):
@@ -441,6 +446,91 @@ class YTDLSource(discord.AudioSource):
             source.all_cleanup()
 
         self.cleaned = True
+
+
+class YTMusicSource(YTDLSource):
+    """
+    This class is used to represent a YouTube Music stream, taken from Invidious instance.
+
+    This could be useful if you run the bot in an area where Youtube Music has been blocked or is not yet available.
+    """
+
+    PARAMS = "fields=videoThumbnails,videoId,title,viewCount,likeCount,author,authorUrl,lengthSeconds"
+
+    def __init__(self, data: dict, requester: discord.Member, *args, **kwargs):
+        super().__init__(data, requester, *args, **kwargs)
+
+    def get(self, key: str, _default: Any = None) -> Any:
+        if not hasattr(self, key):
+            return _default
+
+        return getattr(self, key)
+
+    @staticmethod
+    async def _requests(http_session, url, *args, **kwargs) -> Optional[dict]:
+        async with http_session.get(url, *args, **kwargs) as resp:
+            if resp.status == 200:
+                return await resp.json()
+            raise asyncio.InvalidStateError(f"Failed to get {url}: Get {resp.status}")
+
+    @classmethod
+    async def generate_stream(cls, data, loop=None):
+        loop = loop or asyncio.get_event_loop()
+        requester = data.requester
+
+        data.url = f"https://vid.puffyan.us/latest_version?id={data.id}&itag=250&local=true"
+
+        return cls(
+            source=FFOpusAudioProcess(
+                data.url,
+                **FFMPEG_OPTS,
+                can_cache=data.duration < 600,
+                codec="opus",
+            ),
+            data=data,
+            requester=requester,
+        )
+
+    @classmethod
+    async def indivious_get_track(cls, ctx: commands.Context, videoid, loop=None):
+        # data_search = await cls._requests(
+        #     ctx.bot.http._HTTPClient__session,
+        #     f"https://yt.funami.tech/api/v1/search/{videoid}?{cls.PARAMS}",
+        #     loop=loop,
+        # )
+
+        if "youtube" in videoid:
+            idx = videoid.find("?v=")
+            if idx == -1:
+                return
+
+            # dirty way to extract id from url
+            videoid = videoid[idx + 3 : idx + 3 + 11]  # noqa: E203
+
+        if len(videoid) != 11:
+            return
+
+        req_data = await cls._requests(
+            ctx.bot.http._HTTPClient__session,
+            f"https://yt.funami.tech/api/v1/videos/{videoid}?{cls.PARAMS}",
+        )
+
+        if not req_data:
+            return
+
+        data = {
+            "id": req_data["videoId"],
+            "duration": req_data["lengthSeconds"],
+            "direct": False,
+            "thumbnail": req_data["videoThumbnails"][1]["url"],
+            "title": req_data["title"],
+            "extractor": "ytmusic",
+            "uploader": req_data["author"],
+            "author_url": req_data["authorUrl"],
+            "webpage_url": f"https://music.youtube.com/watch?v={req_data['videoId']}",
+        }
+
+        return cls.info_wrapper(data, ctx.author)
 
 
 class MainPlayer:
@@ -534,7 +624,7 @@ class MainPlayer:
 
                     if self.allow_np_msg:
                         await self._channel.send(embed=self.build_embed(self.track, "Now playing"))
-                    self.track = await YTDLSource.generate_stream(self.track)
+                    self.track = await self.track.generate_stream(self.track)
                     self.total_duration -= self.track.duration
                 else:
                     self.loop_play_count += 1
@@ -1024,7 +1114,14 @@ class MusicV2Cog(commands.Cog):
         if provider == "ytmusic":
             search = f"{search}#songs"
 
-        tracks: List[YTDLSource] = [tr async for tr in YTDLSource.get_tracks(ctx, search, amount, provider)]
+        try:
+            tracks: List[YTDLSource] = [tr async for tr in YTDLSource.get_tracks(ctx, search, amount, provider)]
+        except DownloadError:
+            if "youtube" in search:
+                tracks = [await YTMusicSource.indivious_get_track(ctx, search)]  # type: ignore
+            else:
+                tracks = []
+
         if not tracks:
             await ctx.send(f"No tracks found for '{search}' on '{provider}'.")
             return

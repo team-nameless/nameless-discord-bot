@@ -50,14 +50,6 @@ jobs:
         run: |
           pyright
 
-      - name: Linting (flake8)
-        run: |
-          flake8 --select=E
-
-      - name: Linting (pylint)
-        run: |
-          pylint **/*.py --disable=W,R,C
-
       - name: Linting (ruff)
         run: |
           ruff nameless main.py NamelessConfig_example.py

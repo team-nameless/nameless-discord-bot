@@ -1,8 +1,6 @@
 pip-autoremove
 black
 isort
-flake8
-pylint
 pip
 setuptools
 wheel

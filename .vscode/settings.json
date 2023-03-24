@@ -1,7 +1,5 @@
 {
   "python.linting.enabled": true,
-  "python.linting.flake8Enabled": true,
-  "python.linting.pylintEnabled": true,
   "python.formatting.provider": "black",
   "python.analysis.diagnosticMode": "workspace",
   "python.testing.pytestEnabled": true,

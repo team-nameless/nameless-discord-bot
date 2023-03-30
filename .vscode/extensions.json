@@ -7,6 +7,7 @@
 		"ms-vscode.test-adapter-converter",
 		"TabNine.tabnine-vscode",
 		"GitHub.copilot",
+		"charliermarsh.ruff",
 		"KevinRose.vsc-python-indent",
 		"tamasfe.even-better-toml",
 		"ms-python.python",
@@ -21,10 +22,5 @@
 		"eamodio.gitlens",
 		"donjayamanne.githistory",
 		"GitHub.vscode-pull-request-github",
-
-		// Cosmetic
-		"LeonardSSH.vscord",
-		"Catppuccin.catppuccin-vsc",
-		"PKief.material-icon-theme"
 	],
 }

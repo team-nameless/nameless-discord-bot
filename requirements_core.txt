@@ -2,7 +2,6 @@ sqlalchemy
 ossapi
 discord.py
 discord.py[speed]
-DiscordUtils
 reactionmenu
 wavelink
 alembic

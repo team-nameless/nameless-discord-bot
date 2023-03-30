@@ -92,7 +92,7 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
                 upcoming = (
                     f"{idx + 1} - "
                     f"[{escape_markdown(track.title)} by {escape_markdown(track.author)}]"  # pyright: ignore
-                    f"({track.uri})\n"  # pyright: ignore
+                    f"({track.uri or 'N/A'})\n"
                 )
 
                 if len(txt) + len(upcoming) > 2048:
@@ -546,9 +546,9 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
             embed.add_field(
                 name="Next track",
-                value=f"[{escape_markdown(next_tr.title) if next_tr.title else 'Unknown title'} "  # pyright: ignore
+                value=f"[{escape_markdown(next_tr.title) if next_tr.title else 'Unknown title'} "
                 f"by {escape_markdown(next_tr.author)}]"  # pyright: ignore
-                f"({next_tr.uri})"  # pyright: ignore
+                f"({next_tr.uri or 'N/A'})"
                 if next_tr
                 else "N/A",
             )

@@ -252,12 +252,7 @@ class ModeratorCog(commands.GroupCog):
         async def max_fn(_interaction: discord.Interaction, _member: discord.Member, _reason: str):
             pass
 
-        await ModeratorCog.__generic_warn(interaction, member,
-                                          reason,
-                                          -count,
-                                          zero_fn,
-                                          max_fn,
-                                          diff_fn)
+        await ModeratorCog.__generic_warn(interaction, member, reason, -count, zero_fn, max_fn, diff_fn)
 
     @app_commands.command()
     @app_commands.guild_only()

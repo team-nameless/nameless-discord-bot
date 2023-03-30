@@ -1,2 +1,2 @@
 from .BaseCheck import *
-from .MusicCogCheck import *
+from .MusicLavalinkCogCheck import *

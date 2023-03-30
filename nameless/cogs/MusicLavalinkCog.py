@@ -14,7 +14,7 @@ from reactionmenu import ViewButton, ViewMenu
 from wavelink.ext import spotify
 
 from nameless import Nameless
-from nameless.cogs.checks import LavalinkMusicCogCheck
+from nameless.cogs.checks import MusicLavalinkCogCheck
 from nameless.commons import Utility
 from nameless.ui_kit import TrackSelectDropdown, VoteMenu
 from NamelessConfig import NamelessConfig
@@ -269,8 +269,8 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
     @app_commands.command()
     @app_commands.guild_only()
     @app_commands.describe(source_url="Radio site URL to broadcast, like 'https://listen.moe/stream'")
-    @app_commands.check(LavalinkMusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(LavalinkMusicCogCheck.bot_is_silent)
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.bot_is_silent)
     async def radio(self, interaction: discord.Interaction, source_url: str):
         """Play a radio stream."""
         await interaction.response.defer()
@@ -287,7 +287,7 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
     @app_commands.command()
     @app_commands.guild_only()
-    @app_commands.check(LavalinkMusicCogCheck.user_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.user_in_voice)
     async def connect(self, interaction: discord.Interaction):
         """
         Connect to your current voice channel. Normally the bot should join your channel when you execute a play-like
@@ -311,7 +311,7 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
     @app_commands.command()
     @app_commands.guild_only()
-    @app_commands.check(LavalinkMusicCogCheck.bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.bot_in_voice)
     async def disconnect(self, interaction: discord.Interaction):
         """Disconnect from my current voice channel"""
         await interaction.response.defer()
@@ -324,8 +324,8 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
     @app_commands.command()
     @app_commands.guild_only()
-    @app_commands.check(LavalinkMusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(LavalinkMusicCogCheck.bot_must_play_track_not_stream)
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.bot_must_play_track_not_stream)
     async def toggle_loop_track(self, interaction: discord.Interaction):
         """Toggle loop of current track."""
         await interaction.response.defer()
@@ -337,8 +337,8 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
     @app_commands.command()
     @app_commands.guild_only()
-    @app_commands.check(LavalinkMusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(LavalinkMusicCogCheck.queue_has_element)
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.queue_has_element)
     async def toggle_loop_queue(self, interaction: discord.Interaction):
         """Toggle loop of current queue."""
         await interaction.response.defer()
@@ -350,8 +350,8 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
     @app_commands.command()
     @app_commands.guild_only()
-    @app_commands.check(LavalinkMusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(LavalinkMusicCogCheck.bot_must_play_something)
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.bot_must_play_something)
     async def pause(self, interaction: discord.Interaction):
         """Pause current track"""
         await interaction.response.defer()
@@ -367,8 +367,8 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
     @app_commands.command()
     @app_commands.guild_only()
-    @app_commands.check(LavalinkMusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(LavalinkMusicCogCheck.bot_is_silent)
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.bot_is_silent)
     async def resume(self, interaction: discord.Interaction):
         """Resume current playback, if paused"""
         await interaction.response.defer()
@@ -384,8 +384,8 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
     @app_commands.command()
     @app_commands.guild_only()
-    @app_commands.check(LavalinkMusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(LavalinkMusicCogCheck.bot_must_play_something)
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.bot_must_play_something)
     async def stop(self, interaction: discord.Interaction):
         """Stop current playback."""
         await interaction.response.defer()
@@ -398,9 +398,9 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
     @app_commands.command()
     @app_commands.guild_only()
-    @app_commands.check(LavalinkMusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(LavalinkMusicCogCheck.bot_must_play_track_not_stream)
-    @app_commands.check(LavalinkMusicCogCheck.queue_has_element)
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.bot_must_play_track_not_stream)
+    @app_commands.check(MusicLavalinkCogCheck.queue_has_element)
     async def skip(self, interaction: discord.Interaction):
         """Skip a song."""
         await interaction.response.defer()
@@ -421,8 +421,8 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
     @app_commands.guild_only()
     @app_commands.describe(position="Position to seek to in milliseconds, defaults to run from start")
     @app_commands.checks.has_permissions(manage_guild=True)
-    @app_commands.check(LavalinkMusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(LavalinkMusicCogCheck.bot_must_play_track_not_stream)
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.bot_must_play_track_not_stream)
     async def seek(self, interaction: discord.Interaction, position: app_commands.Range[int, 0] = 0):
         """Seek to named position in a track"""
         await interaction.response.defer()
@@ -445,8 +445,8 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
     @app_commands.guild_only()
     @app_commands.describe(segment="Segment percentage to seek (from 0 to 100, respecting with from  0% to 100%)")
     @app_commands.checks.has_permissions(manage_guild=True)
-    @app_commands.check(LavalinkMusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(LavalinkMusicCogCheck.bot_must_play_track_not_stream)
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.bot_must_play_track_not_stream)
     async def seek_segment(self, interaction: discord.Interaction, segment: Range[int, 0, 100] = 0):
         """Seek to percentage-based position in a track."""
         await interaction.response.defer()
@@ -462,8 +462,8 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
     @app_commands.command()
     @app_commands.guild_only()
-    @app_commands.check(LavalinkMusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(LavalinkMusicCogCheck.bot_must_play_track_not_stream)
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.bot_must_play_track_not_stream)
     async def toggle_now_playing(self, interaction: discord.Interaction):
         """Toggle 'Now playing' message delivery on every non-looping track."""
         await interaction.response.defer()
@@ -475,7 +475,7 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
     @app_commands.command()
     @app_commands.guild_only()
-    @app_commands.check(LavalinkMusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
     async def toggle_autoplay(self, interaction: discord.Interaction):
         """Toggle AutoPlay feature."""
         await interaction.response.defer()
@@ -488,8 +488,8 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
     @app_commands.command()
     @app_commands.guild_only()
     @app_commands.describe(show_next_track="Whether the minimal information of next track should be shown")
-    @app_commands.check(LavalinkMusicCogCheck.bot_in_voice)
-    @app_commands.check(LavalinkMusicCogCheck.bot_must_play_something)
+    @app_commands.check(MusicLavalinkCogCheck.bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.bot_must_play_something)
     async def now_playing(self, interaction: discord.Interaction, show_next_track: bool = True):
         """Check now playing song"""
         await interaction.response.defer()
@@ -559,7 +559,7 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
     @queue.command()
     @app_commands.guild_only()
-    @app_commands.check(LavalinkMusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
     async def view(self, interaction: discord.Interaction):
         """View current queue"""
         await interaction.response.defer()
@@ -577,8 +577,8 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
     @app_commands.guild_only()
     @app_commands.describe(index="The index to remove")
     @app_commands.checks.has_permissions(manage_guild=True)
-    @app_commands.check(LavalinkMusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(LavalinkMusicCogCheck.queue_has_element)
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.queue_has_element)
     async def delete(self, interaction: discord.Interaction, index: Range[int, 1]):
         """Remove track from queue"""
         await interaction.response.defer()
@@ -599,7 +599,7 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
     @app_commands.guild_only()
     @app_commands.describe(search="Search query", source="Source to search")
     @app_commands.choices(source=[Choice(name=k, value=k) for k in music_default_sources])
-    @app_commands.check(LavalinkMusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
     async def add(self, interaction: discord.Interaction, search: str, source: str = "youtube"):
         """Add selected track(s) to queue"""
         await interaction.response.defer()
@@ -664,7 +664,7 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
     @queue.command()
     @app_commands.guild_only()
-    @app_commands.check(LavalinkMusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
     @app_commands.describe(url="Playlist URL", source="Source to get playlist")
     @app_commands.choices(source=[Choice(name=k, value=k) for k in music_default_sources])
     async def add_playlist(self, interaction: discord.Interaction, url: str, source: str = "youtube"):
@@ -710,8 +710,8 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
     @app_commands.guild_only()
     @app_commands.describe(before="Old position", after="New position")
     @app_commands.checks.has_permissions(manage_guild=True)
-    @app_commands.check(LavalinkMusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(LavalinkMusicCogCheck.queue_has_element)
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.queue_has_element)
     async def move(self, interaction: discord.Interaction, before: Range[int, 1], after: Range[int, 1]):
         """Move track to new position"""
         await interaction.response.defer()
@@ -735,16 +735,16 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
     @app_commands.guild_only()
     @app_commands.describe(pos="Current position", diff="Relative difference")
     @app_commands.checks.has_permissions(manage_guild=True)
-    @app_commands.check(LavalinkMusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(LavalinkMusicCogCheck.queue_has_element)
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.queue_has_element)
     async def move_relative(self, interaction: discord.Interaction, pos: Range[int, 1], diff: int):
         """Move track to new position using relative difference"""
         await self.move(interaction, pos, pos + diff)  # pyright: ignore
 
     @queue.command()
     @app_commands.guild_only()
-    @app_commands.check(LavalinkMusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(LavalinkMusicCogCheck.queue_has_element)
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.queue_has_element)
     @app_commands.describe(
         pos1="Position of first track",
         pos2="Position of second track",
@@ -771,8 +771,8 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
     @queue.command()
     @app_commands.guild_only()
-    @app_commands.check(LavalinkMusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(LavalinkMusicCogCheck.queue_has_element)
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.queue_has_element)
     @app_commands.checks.has_permissions(manage_guild=True)
     async def shuffle(self, interaction: discord.Interaction):
         """Shuffle the queue"""
@@ -785,8 +785,8 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
     @queue.command()
     @app_commands.guild_only()
-    @app_commands.check(LavalinkMusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(LavalinkMusicCogCheck.queue_has_element)
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.queue_has_element)
     async def clear(self, interaction: discord.Interaction):
         """Clear the queue, using vote system."""
         await interaction.response.defer()
@@ -799,8 +799,8 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
     @queue.command()
     @app_commands.guild_only()
-    @app_commands.check(LavalinkMusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(LavalinkMusicCogCheck.queue_has_element)
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.queue_has_element)
     @app_commands.checks.has_permissions(manage_guild=True)
     async def force_clear(self, interaction: discord.Interaction):
         """Force clear the queue, guild managers only."""

@@ -160,8 +160,6 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
             for node in NamelessConfig.LAVALINK["nodes"]
         ]
 
-        print(nodes)
-
         await wavelink.NodePool.connect(
             client=self.bot,
             nodes=nodes,

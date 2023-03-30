@@ -77,7 +77,7 @@ class NamelessConfig:
     #                       Osu (requires `OSU` to be properly provided),
     #                       Owner
     COGS: List[LiteralString] = [
-        "MusicV1",
+        "MusicLavalink",
         "Owner",
         "General",
         "Config",

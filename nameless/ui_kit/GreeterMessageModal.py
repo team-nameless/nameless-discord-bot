@@ -7,8 +7,6 @@ __all__ = ["GreeterMessageModal"]
 
 class GreeterMessageModal(ui.Modal, title="New greeter text"):
     def __init__(self, initial_text: str | None = None):
-        super().__init__()
-
         if initial_text is not None:
             self.text.default = initial_text
 

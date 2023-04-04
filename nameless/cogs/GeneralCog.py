@@ -97,7 +97,7 @@ class GeneralCog(commands.Cog):
                 title=f"Something about '{guild.name}'",
                 color=discord.Color.orange(),
             )
-            .set_thumbnail(url=guild.banner.url if guild.banner else "")
+            .set_thumbnail(url=guild.icon.url if guild.icon else "")
             .add_field(
                 name="Guild creation date",
                 value=f"<t:{int(guild_create_date.timestamp())}:R>",
@@ -118,6 +118,7 @@ class GeneralCog(commands.Cog):
                 if is_boosted
                 else "Not boosted",
             )
+            .set_image(url=guild.banner.url if guild.banner else "")
         )
 
         await interaction.followup.send(embed=embed)

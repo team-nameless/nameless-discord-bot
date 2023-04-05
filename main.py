@@ -8,6 +8,7 @@ from discord.ext import commands
 import NamelessConfig
 from nameless import Nameless
 
+
 UPDATE_CHECK_FLAG = "--allow-updates-check"
 
 cfg = NamelessConfig.NamelessConfig
@@ -41,6 +42,7 @@ async def on_app_command_error(interaction: discord.Interaction, err: AppCommand
         stack_info=True,
         exc_info=err,
     )
+
 
 # If you are encountering the error such as "column not found", this is for you
 # Be aware that this will "erase" your tables as well

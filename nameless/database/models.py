@@ -3,8 +3,8 @@ from typing import Union
 
 import discord
 from sqlalchemy import Column
-from sqlalchemy.sql.sqltypes import *
 from sqlalchemy.orm import declarative_base  # pyright: ignore
+from sqlalchemy.sql.sqltypes import *
 
 
 __all__ = ["Base", "DbUser", "DbGuild"]
@@ -54,7 +54,5 @@ class DbGuild(Base):
         default=datetime.min,
     )  # type: ignore
     mute_timeout_interval: timedelta = Column(
-        Interval,
-        name="MuteTimeoutInterval",
-        default=timedelta(days=7)
-    )
+        Interval, name="MuteTimeoutInterval", default=timedelta(days=7)
+    )  # type: ignore

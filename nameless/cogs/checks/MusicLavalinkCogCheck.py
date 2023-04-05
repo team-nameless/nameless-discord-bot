@@ -15,7 +15,7 @@ class MusicLavalinkCogCheck(BaseCheck):
 
     @staticmethod
     def bot_must_play_track_not_stream(interaction: discord.Interaction):
-        return MusicLavalinkCogCheck.bot_must_play_something(
+        return MusicLavalinkCogCheck.bot_is_playing_something(
             interaction
         ) and MusicLavalinkCogCheck.must_not_be_a_stream(interaction)
 
@@ -34,16 +34,25 @@ class MusicLavalinkCogCheck(BaseCheck):
         return True
 
     @staticmethod
-    def bot_is_silent(interaction: discord.Interaction):
+    def bot_is_not_playing_something(interaction: discord.Interaction):
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
 
         if vc and vc.is_playing():
+            raise CheckFailure("I must not be playing something (or paused while doing it).")
+
+        return True
+
+    @staticmethod
+    def bot_is_silent(interaction: discord.Interaction):
+        vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
+
+        if vc and not vc.is_paused():
             raise CheckFailure("I must be silenced.")
 
         return True
 
     @staticmethod
-    def bot_must_play_something(interaction: discord.Interaction):
+    def bot_is_playing_something(interaction: discord.Interaction):
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
         if vc and not vc.is_playing():
             raise CheckFailure("I need to play something.")

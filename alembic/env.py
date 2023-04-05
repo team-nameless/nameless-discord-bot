@@ -5,6 +5,8 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
+
+import nameless
 from nameless.commons import Utility
 from nameless.database import Base
 
@@ -26,7 +28,7 @@ config.set_main_option("sqlalchemy.url", db_url)
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = Base.metadata
+target_metadata = nameless.database.models.Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

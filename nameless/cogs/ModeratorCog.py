@@ -10,6 +10,7 @@ from discord.ext import commands
 import nameless
 from nameless.database.crud import CRUD
 
+
 __all__ = ["ModeratorCog"]
 
 from nameless.ui_kit import YesNoButtonPrompt
@@ -88,7 +89,7 @@ class ModeratorCog(commands.GroupCog, name="mod"):
 
         await interaction.followup.send(
             content=f"{'Removed' if val < 0 else 'Added'} {abs(val)} warning(s) to {member.mention} with reason: {reason}\n"
-                    f"Now they are having {db_user.warn_count} warning(s)"
+            f"Now they are having {db_user.warn_count} warning(s)"
         )
 
     @staticmethod
@@ -107,8 +108,10 @@ class ModeratorCog(commands.GroupCog, name="mod"):
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
 
         try:
-            mute_role = interaction.guild.get_role(db_guild.mute_role_id) or \
-                        [role for role in interaction.guild.roles if role.name == "muted by nameless*"][0]
+            mute_role = (
+                interaction.guild.get_role(db_guild.mute_role_id)
+                or [role for role in interaction.guild.roles if role.name == "muted by nameless*"][0]
+            )
         except IndexError:
             mute_role = None
 
@@ -125,19 +128,24 @@ class ModeratorCog(commands.GroupCog, name="mod"):
             is_timed_out = await prompt.wait()
 
             if is_timed_out:
-                await m.edit_message(content="Timed out", view=None)
+                await m.edit(content="Timed out", view=None)  # pyright: ignore
                 return
             else:
-                perms = discord.Permissions()
+                perms = discord.Permissions.text()
 
                 perms.send_messages = False
                 perms.send_messages_in_threads = False
+                perms.add_reactions = False
 
                 role = await interaction.guild.create_role(
                     name="muted by nameless*", reason="temporary role creation", permissions=perms
                 )
 
                 mute_role = role
+                db_guild.mute_role_id = role.id
+                CRUD.save_changes()
+
+                await m.edit(content="Creation complete!", view=None)  # pyright: ignore
 
         if not use_native_timeout:
             if not mute_role:
@@ -225,7 +233,7 @@ class ModeratorCog(commands.GroupCog, name="mod"):
             pass
 
         async def diff_fn(
-                _interaction: discord.Interaction, _member: discord.Member, _reason: str, curr: int, prev: int
+            _interaction: discord.Interaction, _member: discord.Member, _reason: str, curr: int, prev: int
         ):
             pass
 
@@ -255,7 +263,7 @@ class ModeratorCog(commands.GroupCog, name="mod"):
             pass
 
         async def diff_fn(
-                _interaction: discord.Interaction, _member: discord.Member, _reason: str, current: int, prev: int
+            _interaction: discord.Interaction, _member: discord.Member, _reason: str, current: int, prev: int
         ):
             db_guild = CRUD.get_or_create_guild_record(interaction.guild)
             if prev == db_guild.max_warn_count:
@@ -351,8 +359,9 @@ class ModeratorCog(commands.GroupCog, name="mod"):
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(moderate_members=True, manage_guild=True)
     @app_commands.describe(duration="Default mute duration.")
-    async def set_mute_timeout_duration(self, interaction: discord.Interaction,
-                                        duration: Literal["60s", "5m", "10m", "1h", "1d", "1w"]):
+    async def set_mute_timeout_duration(
+        self, interaction: discord.Interaction, duration: Literal["60s", "5m", "10m", "1h", "1d", "1w"]
+    ):
         """Set default mute duration for timeout."""
         await interaction.response.defer()
 
@@ -375,7 +384,6 @@ class ModeratorCog(commands.GroupCog, name="mod"):
         CRUD.save_changes()
 
         await interaction.followup.send(f"Set mute timeout duration to {delta}")
-
 
 
 async def setup(bot: nameless.Nameless):

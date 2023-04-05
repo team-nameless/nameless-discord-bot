@@ -114,6 +114,7 @@ class Nameless(commands.AutoShardedBot):
         logging.info("Shard #%s is ready", shard_id)
 
     async def setup_hook(self) -> None:
+        CRUD.init()
         await self.construct_shared_vars()
         self.check_for_updates()
 

@@ -52,7 +52,7 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
         logging.warning("Initiating autoleave for voice channel ID:%s of guild %s", chn.id, chn.guild.id)
         await asyncio.sleep(120)
         await self.bot.get_guild(chn.guild.id).voice_client.disconnect(force=True)
-        await self.bot.get_guild(chn.guild.id).voice_client.cleanup()
+        self.bot.get_guild(chn.guild.id).voice_client.cleanup()
         logging.warning("Disconnect from voice channel ID:%s of guild %s", chn.id, chn.guild.id)
 
     @staticmethod
@@ -205,7 +205,7 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
                 logging.info(
                     "No member present in voice channel ID:%s in guild %s, creating autoleave", chn.id, guild.id
                 )
-                self.autoleave_waiter_task[chn.id] = self.bot.loop.create_task(self.autoleave(chn))
+                self.autoleave_waiter_task[chn.id] = self.bot.loop.create_task(self.autoleave(chn))  # pyright: ignore
                 logging.debug("%s", self.autoleave_waiter_task)
             else:
                 if self.autoleave_waiter_task:
@@ -330,7 +330,9 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
             )
             return
 
-        m: discord.WebhookMessage = await interaction.followup.send(content="Connecting to the radio stream...")
+        m: discord.WebhookMessage = await interaction.followup.send(
+            content="Connecting to the radio stream..."
+        )  # pyright: ignore
 
         await self.__preprocess_track_then_play(interaction, m, source_url, True)
 
@@ -475,7 +477,7 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicLavalinkCogCheck.bot_must_play_track_not_stream)
-    async def seek(self, interaction: discord.Interaction, position: app_commands.Range[float, 0] = 0):
+    async def seek(self, interaction: discord.Interaction, position: app_commands.Range[int, 0] = 0):
         """Seek to named position in a track"""
         await interaction.response.defer()
 
@@ -499,7 +501,7 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicLavalinkCogCheck.bot_must_play_track_not_stream)
-    async def seek_segment(self, interaction: discord.Interaction, segment: Range[float, 0, 100] = 0):
+    async def seek_segment(self, interaction: discord.Interaction, segment: Range[int, 0, 100] = 0):
         """Seek to percentage-based position in a track."""
         await interaction.response.defer()
 
@@ -685,7 +687,7 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
         view = discord.ui.View().add_item(TrackSelectDropdown([track for track in tracks if not track.is_stream]))
 
-        m: discord.WebhookMessage = await interaction.followup.send("Tracks found", view=view)
+        m: discord.WebhookMessage = await interaction.followup.send("Tracks found", view=view)  # pyright: ignore
 
         if await view.wait():
             await m.edit(content="Timed out! Please try again!", view=None)

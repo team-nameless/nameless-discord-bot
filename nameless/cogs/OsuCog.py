@@ -308,10 +308,7 @@ class OsuCog(commands.GroupCog, name="osu"):
         """View osu! specific detail(s) of a member."""
         await interaction.response.defer()
 
-        if member is None:
-            member = interaction.user
-
-        db_user = CRUD.get_or_create_user_record(member)
+        db_user = CRUD.get_or_create_user_record(member if member else interaction.user)
 
         if not db_user.osu_username:
             if member is None:

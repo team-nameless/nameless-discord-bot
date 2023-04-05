@@ -88,7 +88,8 @@ class ModeratorCog(commands.GroupCog, name="mod"):
             await diff_fn(interaction, member, reason, db_user.warn_count, db_user.warn_count - val)
 
         await interaction.followup.send(
-            content=f"{'Removed' if val < 0 else 'Added'} {abs(val)} warning(s) to {member.mention} with reason: {reason}\n"
+            content=f"{'Removed' if val < 0 else 'Added'} {abs(val)} warning(s) to {member.mention} "
+            f"with reason: {reason}\n"
             f"Now they are having {db_user.warn_count} warning(s)"
         )
 
@@ -339,7 +340,7 @@ class ModeratorCog(commands.GroupCog, name="mod"):
         db_guild.mute_role_id = 0
         CRUD.save_changes()
 
-        await interaction.followup.send(content=f"Cleared mute role selection.")
+        await interaction.followup.send(content="Cleared mute role selection.")
 
     @app_commands.command()
     @app_commands.guild_only()

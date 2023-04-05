@@ -213,11 +213,11 @@ class Nameless(commands.AutoShardedBot):
         if not isinstance(err, errors.CommandNotFound):
             await ctx.send(f"Something went wrong when executing the command:\n```\n{err}\n```")
 
-        logging.exception(
-            "[on_command_error] We have gone under a crisis!!!",
-            stack_info=True,
-            exc_info=err,
-        )
+            logging.exception(
+                "[on_command_error] We have gone under a crisis!!!",
+                stack_info=True,
+                exc_info=err,
+            )
 
     async def close(self) -> None:
         logging.warning(msg="Shutting down...")

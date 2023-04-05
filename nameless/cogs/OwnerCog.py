@@ -147,6 +147,19 @@ class OwnerCog(commands.Cog):
 
         await pending_message.edit(content=None, embed=embed)
 
+    @commands.is_owner()
+    @commands.hybrid_command()
+    async def refresh_command_list(self, ctx: commands.Context):
+        """Refresh command list, mostly for deduplication"""
+        await ctx.send("You should restart the bot after running this!")
+
+        for guild in ctx.bot.guilds:
+            ctx.bot.tree.clear_commands(guild=guild)
+
+        ctx.bot.tree.clear_commands(guild=None)
+
+        await ctx.send("Command cleaning done, you should restart me to update the new commands")
+
 
 async def setup(bot: Nameless):
     await bot.add_cog(OwnerCog(bot))

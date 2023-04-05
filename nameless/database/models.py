@@ -1,8 +1,9 @@
-import datetime
+from datetime import datetime, timedelta
 from typing import Union
 
 import discord
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, SmallInteger, Text, UnicodeText
+from sqlalchemy import Column
+from sqlalchemy.sql.sqltypes import *
 from sqlalchemy.orm import declarative_base  # pyright: ignore
 
 
@@ -47,8 +48,13 @@ class DbGuild(Base):
     goodbye_message: str = Column(UnicodeText, name="GoodbyeMessage", default="")  # type: ignore
     max_warn_count: int = Column(BigInteger, name="MaxWarnCount", default=3)  # type: ignore
     mute_role_id: int = Column(BigInteger, name="MuteRoleId", default=0)  # type: ignore
-    radio_start_time: datetime.datetime = Column(
+    radio_start_time: datetime = Column(
         DateTime,
         name="RadioStartTime",
-        default=datetime.datetime.min,
+        default=datetime.min,
     )  # type: ignore
+    mute_timeout_interval: timedelta = Column(
+        Interval,
+        name="MuteTimeoutInterval",
+        default=timedelta(days=7)
+    )

@@ -590,7 +590,7 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
                 value=str(
                     discord.utils.utcnow().replace(tzinfo=None) - dbg.radio_start_time
                     if is_stream
-                    else f"{datetime.timedelta(seconds=vc.position)}/{datetime.timedelta(seconds=track.length)}"
+                    else f"{datetime.timedelta(milliseconds=vc.position)}/{datetime.timedelta(milliseconds=track.length)}"
                 ),
             )
             .add_field(

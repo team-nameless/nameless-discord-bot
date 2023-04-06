@@ -341,8 +341,7 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicLavalinkCogCheck.user_in_voice)
     async def connect(self, interaction: discord.Interaction):
         """
-        Connect to your current voice channel. Normally the bot should join your channel when you execute a play-like
-        command.
+        Connect to your current voice channel.
         """
         await interaction.response.defer()
 
@@ -375,6 +374,19 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
             await interaction.followup.send("Disconnected from my own voice channel")
         except AttributeError:
             await interaction.followup.send("I am already disconnected!")
+
+    @app_commands.command()
+    @app_commands.guild_only()
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicLavalinkCogCheck.queue_has_element)
+    async def play(self, interaction: discord.Interaction):
+        """Start playing the queue."""
+        await interaction.response.defer()
+
+        vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
+
+        await interaction.followup.send("The queue should be playing now.")
+        await vc.play(vc.queue.get())
 
     @app_commands.command()
     @app_commands.guild_only()

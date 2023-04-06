@@ -549,7 +549,7 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
         vc.autoplay = not vc.autoplay
 
-        await interaction.followup.send(f"AutoPlay is now {'on' if getattr(vc, 'play_now_allowed') else 'off'}")
+        await interaction.followup.send(f"AutoPlay is now {'on' if vc.autoplay else 'off'}")
 
     @app_commands.command()
     @app_commands.guild_only()

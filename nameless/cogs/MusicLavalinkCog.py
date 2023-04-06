@@ -243,74 +243,37 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
         chn = player.guild.get_channel(getattr(player, "trigger_channel_id"))
 
-        if (
-            chn is not None
-            and (getattr(player, "play_now_allowed") and getattr(player, "should_send_play_now"))
-            and not getattr(player, "loop_sent")
-        ):
-            setattr(player, "should_send_play_now", False)
-
+        if chn is not None and getattr(player, "play_now_allowed") and getattr(player, "should_send_play_now"):
             if track.is_stream:
                 await chn.send(f"Streaming music from {track.uri}")  # pyright: ignore
             else:
                 await chn.send(f"Playing: **{track.title}** from **{track.author}** ({track.uri})")  # pyright: ignore
 
-    @commands.Cog.listener()
-    async def on_wavelink_track_end(self, payload: TrackEventPayload):
-        player = payload.player
-        track = payload.track
-
-        if getattr(player, "stop_sent"):
-            setattr(player, "stop_sent", False)
-            return
-
-        chn = player.guild.get_channel(getattr(player, "trigger_channel_id"))
-        setattr(player, "should_send_play_now", True)
-
-        # Temporary workaround for radio sites end the stream in every song.
-        if track.is_stream:
-            setattr(player, "should_send_play_now", False)
-            await player.play(track)
-            return
-
-        is_loop = getattr(player, "loop_sent")
-        is_skip = getattr(player, "skip_sent")
-
-        try:
-            if is_loop and not is_skip:
-                setattr(player, "loop_play_count", getattr(player, "loop_play_count") + 1)
-            elif is_loop and is_skip:
-                setattr(player, "loop_play_count", 0)
-                setattr(player, "skip_sent", False)
-                track = await player.queue.get_wait()
-            elif is_skip and not is_loop:
-                track = await player.queue.get_wait()
-            elif not is_skip and not is_loop:
-                track = await player.queue.get_wait()
-
-            await self.__play_track(player, track.uri)
-        except wavelink.QueueEmpty:
-            if chn:
-                await chn.send("The queue is empty now")  # pyright: ignore
-
-    async def __preprocess_track_then_play(
+    async def __preprocess_radio_then_play(
         self, interaction: discord.Interaction, message: discord.WebhookMessage, url: str, is_radio: bool = False
     ):
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
+
+        # In case of sudden switch from queued music -> radio
+        if not vc.queue.is_empty:
+            vc.queue.clear()
+
+        if not vc.auto_queue.is_empty:
+            vc.auto_queue.clear()
 
         if is_radio:
             db_guild = CRUD.get_or_create_guild_record(interaction.guild)
             db_guild.radio_start_time = discord.utils.utcnow()
 
-        await self.__play_track(vc, url, is_radio)
-
-    async def __play_track(self, vc: wavelink.Player, url: str | None, is_radio: bool = False):
         tracks = await vc.current_node.get_tracks(wavelink.GenericTrack, url or "")
 
         if tracks:
             track = tracks[0]
             if is_radio and not track.is_stream:
                 raise AppCommandError("Radio track must be a stream")
+
+            setattr(vc, "should_send_play_now", True)
+            vc.queue.loop = True
             await vc.play(track)
         else:
             raise AppCommandError(f"No tracks found for {url}")
@@ -319,9 +282,8 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
     @app_commands.guild_only()
     @app_commands.describe(source_url="Radio site URL to broadcast, like 'https://listen.moe/stream'")
     @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
-    @app_commands.check(MusicLavalinkCogCheck.bot_is_not_playing_something)
     async def radio(self, interaction: discord.Interaction, source_url: str):
-        """Play a radio stream."""
+        """Play a radio stream. Clear any queue that exists."""
         await interaction.response.defer()
 
         if not Utility.is_an_url(source_url):
@@ -334,7 +296,7 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
             content="Connecting to the radio stream..."
         )  # pyright: ignore
 
-        await self.__preprocess_track_then_play(interaction, m, source_url, True)
+        await self.__preprocess_radio_then_play(interaction, m, source_url, True)
 
     @app_commands.command()
     @app_commands.guild_only()
@@ -350,14 +312,11 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
             await interaction.followup.send("Connected to your voice channel")
 
             vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
-            setattr(vc, "loop_sent", False)
-            setattr(vc, "queue_loop_sent", False)
-            setattr(vc, "skip_sent", False)
-            setattr(vc, "stop_sent", False)
+
             setattr(vc, "should_send_play_now", True)
             setattr(vc, "play_now_allowed", True)
             setattr(vc, "trigger_channel_id", interaction.channel.id)
-            setattr(vc, "loop_play_count", 0)
+            vc.autoplay = True
         except ClientException:
             await interaction.followup.send("Already connected")
 
@@ -385,8 +344,12 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
 
+        # When the user switch from radio -> normal queued track
+        vc.queue.loop = False
+        setattr(vc, "should_send_play_now", True)
+
         await interaction.followup.send("The queue should be playing now.")
-        await vc.play(vc.queue.get())
+        await vc.play(vc.queue.get(), populate=vc.autoplay)  # pyright: ignore
 
     @app_commands.command()
     @app_commands.guild_only()
@@ -398,20 +361,23 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
         vc.queue.loop = not vc.queue.loop
-        setattr(vc, "loop_sent", vc.queue.loop)
+        setattr(vc, "should_send_play_now", not vc.queue.loop)
         await interaction.followup.send(f"Track loop set to {'on' if vc.queue.loop else 'off'}")
 
     @app_commands.command()
     @app_commands.guild_only()
     @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
-    @app_commands.check(MusicLavalinkCogCheck.queue_has_element)
     async def toggle_loop_queue(self, interaction: discord.Interaction):
         """Toggle loop of current queue."""
         await interaction.response.defer()
 
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
+
+        if vc.queue.loop:
+            await interaction.followup.send("You must have track looping disabled before using this.")
+            return
+
         vc.queue.loop_all = not vc.queue.loop_all
-        setattr(vc, "queue_loop_sent", vc.queue.loop)
         await interaction.followup.send(f"Queue loop set to {'on' if vc.queue.loop_all else 'off'}")
 
     @app_commands.command()
@@ -451,37 +417,31 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
     @app_commands.command()
     @app_commands.guild_only()
     @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
-    @app_commands.check(MusicLavalinkCogCheck.bot_is_playing_something)
-    async def stop(self, interaction: discord.Interaction):
-        """Stop current playback."""
-        await interaction.response.defer()
-
-        vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
-        setattr(vc, "stop_sent", True)
-
-        await vc.stop()
-        await interaction.followup.send("Stopped")
-
-    @app_commands.command()
-    @app_commands.guild_only()
-    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicLavalinkCogCheck.bot_must_play_track_not_stream)
     @app_commands.check(MusicLavalinkCogCheck.queue_has_element)
     async def skip(self, interaction: discord.Interaction):
-        """Skip a song."""
+        """Skip a song. Even if it is looping."""
         await interaction.response.defer()
 
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
-        track: wavelink.Track = vc.track  # pyright: ignore
+
+        track: wavelink.Playable = vc.current  # pyright: ignore
+        should_set_play_now_again: bool = False
+        current_play_now_state: bool = True
 
         if await VoteMenu("skip", track.title, interaction, vc).start():
-            # setattr(vc, "should_send_play_now", True)
+            if vc.queue.loop:
+                current_play_now_state = getattr(vc, "should_send_play_now")
+                setattr(vc, "should_send_play_now", True)
+                should_set_play_now_again = True
 
-            setattr(vc, "skip_sent", True)
             await vc.stop()
-            await interaction.response.edit_message(content="Next track should be played now")
+            await interaction.followup.send("Next track should be played now")
+
+            if should_set_play_now_again:
+                setattr(vc, "should_send_play_now", current_play_now_state)
         else:
-            await interaction.response.edit_message(content="Not skipping because not enough votes!")
+            await interaction.followup.send("Not skipping because not enough votes!")
 
     @app_commands.command()
     @app_commands.guild_only()
@@ -496,20 +456,18 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
         track: wavelink.Playable = vc.current  # pyright: ignore
 
-        pos = position if position else 0
-
-        if not 0 <= pos / 1000 <= track.length:
+        if not 0 <= position <= track.length:
             await interaction.followup.send("Invalid position to seek")
             return
 
         if await VoteMenu("seek", track.title, interaction, vc).start():
-            await vc.seek(pos)
-            delta_pos = datetime.timedelta(milliseconds=pos)
-            await interaction.response.edit_message(content=f"Seeking to position {delta_pos}")
+            await vc.seek(position)
+            delta_pos = datetime.timedelta(milliseconds=position)
+            await interaction.followup.send(content=f"Seeking to position {delta_pos}")
 
     @app_commands.command()
     @app_commands.guild_only()
-    @app_commands.describe(segment="Segment percentage to seek (from 0 to 100, respecting with from  0% to 100%)")
+    @app_commands.describe(segment="Segment percentage to seek (from 0 to 100, respecting with from 0% to 100%)")
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicLavalinkCogCheck.bot_must_play_track_not_stream)
@@ -521,10 +479,10 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
         track: wavelink.Playable = vc.current  # pyright: ignore
 
         if await VoteMenu("seek_segment", track.title, interaction, vc).start():
-            pos = int(float(track.length * segment / 100) * 1000)
+            pos = int(float(track.length * segment / 100))
             await vc.seek(pos)
             delta_pos = datetime.timedelta(milliseconds=pos)
-            await interaction.followup.send(f"Seek to segment #{segment}: {delta_pos}")
+            await interaction.followup.send(f"Seek to {segment}%: {delta_pos}")
 
     @app_commands.command()
     @app_commands.guild_only()
@@ -553,7 +511,7 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
     @app_commands.command()
     @app_commands.guild_only()
-    @app_commands.describe(show_next_track="Whether the minimal information of next track should be shown")
+    @app_commands.describe(show_next_track="Whether the next track should be shown (useless in looping)")
     @app_commands.check(MusicLavalinkCogCheck.bot_in_voice)
     @app_commands.check(MusicLavalinkCogCheck.bot_is_playing_something)
     async def now_playing(self, interaction: discord.Interaction, show_next_track: bool = True):
@@ -562,6 +520,8 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
         track: wavelink.Playable = vc.current  # pyright: ignore
+
+        thumbnail_url: str = await track.fetch_thumbnail() if isinstance(track, wavelink.YouTubeTrack) else ""
 
         is_stream = track.is_stream
         dbg = CRUD.get_or_create_guild_record(interaction.guild)
@@ -590,21 +550,16 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
                 value=str(
                     discord.utils.utcnow().replace(tzinfo=None) - dbg.radio_start_time
                     if is_stream
-                    else f"{datetime.timedelta(milliseconds=vc.position)}/{datetime.timedelta(milliseconds=track.length)}"
+                    else f"{datetime.timedelta(milliseconds=vc.position)}/"
+                    f"{datetime.timedelta(milliseconds=track.length)}"
                 ),
             )
-            .add_field(
-                name="Looping",
-                value="This is a stream"
-                if is_stream
-                else f"Looped {getattr(vc, 'loop_play_count')} time(s)"
-                if getattr(vc, "loop_sent") is True
-                else False,
-            )
+            .add_field(name="Looping", value="This is a stream" if is_stream else vc.queue.loop)
             .add_field(name="Paused", value=vc.is_paused())
+            .set_thumbnail(url=thumbnail_url)
         )
 
-        if show_next_track and not track.is_stream:
+        if not vc.queue.loop and show_next_track and not track.is_stream:
             try:
                 next_tr = vc.queue.copy().get()
             except wavelink.QueueEmpty:
@@ -632,11 +587,27 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
 
-        if len(vc.queue._queue) == 0:
+        if vc.queue.is_empty:
             await interaction.followup.send("Wow, such empty queue. Mind adding some cool tracks?")
             return
 
         embeds = self.generate_embeds_from_queue(vc.queue)
+        self.bot.loop.create_task(self.show_paginated_tracks(interaction, embeds))
+
+    @queue.command()
+    @app_commands.guild_only()
+    @app_commands.check(MusicLavalinkCogCheck.user_and_bot_in_voice)
+    async def view_autoplay(self, interaction: discord.Interaction):
+        """View current autoplay queue"""
+        await interaction.response.defer()
+
+        vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
+
+        if vc.auto_queue.is_empty:
+            await interaction.followup.send("Wow, such empty autoplay queue. Mind enable it with `toggle_autoplay`?")
+            return
+
+        embeds = self.generate_embeds_from_queue(vc.auto_queue)
         self.bot.loop.create_task(self.show_paginated_tracks(interaction, embeds))
 
     @queue.command()

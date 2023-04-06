@@ -664,11 +664,11 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
             track = (await vc.current_node.get_tracks(search_cls, search))[0]
 
             if track.is_stream:
-                await interaction.response.edit_message(content="This is a stream, cannot add to queue.")
+                await interaction.followup.send("This is a stream, cannot add to queue.")
                 return
 
             vc.queue.put(track)
-            await interaction.response.edit_message(content=f"Added `{track.title}` into the queue")
+            await interaction.followup.send(f"Added `{track.title}` into the queue")
             return
 
         sources: Dict[str, Any] = {

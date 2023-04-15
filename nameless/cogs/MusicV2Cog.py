@@ -2,7 +2,6 @@ import asyncio
 import datetime
 import io
 import logging
-import math
 import random
 import threading
 from collections import deque
@@ -22,8 +21,8 @@ from nameless import Nameless
 from nameless.cogs.checks import MusicCogCheck
 from nameless.commons import Utility
 from nameless.database import CRUD
+from nameless.ui_kit import TrackSelectDropdown, VoteMenu
 from NamelessConfig import NamelessConfig
-
 
 __all__ = ["MusicV2Cog"]
 
@@ -48,148 +47,6 @@ YTDL_OPTS = {
     "source_address": "0.0.0.0",
 }
 ytdl = YoutubeDL(YTDL_OPTS)
-
-
-class VoteMenuView(discord.ui.View):
-    __slots__ = ("user", "value")
-
-    def __init__(
-        self,
-        action: str,
-        content: str,
-        ctx: commands.Context,
-        timeout: float = 30.0,
-    ):
-        super().__init__(timeout=timeout)
-
-        self.ctx = ctx
-        self.action = action
-        self.content = f"{content[:50]}..."
-
-        self.max_vote = math.ceil(len([m for m in ctx.voice_client.channel.members if not m.bot]) / 2)  # type: ignore
-        self.total_vote = 1
-
-        self.approve_member: List[str] = [ctx.author.mention]
-        self.disapprove_member: List[str] = []
-
-        self.message: discord.Message = MISSING
-        ctx.bot.loop.create_task(self.update())
-
-    def __eb(self):
-        return (
-            discord.Embed(
-                title=f"Vote {self.action} {self.content}",
-                description=f"Total vote: {self.total_vote}/{self.max_vote}",
-            )
-            .add_field(
-                name="Approve",
-                value="\n".join(self.approve_member),
-                inline=True,
-            )
-            .add_field(
-                name="Disapprove",
-                value="\n".join(self.disapprove_member) if self.disapprove_member else "None",
-                inline=True,
-            )
-            .set_footer(text=f"Requested by {self.ctx.author.name}")
-        )
-
-    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green, emoji="✅")
-    async def approve(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.approve_member.append(interaction.user.mention)
-        await self.update()
-
-    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.grey, emoji="❌")
-    async def disapprove(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.disapprove_member.append(interaction.user.mention)
-        await self.update()
-
-    async def send_or_edit(self, **kwargs):
-        if self.message:
-            self.message = await self.message.edit(**kwargs)
-            return
-
-        self.message = await self.ctx.send(**kwargs)
-
-    async def update(self):
-        if self.max_vote <= 1:
-            self.stop()
-            return
-
-        self.total_vote += 1
-        await self.send_or_edit(embed=self.__eb(), view=self)
-
-        if self.total_vote == self.max_vote:
-            self.stop()
-
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:  # pylint: disable=arguments-differ
-        if interaction.user.mention in self.approve_member or interaction.user.mention in self.disapprove_member:
-            return False
-
-        await interaction.response.defer()
-        return True
-
-
-class VoteMenu:
-    __slots__ = ("view",)
-
-    def __init__(
-        self,
-        action: str,
-        content: str,
-        ctx: commands.Context,
-    ):
-        self.view = VoteMenuView(action, content, ctx)
-
-    async def start(self):
-        await self.view.wait()
-
-        pred = True
-        if self.view.max_vote > 1:
-            pred = (
-                len(self.view.disapprove_member) < len(self.view.approve_member) and len(self.view.approve_member) > 1
-            )
-
-        if pred:
-            await self.view.send_or_edit(
-                content=f"{self.view.action.title()} {self.view.content}!", embed=None, view=None
-            )
-        else:
-            await self.view.send_or_edit(content=f"Not enough votes to {self.view.action}!", embed=None, view=None)
-
-        return pred
-
-
-class TrackPickDropdown(discord.ui.Select):
-    def __init__(self, tracks: List):
-        options = [
-            discord.SelectOption(
-                label="I don't see my results here",
-                description="Nothing here!",
-                value="Nope",
-                emoji="❌",
-            )
-        ] + [
-            discord.SelectOption(
-                label=f"{track.author} - {track.title}"[:100],
-                description=track.uri[:100] if track.uri else "No URI",
-                value=str(index),
-            )
-            for index, track in enumerate(tracks)
-        ]
-
-        super().__init__(
-            custom_id="music-pick-select",
-            placeholder="Choose your tracks",
-            min_values=1,
-            max_values=len(options),
-            options=options,
-        )
-
-    async def callback(self, _: discord.Interaction) -> Any:
-        v: Optional[discord.ui.View] = self.view
-        if v:
-            v.stop()
 
 
 class FFAudioProcessNoCache(BaseException):
@@ -330,7 +187,7 @@ class YTDLSource(discord.AudioSource):
             raise asyncio.InvalidStateError(f"Failed to get {url}: Get {resp.status}")
 
     @classmethod
-    async def get_related_tracks(cls, track, bot: Nameless):
+    async def get_related_tracks(cls, track, bot: discord.Client):
         http_session = bot.http._HTTPClient__session  # type: ignore
 
         try:
@@ -391,12 +248,13 @@ class YTDLSource(discord.AudioSource):
                 )
         return YoutubeDL(config)
 
+    @property
     def is_stream(self):
         return self.direct
 
     @classmethod
     async def get_tracks(
-        cls, ctx: commands.Context, search, amount=5, provider="youtube", loop=None, process=True
+        cls, interaction: discord.Interaction, search, amount=5, provider="youtube", loop=None, process=True
     ) -> AsyncGenerator:
         data = await cls.__get_raw_data(
             search, loop, ytdl_cls=cls.maybe_new_extractor(provider, amount), process=process
@@ -406,13 +264,13 @@ class YTDLSource(discord.AudioSource):
 
         if entries := data.get("entries", None):
             for track in entries:
-                yield cls.info_wrapper(track, ctx.author, extra_info=data)
+                yield cls.info_wrapper(track, interaction.user, extra_info=data)
         else:
-            yield cls.info_wrapper(data, ctx.author)
+            yield cls.info_wrapper(data, interaction.user)
 
     @classmethod
-    async def get_track(cls, ctx: commands.Context, search, amount=5, provider="youtube", loop=None):
-        return await anext(cls.get_tracks(ctx, search, amount, provider, loop))
+    async def get_track(cls, interaction: discord.Interaction, search, amount=5, provider="youtube", loop=None):
+        return await anext(cls.get_tracks(interaction, search, amount, provider, loop))
 
     @classmethod
     def info_wrapper(cls, track, author, extra_info=None):
@@ -492,7 +350,7 @@ class YTMusicSource(YTDLSource):
         )
 
     @classmethod
-    async def indivious_get_track(cls, ctx: commands.Context, videoid, loop=None):
+    async def indivious_get_track(cls, interaction: discord.Interaction, videoid, loop=None):
         # data_search = await cls._requests(
         #     ctx.bot.http._HTTPClient__session,
         #     f"https://yt.funami.tech/api/v1/search/{videoid}?{cls.PARAMS}",
@@ -511,7 +369,7 @@ class YTMusicSource(YTDLSource):
             return
 
         req_data = await cls._requests(
-            ctx.bot.http._HTTPClient__session,
+            interaction.client.http._HTTPClient__session,  # pyright: ignore
             f"https://yt.funami.tech/api/v1/videos/{videoid}?{cls.PARAMS}",
         )
 
@@ -530,7 +388,7 @@ class YTMusicSource(YTDLSource):
             "webpage_url": f"https://music.youtube.com/watch?v={req_data['videoId']}",
         }
 
-        return cls.info_wrapper(data, ctx.author)
+        return cls.info_wrapper(data, interaction.user)
 
 
 class MainPlayer:
@@ -540,7 +398,7 @@ class MainPlayer:
         "_channel",
         "_cog",
         "queue",
-        "next",
+        "signal",
         "track",
         "total_duration",
         "position",
@@ -552,14 +410,14 @@ class MainPlayer:
         "stopped",
     )
 
-    def __init__(self, ctx: commands.Context, cog) -> None:
-        self.client = ctx.bot
-        self._guild = ctx.guild
-        self._channel = ctx.channel
+    def __init__(self, interaction: discord.Interaction, cog) -> None:
+        self.client = interaction.client
+        self._guild = interaction.guild
+        self._channel = interaction.channel
         self._cog = cog
 
         self.queue: asyncio.Queue[YTDLSource] = asyncio.Queue()
-        self.next = asyncio.Event()
+        self.signal = asyncio.Event()
 
         self.track: YTDLSource = MISSING
         self.position = 0
@@ -575,8 +433,8 @@ class MainPlayer:
             logging.error("Wait what? There is no guild here!")
             raise AttributeError(f"Try to access guild attribute, got {self._guild.__class__.__name__} instead")
 
-        self.task: asyncio.Task = ctx.bot.loop.create_task(self.create())
-        setattr(self._guild.voice_client, "is_queue_empty", self.is_queue_empty)
+        self.task: asyncio.Task = self.client.loop.create_task(self.create())
+        setattr(self._guild.voice_client, "is_empty", self.is_empty)
 
     @staticmethod
     def build_embed(track: YTDLSource, header: str):
@@ -602,7 +460,8 @@ class MainPlayer:
             )
         )
 
-    def is_queue_empty(self):
+    @property
+    def is_empty(self):
         return self.queue.empty()
 
     def clear_queue(self):
@@ -617,13 +476,14 @@ class MainPlayer:
 
         while not self.client.is_closed():
             try:
-                self.next.clear()
+                self.signal.clear()
                 if not self.repeat or not self.track:
                     self.track = await self.queue.get()
                     self.stopped = False
 
                     if self.allow_np_msg:
-                        await self._channel.send(embed=self.build_embed(self.track, "Now playing"))
+                        await self._channel.send(embed=self.build_embed(self.track, "Now playing"))  # pyright: ignore
+
                     self.track = await self.track.generate_stream(self.track)
                     self.total_duration -= self.track.duration
                 else:
@@ -634,7 +494,7 @@ class MainPlayer:
                         self.track = await YTDLSource.generate_stream(self.track)
 
                 self._guild.voice_client.play(  # type: ignore
-                    self.track, after=lambda _: self.client.loop.call_soon_threadsafe(self.next.set)
+                    self.track, after=lambda _: self.client.loop.call_soon_threadsafe(self.signal.set)
                 )
 
             except AttributeError as err:
@@ -650,10 +510,12 @@ class MainPlayer:
                     self._guild.id,
                     str(e),
                 )
-                return await self._channel.send(f"There was an error processing your song.\n" f"```css\n[{e}]\n```")
+                return await self._channel.send(  # pyright: ignore
+                    f"There was an error processing your song.\n" f"```css\n[{e}]\n```"
+                )
 
             finally:
-                await self.next.wait()
+                await self.signal.wait()
 
             if not self.repeat:
                 if self.play_related_tracks and self.queue.empty() and not self.stopped:
@@ -678,13 +540,13 @@ class MusicV2Cog(commands.Cog):
         self.bot = bot
         self.players: Dict[int, MainPlayer] = {}
 
-    def get_player(self, ctx: commands.Context):
+    def get_player(self, interaction: discord.Interaction):
         """Retrieve the guild player, or generate one."""
         try:
-            player = self.players[ctx.guild.id]
+            player = self.players[interaction.guild.id]
         except KeyError:
-            player = MainPlayer(ctx, self)
-            self.players[ctx.guild.id] = player
+            player = MainPlayer(interaction, self)
+            self.players[interaction.guild.id] = player
 
         return player
 
@@ -694,8 +556,8 @@ class MusicV2Cog(commands.Cog):
             player._guild.voice_client.stop()  # type: ignore
             player.task.cancel()
 
-            if not player.next.is_set():
-                player.next.set()
+            if not player.signal.is_set():
+                player.signal.set()
 
             await player._guild.voice_client.disconnect()  # type: ignore
             if player.track:  # edge-case
@@ -787,8 +649,8 @@ class MusicV2Cog(commands.Cog):
         return embeds
 
     @staticmethod
-    async def show_paginated_tracks(ctx: commands.Context, embeds: List[discord.Embed], **kwargs):
-        p = DiscordUtils.Pagination.AutoEmbedPaginator(ctx, **kwargs)
+    async def show_paginated_tracks(interaction: discord.Interaction, embeds: List[discord.Embed], **kwargs):
+        p = DiscordUtils.Pagination.AutoEmbedPaginator(interaction, **kwargs)
         await p.run(embeds[:25])
 
     @commands.Cog.listener()
@@ -815,87 +677,55 @@ class MusicV2Cog(commands.Cog):
             if not after.channel:
                 return await self.cleanup(member.guild.id)
 
-    async def __internal_play(self, ctx: commands.Context, url: str, is_radio: bool = False):
-        if is_radio:
-            dbg = CRUD.get_or_create_guild_record(ctx.guild)
-            dbg.radio_start_time = discord.utils.utcnow()
-            CRUD.save_changes()
-
-        await self.__internal_play2(ctx, url, is_radio)
-
-    async def __internal_play2(self, ctx: commands.Context, url: str, is_radio: bool = False):
-        player = self.get_player(ctx)
-        track = await YTDLSource.get_track(ctx, url)
-
-        if track:
-            if is_radio and not track.is_stream():
-                raise commands.CommandError("Radio track must be a stream")
-            await player.queue.put(track)
-        else:
-            raise commands.CommandError(f"No tracks found for {url}")
-
-    @commands.hybrid_group(fallback="radio")
-    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
-    @commands.guild_only()
-    @app_commands.describe(url="Radio url")
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.bot_must_silent)
-    async def music(self, ctx: commands.Context, url: str):
-        """Play a radio"""
-        await ctx.defer()
-
-        if not Utility.is_an_url(url):
-            await ctx.send("You need to provide a direct URL")
-            return
-
-        await self.__internal_play(ctx, url, True)
+    music = app_commands.Group(name="music", description="Music related commands")
 
     @music.command()
-    @commands.guild_only()
-    @commands.check(MusicCogCheck.user_in_voice)
-    async def connect(self, ctx: commands.Context):
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_in_voice)
+    async def connect(self, interaction: discord.Interaction):
         """Connect to your current voice channel"""
-        await ctx.defer()
+        await interaction.response.defer()
 
+        await self.bot.wait_until_ready()
         try:
-            await ctx.author.voice.channel.connect(self_deaf=True)  # type: ignore
-            await ctx.send("Connected to your current voice channel")
-            self.get_player(ctx)
+            await interaction.user.voice.channel.connect(self_deaf=True)  # type: ignore
+            await interaction.followup.send("Connected to your current voice channel")
+            self.get_player(interaction)
         except ClientException:
-            await ctx.send("Already connected")
+            await interaction.followup.send("Already connected")
 
     @music.command()
-    @commands.guild_only()
-    @commands.check(MusicCogCheck.bot_in_voice)
-    async def disconnect(self, ctx: commands.Context):
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.bot_in_voice)
+    async def disconnect(self, interaction: discord.Interaction):
         """Disconnect from my current voice channel"""
-        await ctx.defer()
+        await interaction.response.defer()
 
         try:
-            await self.cleanup(ctx.guild.id)
-            await ctx.send("Disconnected from my own voice channel")
+            await self.cleanup(interaction.guild.id)
+            await interaction.followup.send("Disconnected from my own voice channel")
         except AttributeError:
-            await ctx.send("Already disconnected")
+            await interaction.followup.send("Already disconnected")
 
     @music.command()
-    @commands.guild_only()
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
-    async def loop(self, ctx: commands.Context):
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
+    async def loop(self, interaction: discord.Interaction):
         """Toggle loop playback of current track"""
-        await ctx.defer()
+        await interaction.response.defer()
 
-        player = self.get_player(ctx)
+        player = self.get_player(interaction)
         player.repeat = not player.repeat
-        await ctx.send(f"Loop set to {'on' if player.repeat else 'off'}")
+        await interaction.followup.send(f"Loop set to {'on' if player.repeat else 'off'}")
 
     @music.command()
-    @commands.guild_only()
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.bot_must_play_something)
-    async def toggle(self, ctx: commands.Context):
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.bot_must_play_something)
+    async def toggle(self, interaction: discord.Interaction):
         """Toggle for current playback."""
-        vc: VoiceClient = ctx.voice_client  # type: ignore
+        vc: VoiceClient = interaction.guild.voice_client  # type: ignore
 
         if vc.is_paused():
             vc.resume()
@@ -904,138 +734,132 @@ class MusicV2Cog(commands.Cog):
             vc.pause()
             action = "Paused"
 
-        await ctx.send(action)
+        await interaction.followup.send(action)
 
     @music.command()
-    @commands.guild_only()
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.bot_must_play_something)
-    async def pause(self, ctx: commands.Context):
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.bot_must_play_something)
+    async def pause(self, interaction: discord.Interaction):
         """Pause current playback"""
-        await ctx.defer()
+        await interaction.response.defer()
 
-        vc: VoiceClient = ctx.voice_client  # type: ignore
+        vc: VoiceClient = interaction.guild.voice_client  # type: ignore
 
         if vc.is_paused():
-            await ctx.send("Already paused")
+            await interaction.followup.send("Already paused")
             return
 
         vc.pause()
-        await ctx.send("Paused")
+        await interaction.followup.send("Paused")
 
     @music.command()
-    @commands.guild_only()
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.bot_must_silent)
-    async def resume(self, ctx: commands.Context):
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.bot_is_silent)
+    async def resume(self, interaction: discord.Interaction):
         """Resume current playback, if paused"""
-        await ctx.defer()
+        await interaction.response.defer()
 
-        vc: VoiceClient = ctx.voice_client  # type: ignore
+        vc: VoiceClient = interaction.guild.voice_client  # type: ignore
 
         if not vc.is_paused():
-            await ctx.send("Already resuming")
+            await interaction.followup.send("Already resuming")
             return
 
         vc.resume()
-        await ctx.send("Resumed")
+        await interaction.followup.send("Resumed")
 
     @music.command()
-    @commands.guild_only()
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.bot_must_play_something)
-    async def stop(self, ctx: commands.Context):
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.bot_must_play_something)
+    async def stop(self, interaction: discord.Interaction):
         """Stop current playback."""
-        await ctx.defer()
+        await interaction.response.defer()
 
-        vc: VoiceClient = ctx.voice_client  # type: ignore
-        player = self.get_player(ctx)
+        vc: VoiceClient = interaction.guild.voice_client  # type: ignore
+        player = self.get_player(interaction)
 
         vc.stop()
         player.stopped = True
-        await ctx.send("Stopped")
+        await interaction.followup.send("Stopped")
 
     @music.command()
-    @commands.guild_only()
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
-    async def skip(self, ctx: commands.Context):
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
+    async def skip(self, interaction: discord.Interaction):
         """Skip a song."""
-        await ctx.defer()
+        await interaction.response.defer()
 
-        vc: VoiceClient = ctx.voice_client  # type: ignore
-        player: MainPlayer = self.get_player(ctx)
+        vc: VoiceClient = interaction.guild.voice_client  # type: ignore
+        player: MainPlayer = self.get_player(interaction)
         track: YTDLSource = player.track
 
-        if await VoteMenu("skip", track.title, ctx).start():
+        if await VoteMenu("skip", track.title, interaction, vc).start():
             vc.stop()
 
     @music.command()
-    @commands.guild_only()
+    @app_commands.guild_only()
     @app_commands.describe(offset="Position to seek to in milliseconds, defaults to run from start")
-    @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
-    async def seek(self, ctx: commands.Context, offset: int = 0):
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
+    async def seek(self, interaction: discord.Interaction, offset: int = 0):
         """Seek to a position in a track"""
-        await ctx.defer()
+        await interaction.response.defer()
 
-        player: MainPlayer = self.get_player(ctx)
+        player: MainPlayer = self.get_player(interaction)
         source: FFOpusAudioProcess = player.track.source
 
         try:
             source.seek(offset)
-            if ctx.message:
-                await ctx.message.add_reaction("✅")
-            else:
-                await ctx.send("✅")
+            await interaction.response.send_message(content="✅")
         except Exception as err:
-            await ctx.send(f"{err.__class__.__name__}: {str(err)}")
+            await interaction.response.send_message(content=f"{err.__class__.__name__}: {str(err)}")
             logging.error("%s: %s", err.__class__.__name__, str(err))
 
     @music.command()
-    @commands.guild_only()
-    @commands.has_guild_permissions(manage_guild=True)
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.bot_must_play_track_not_stream)
-    async def toggle_play_now(self, ctx: commands.Context):
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
+    async def toggle_play_now(self, interaction: discord.Interaction):
         """Toggle 'Now playing' message delivery"""
-        await ctx.defer()
-        player: MainPlayer = self.get_player(ctx)
+        await interaction.response.defer()
+        player: MainPlayer = self.get_player(interaction)
 
         player.allow_np_msg = not player.allow_np_msg
-        await ctx.send(f"'Now playing' delivery is now {'on' if player.allow_np_msg else 'off'}")
+        await interaction.followup.send(f"'Now playing' delivery is now {'on' if player.allow_np_msg else 'off'}")
 
     @music.command()
-    @commands.guild_only()
-    @commands.check(MusicCogCheck.bot_in_voice)
-    @commands.check(MusicCogCheck.bot_must_play_something)
-    async def now_playing(self, ctx: commands.Context):
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.bot_in_voice)
+    @app_commands.check(MusicCogCheck.bot_must_play_something)
+    async def now_playing(self, interaction: discord.Interaction):
         """Check now playing song"""
-        await ctx.defer()
+        await interaction.response.defer()
 
-        vc: VoiceClient = ctx.voice_client  # type: ignore
-        player: MainPlayer = self.get_player(ctx)
+        vc: VoiceClient = interaction.guild.voice_client  # type: ignore
+        player: MainPlayer = self.get_player(interaction)
         track: YTDLSource = player.track
 
-        is_stream = track.is_stream()
-        dbg = CRUD.get_or_create_guild_record(ctx.guild)
+        dbg = CRUD.get_or_create_guild_record(interaction.guild)
         if not dbg:
             logging.error("Oh no. The database is gone! What do we do now?!!")
-            raise AttributeError(f"Can't find guild id '{ctx.guild.id}'. Or maybe the database is gone?")
+            raise AttributeError(f"Can't find guild id '{interaction.guild.id}'. Or maybe the database is gone?")
 
         next_tr: Optional[YTDLSource] = None
         if not player.queue.empty():
             next_tr = player.queue._queue[0]  # type: ignore
 
-        await ctx.send(
+        await interaction.followup.send(
             embed=player.build_embed(track=track, header="Now playing")
             .add_field(
                 name="Looping",
                 value="This is a stream"
-                if is_stream
+                if track.is_stream
                 else f"Looped {getattr(vc, 'loop_play_count')} time(s)"
                 if player.repeat is True
                 else False,
@@ -1052,78 +876,80 @@ class MusicV2Cog(commands.Cog):
         )
 
     @music.command()
-    @commands.guild_only()
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    async def autoplay(self, ctx: commands.Context):
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    async def autoplay(self, interaction: discord.Interaction):
         """Automatically play the next song in the queue"""
-        await ctx.defer()
+        await interaction.response.defer()
 
-        player: MainPlayer = self.get_player(ctx)
+        player: MainPlayer = self.get_player(interaction)
         player.play_related_tracks = not player.play_related_tracks
 
-        await ctx.send(f"Autoplay is now {'on' if player.play_related_tracks else 'off'}")
+        await interaction.followup.send(f"Autoplay is now {'on' if player.play_related_tracks else 'off'}")
 
-    @music.group(fallback="view")
-    @commands.guild_only()
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.queue_has_element)
-    async def queue(self, ctx: commands.Context):
+    queue = app_commands.Group(name="queue", description="Commands related to queue management.")
+
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.queue_has_element)
+    async def view(self, interaction: discord.Interaction):
         """View current queue"""
-        await ctx.defer()
+        await interaction.response.defer()
 
-        player: MainPlayer = self.get_player(ctx)
+        player: MainPlayer = self.get_player(interaction)
 
         embeds = self.generate_embeds_from_queue(player.queue)
-        self.bot.loop.create_task(self.show_paginated_tracks(ctx, embeds))
+        self.bot.loop.create_task(self.show_paginated_tracks(interaction, embeds))
 
     @queue.command()
-    @commands.guild_only()
+    @app_commands.guild_only()
     @app_commands.describe(idx="The index to remove (1-based)")
-    @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.queue_has_element)
-    async def delete(self, ctx: commands.Context, idx: Range[int, 1]):
+    @app_commands.checks.has_permissions(manage_guild=True)
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.queue_has_element)
+    async def delete(self, interaction: discord.Interaction, idx: Range[int, 1]):
         """Remove track from queue"""
-        await ctx.defer()
+        await interaction.response.defer()
 
         idx -= 1
-        player: MainPlayer = self.get_player(ctx)
+        player: MainPlayer = self.get_player(interaction)
         queue: List = player.queue._queue  # type: ignore
 
         if idx > player.queue.qsize() or idx < 0:
-            return await ctx.send("The track number you just entered is not available. Check again")
+            return await interaction.followup.send("The track number you just entered is not available. Check again")
 
         deleted_track: YTDLSource = queue.pop(idx)
-        await ctx.send(f"Deleted track at position #{idx}: **{deleted_track.title}** from **{deleted_track.author}**")
+        await interaction.followup.send(
+            f"Deleted track at position #{idx}: **{deleted_track.title}** from **{deleted_track.author}**"
+        )
 
     @queue.command()
-    @commands.guild_only()
+    @app_commands.guild_only()
     @app_commands.describe(
         search="Search query", provider="Pick a provider to search from", amount="How much results to show"
     )
     @app_commands.choices(provider=[Choice(name=k, value=k) for k in PROVIDER_MAPPING])
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    async def add(self, ctx: commands.Context, search: str, provider: str = "youtube", amount: int = 5):
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    async def add(self, interaction: discord.Interaction, search: str, provider: str = "youtube", amount: int = 5):
         """Add selected track(s) to queue"""
-        await ctx.defer()
-        m = await ctx.send("Searching...")
+        await interaction.response.defer()
 
-        player: MainPlayer = self.get_player(ctx)
+        player: MainPlayer = self.get_player(interaction)
 
         if provider == "ytmusic":
             search = f"{search}#songs"
 
         try:
-            tracks: List[YTDLSource] = [tr async for tr in YTDLSource.get_tracks(ctx, search, amount, provider)]
+            tracks: List[YTDLSource] = [tr async for tr in YTDLSource.get_tracks(interaction, search, amount, provider)]
         except DownloadError:
             if "youtube" in search:
-                tracks = [await YTMusicSource.indivious_get_track(ctx, search)]  # type: ignore
+                tracks = [await YTMusicSource.indivious_get_track(interaction, search)]  # type: ignore
             else:
                 tracks = []
 
         if not tracks:
-            await ctx.send(f"No tracks found for '{search}' on '{provider}'.")
+            await interaction.followup.send(f"No tracks found for '{search}' on '{provider}'.")
             return
 
         soon_to_add_queue: List[YTDLSource] = []
@@ -1131,17 +957,19 @@ class MusicV2Cog(commands.Cog):
             soon_to_add_queue = tracks
         else:
             if len(tracks) > 1:
-                dropdown: Union[discord.ui.Item[discord.ui.View], TrackPickDropdown] = TrackPickDropdown(tracks)
+                dropdown: Union[discord.ui.Item[discord.ui.View], TrackSelectDropdown] = TrackSelectDropdown(
+                    tracks  # pyright: ignore
+                )
                 view = discord.ui.View().add_item(dropdown)
-                await m.edit(content="Tracks found", view=view)
+                await interaction.response.edit_message(content="Tracks found", view=view)
 
                 if await view.wait():
-                    await m.edit(content="Timed out!", view=None, delete_after=30)
+                    await interaction.response.edit_message(content="Timed out!", view=None, delete_after=30)
                     return
 
                 vals = dropdown.values
                 if not vals or "Nope" in vals:
-                    await m.delete()
+                    await interaction.response.edit_message(content="OK bye", delete_after=5, view=None)
                     return
 
                 for val in vals:
@@ -1153,120 +981,139 @@ class MusicV2Cog(commands.Cog):
                 await player.queue.put(tracks[0])
 
         player.total_duration += sum(tr.duration for tr in soon_to_add_queue)
-        await m.edit(content=f"Added {len(soon_to_add_queue)} tracks into the queue", view=None)
+        await interaction.response.edit_message(
+            content=f"Added {len(soon_to_add_queue)} tracks into the queue", view=None
+        )
         if len(soon_to_add_queue) <= 25:
             embeds = [player.build_embed(track, f"Requested by {track.requester}") for track in soon_to_add_queue]
-            self.bot.loop.create_task(self.show_paginated_tracks(ctx, embeds, timeout=15))
+            self.bot.loop.create_task(self.show_paginated_tracks(interaction, embeds, timeout=15))
+
+    @music.command()
+    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
+    @app_commands.guild_only()
+    @app_commands.describe(url="Radio url")
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.bot_is_silent)
+    async def radio(self, interaction: discord.Interaction, url: str):
+        """Play a radio"""
+        await interaction.response.defer()
+
+        if not Utility.is_an_url(url):
+            await interaction.followup.send("You need to provide a direct URL")
+            return
+
+        await self.add(interaction, url, True)  # type: ignore
 
     @queue.command()
-    @commands.guild_only()
+    @app_commands.guild_only()
     @app_commands.describe(before="Old position", after="New position")
-    @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.queue_has_element)
-    async def move(self, ctx: commands.Context, before: Range[int, 1], after: Range[int, 1]):
+    @app_commands.checks.has_permissions(manage_guild=True)
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.queue_has_element)
+    async def move(self, interaction: discord.Interaction, before: Range[int, 1], after: Range[int, 1]):
         """Move track to new position"""
-        await ctx.defer()
+        await interaction.response.defer()
 
-        player: MainPlayer = self.get_player(ctx)
+        player: MainPlayer = self.get_player(interaction)
         int_queue = player.queue._queue  # type: ignore
         queue_length = player.queue.qsize()
 
         if not (before != after and 1 <= before <= queue_length and 1 <= after <= queue_length):
-            await ctx.send("Invalid queue position(s)")
+            await interaction.followup.send("Invalid queue position(s)")
             return
 
         temp = int_queue[before - 1]
         del int_queue[before - 1]
         int_queue.insert(after - 1, temp)
 
-        await ctx.send(f"Moved track #{before} to #{after}")
+        await interaction.followup.send(f"Moved track #{before} to #{after}")
 
     @queue.command()
-    @commands.guild_only()
+    @app_commands.guild_only()
     @app_commands.describe(pos="Current position", diff="Relative difference")
-    @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.queue_has_element)
-    async def move_relative(self, ctx: commands.Context, pos: Range[int, 1], diff: Range[int, 0]):
+    @app_commands.checks.has_permissions(manage_guild=True)
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.queue_has_element)
+    async def move_relative(self, interaction: discord.Interaction, pos: Range[int, 1], diff: Range[int, 0]):
         """Move track to new position using relative difference"""
-        await self.move(ctx, pos, pos + diff)
+        await self.move(interaction, pos, pos + diff)  # pyright: ignore
 
     @queue.command()
-    @commands.guild_only()
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.queue_has_element)
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.queue_has_element)
     @app_commands.describe(
         pos1="First track position (1-indexed)",
         pos2="Second track position (1-indexed)",
     )
-    @commands.has_guild_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
-    async def swap(self, ctx: commands.Context, pos1: Range[int, 1], pos2: Range[int, 1]):
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def swap(self, interaction: discord.Interaction, pos1: Range[int, 1], pos2: Range[int, 1]):
         """Swap two tracks."""
-        await ctx.defer()
+        await interaction.response.defer()
 
-        player: MainPlayer = self.get_player(ctx)
+        player: MainPlayer = self.get_player(interaction)
 
         q = player.queue._queue  # type: ignore
         q_length = len(q)
 
         if not (1 <= pos1 <= q_length and 1 <= pos2 <= q_length):
-            await ctx.send(f"Invalid position(s): ({pos1}, {pos2})")
+            await interaction.followup.send(f"Invalid position(s): ({pos1}, {pos2})")
             return
 
         q[pos1 - 1], q[pos2 - 1] = q[pos2 - 1], q[pos1 - 1]
-        await ctx.send(f"Swapped track #{pos1} and #{pos2}")
+        await interaction.followup.send(f"Swapped track #{pos1} and #{pos2}")
 
     @queue.command()
-    @commands.guild_only()
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.queue_has_element)
-    @commands.has_guild_permissions(manage_guild=True)
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.queue_has_element)
     @app_commands.checks.has_permissions(manage_guild=True)
-    async def shuffle(self, ctx: commands.Context):
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def shuffle(self, interaction: discord.Interaction):
         """Shuffle the queue"""
-        await ctx.defer()
+        await interaction.response.defer()
 
-        vc: VoiceClient = ctx.voice_client  # type: ignore
+        vc: VoiceClient = interaction.guild.voice_client  # type: ignore
 
         random.shuffle(vc.queue._queue)  # type: ignore
-        await ctx.send("Shuffled the queue")
+        await interaction.followup.send("Shuffled the queue")
 
     @queue.command()
-    @commands.guild_only()
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.queue_has_element)
-    async def clear(self, ctx: commands.Context):
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.queue_has_element)
+    async def clear(self, interaction: discord.Interaction):
         """Clear the queue"""
-        await ctx.defer()
+        await interaction.response.defer()
 
-        player: MainPlayer = self.get_player(ctx)
+        vc = interaction.guild.voice_client  # type: ignore
+        player: MainPlayer = self.get_player(interaction)
 
-        if await VoteMenu("clear", "queue", ctx).start():
+        if await VoteMenu("clear", "queue", interaction, vc).start():  # pyright: ignore
             player.clear_queue()
-            await ctx.send("Cleared the queue")
+            await interaction.followup.send("Cleared the queue")
 
     @queue.command()
-    @commands.guild_only()
-    @commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @commands.check(MusicCogCheck.queue_has_element)
-    @commands.has_guild_permissions(manage_guild=True)
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.queue_has_element)
     @app_commands.checks.has_permissions(manage_guild=True)
-    async def force_clear(self, ctx: commands.Context):
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def force_clear(self, interaction: discord.Interaction):
         """Clear the queue"""
-        await ctx.defer()
-        player: MainPlayer = self.get_player(ctx)
+        await interaction.response.defer()
+        player: MainPlayer = self.get_player(interaction)
 
         try:
             player.clear_queue()
-            await ctx.send("Cleared the queue")
+            await interaction.followup.send("Cleared the queue")
         except Exception as e:
             logging.error(
                 "User %s try to forcely clear the queue in %s, but we encounter some trouble.",
-                ctx.author.id,
+                interaction.user.id,
                 player._guild.id,
             )
             logging.error("MusicCog.force_clear raise an error: [%s] %s", e.__class__.__name__, str(e))

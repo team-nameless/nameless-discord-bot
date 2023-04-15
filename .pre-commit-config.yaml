@@ -4,38 +4,35 @@ repos:
       - id: black
         name: black
         entry: black
-        always_run: true
         language: system
-        pass_filenames: false
-        fail_fast: true
-        args:
-          [
-            ".",
-            "--check",
-            "--diff",
-          ]
+        pass_filenames: true
+        fail_fast: false
+        types:
+          - python
 
       - id: isort
         name: isort
         entry: isort
-        always_run: true
         language: system
-        pass_filenames: false
-        fail_fast: true
-        args:
-          [
-            ".",
-            "--check",
-            "--diff",
-          ]
+        pass_filenames: true
+        fail_fast: false
+        types:
+          - python
+
 
   - repo: https://github.com/asottile/pyupgrade
     rev: v3.3.1
     hooks:
       - id: pyupgrade
+        fail_fast: false
+        types:
+        - python
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     rev: 'v0.0.224'
     hooks:
       - id: ruff
+        fail_fast: false
         args: [ "--force-exclude" ]
+        types:
+          - python

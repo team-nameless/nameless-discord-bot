@@ -722,7 +722,7 @@ class MusicV2Cog(commands.Cog):
     @music.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(MusicCogCheck.bot_must_play_something)
+    @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
     async def toggle(self, interaction: discord.Interaction):
         """Toggle for current playback."""
         vc: VoiceClient = interaction.guild.voice_client  # type: ignore
@@ -739,7 +739,7 @@ class MusicV2Cog(commands.Cog):
     @music.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(MusicCogCheck.bot_must_play_something)
+    @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
     async def pause(self, interaction: discord.Interaction):
         """Pause current playback"""
         await interaction.response.defer()
@@ -773,7 +773,7 @@ class MusicV2Cog(commands.Cog):
     @music.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(MusicCogCheck.bot_must_play_something)
+    @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
     async def stop(self, interaction: discord.Interaction):
         """Stop current playback."""
         await interaction.response.defer()
@@ -836,7 +836,7 @@ class MusicV2Cog(commands.Cog):
     @music.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.bot_in_voice)
-    @app_commands.check(MusicCogCheck.bot_must_play_something)
+    @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
     async def now_playing(self, interaction: discord.Interaction):
         """Check now playing song"""
         await interaction.response.defer()

@@ -4,7 +4,7 @@ from typing import Dict, List, Optional
 
 import discord
 from discord import Color, app_commands
-from discord.app_commands import Choice
+from discord.app_commands import Choice, Range
 from discord.ext import commands
 from ossapi import GameMode, Ossapi, Score, ScoreType, User, UserLookupKey
 from reactionmenu import ViewButton, ViewMenu
@@ -75,7 +75,6 @@ class OsuCog(commands.GroupCog, name="osu"):
                 timestamp=datetime.datetime.now(),
                 colour=Color.brand_red(),
             )
-            .set_image(url=interaction.user.display_avatar.url)
             .add_field(name="Username", value=db_user.osu_username, inline=True)
             .add_field(name="Mode", value=db_user.osu_mode, inline=True)
         )
@@ -89,7 +88,7 @@ class OsuCog(commands.GroupCog, name="osu"):
         await interaction.response.defer()
         db_user = CRUD.get_or_create_user_record(interaction.user)
         db_user.osu_username, db_user.osu_mode = username, mode.title()
-
+        CRUD.save_changes()
         await interaction.followup.send("Successfully updated your profile details with me! Yay!")
 
     @app_commands.command()
@@ -107,6 +106,8 @@ class OsuCog(commands.GroupCog, name="osu"):
         await interaction.response.defer()
         db_user = CRUD.get_or_create_user_record(member)
         db_user.osu_username, db_user.osu_mode = username, mode.title()
+
+        CRUD.save_changes()
 
         await interaction.followup.send(
             f"Successfully updated the profile details of " f"**{member.display_name}#{member.discriminator}**!"
@@ -127,10 +128,6 @@ class OsuCog(commands.GroupCog, name="osu"):
         the_mode = None if mode == "default" else convert_to_game_mode(mode)
 
         osu_user: User = self.api.user(username, mode=the_mode, key=UserLookupKey.USERNAME)
-
-        if not osu_user:
-            await m.edit(content="I can not find the user on Bancho!")
-            return
 
         user_stats = osu_user.statistics
 
@@ -200,8 +197,9 @@ class OsuCog(commands.GroupCog, name="osu"):
                 request_type = ScoreType.RECENT
 
             # fail inclusion prompt
-            if not is_from_context and request == "recent_scores" and interaction.client.intents.message_content:
+            if not is_from_context and request == "recent_scores":
                 fail_prompt = YesNoButtonPrompt()
+                fail_prompt.timeout = 30
                 m = await m.edit(content="Do you want to include fail scores?", view=fail_prompt)
 
                 if await fail_prompt.wait():
@@ -273,11 +271,12 @@ class OsuCog(commands.GroupCog, name="osu"):
 
                 embeds.append(embed)
 
-            if not is_from_context or len(embeds) != 1:
+            if len(embeds) != 1:
                 view_menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed)
                 view_menu.add_pages(embeds)
 
                 view_menu.add_button(ViewButton.back())
+                view_menu.add_button(ViewButton.end_session())
                 view_menu.add_button(ViewButton.next())
 
                 await view_menu.start()
@@ -300,15 +299,16 @@ class OsuCog(commands.GroupCog, name="osu"):
     async def details(
         self,
         interaction: discord.Interaction,
-        member: discord.Member,
+        member: Optional[discord.Member],
         request_type: str = "profile",
         game_mode: str = "default",
         include_fail: bool = True,
-        count: int = 1,
+        count: Range[int, 1] = 1,
     ):
         """View osu! specific detail(s) of a member."""
         await interaction.response.defer()
-        db_user = CRUD.get_or_create_user_record(member)
+
+        db_user = CRUD.get_or_create_user_record(member if member else interaction.user)
 
         if not db_user.osu_username:
             if member is None:
@@ -354,7 +354,7 @@ class OsuCog(commands.GroupCog, name="osu"):
         request_type: str = "profile",
         game_mode: str = "default",
         include_fail: bool = True,
-        count: int = 1,
+        count: Range[int, 1] = 1,
     ):
         """View osu! specific detail(s) of a custom osu! profile"""
         await interaction.response.defer()

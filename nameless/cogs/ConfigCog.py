@@ -101,8 +101,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         db_guild.welcome_message = modal.text.value
         CRUD.save_changes()
 
-        await interaction.followup.send("Updated the new welcome message successfully!")
-        await interaction.followup.send(f"Your new welcome text:\n\n{db_guild.welcome_message}")
+        await interaction.followup.send(content=f"Your new welcome text:\n\n{db_guild.welcome_message}")
 
     @app_commands.command()
     @app_commands.guild_only()
@@ -122,7 +121,6 @@ class ConfigCog(commands.GroupCog, name="config"):
         db_guild.goodbye_message = modal.text.value
         CRUD.save_changes()
 
-        await interaction.followup.send("Updated the new goodbye message successfully!")
         await interaction.followup.send(f"Your new goodbye text:\n\n{db_guild.goodbye_message}")
 
     @app_commands.command()
@@ -139,6 +137,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         await interaction.response.defer()
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.goodbye_channel_id = dest_channel.id
+        CRUD.save_changes()
         await interaction.followup.send(f"Done updating goodbye channel to {dest_channel.mention}")
 
     @app_commands.command()
@@ -155,6 +154,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         await interaction.response.defer()
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.welcome_channel_id = dest_channel.id
+        CRUD.save_changes()
         await interaction.followup.send(f"Done updating welcome channel to {dest_channel.mention}")
 
     @app_commands.command()
@@ -166,6 +166,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         await interaction.response.defer()
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.is_welcome_enabled = not db_guild.is_welcome_enabled
+        CRUD.save_changes()
         await interaction.followup.send(f"Welcome message delivery: {'on' if db_guild.is_welcome_enabled else 'off'}")
 
     @app_commands.command()
@@ -177,6 +178,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         await interaction.response.defer()
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.is_goodbye_enabled = not db_guild.is_goodbye_enabled
+        CRUD.save_changes()
         await interaction.followup.send(f"Goodbye message delivery: {'on' if db_guild.is_goodbye_enabled else 'off'}")
 
     @app_commands.command()
@@ -188,6 +190,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         await interaction.response.defer()
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.is_bot_greeting_enabled = not db_guild.is_bot_greeting_enabled
+        CRUD.save_changes()
         await interaction.followup.send(f"BOTs greeter delivery: {'on' if db_guild.is_bot_greeting_enabled else 'off'}")
 
     @app_commands.command()
@@ -199,6 +202,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         await interaction.response.defer()
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.is_dm_preferred = not db_guild.is_dm_preferred
+        CRUD.save_changes()
         await interaction.followup.send(f"DM greeter delivery: {'on' if db_guild.is_dm_preferred else 'off'}")
 
     @app_commands.command()
@@ -215,18 +219,6 @@ class ConfigCog(commands.GroupCog, name="config"):
 
         await interaction.response.send_message(
             "\n".join(f"**{key}**\n{value}\n" for key, value in placeholders.items())
-        )
-
-    @app_commands.command()
-    @app_commands.guild_only()
-    @app_commands.checks.has_permissions(manage_guild=True)
-    async def toggle_native_timeout(self, interaction: discord.Interaction):
-        """Toggle using native 'Timeout' feature instead of using 'Mute role'"""
-        await interaction.response.defer()
-        db_guild = CRUD.get_or_create_guild_record(interaction.guild)
-        db_guild.is_timeout_preferred = not db_guild.is_timeout_preferred
-        await interaction.followup.send(
-            f"Use native `Timeout` feature: {'on' if db_guild.is_timeout_preferred else 'off'}"
         )
 
 

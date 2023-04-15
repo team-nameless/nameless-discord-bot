@@ -114,6 +114,7 @@ class Nameless(commands.AutoShardedBot):
         logging.info("Shard #%s is ready", shard_id)
 
     async def setup_hook(self) -> None:
+        CRUD.init()
         await self.construct_shared_vars()
         self.check_for_updates()
 
@@ -212,11 +213,11 @@ class Nameless(commands.AutoShardedBot):
         if not isinstance(err, errors.CommandNotFound):
             await ctx.send(f"Something went wrong when executing the command:\n```\n{err}\n```")
 
-        logging.exception(
-            "[on_command_error] We have gone under a crisis!!!",
-            stack_info=True,
-            exc_info=err,
-        )
+            logging.exception(
+                "[on_command_error] We have gone under a crisis!!!",
+                stack_info=True,
+                exc_info=err,
+            )
 
     async def close(self) -> None:
         logging.warning(msg="Shutting down...")

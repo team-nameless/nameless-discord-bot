@@ -43,7 +43,13 @@ class CRUD:
     _session = sessionmaker(bind=engine)
     session = _session()
 
-    Base.metadata.create_all(engine)
+    @staticmethod
+    def init():
+        Base.metadata.create_all(CRUD.engine)
+
+    @staticmethod
+    def in_case_of_getting_f_up():
+        Base.metadata.drop_all(CRUD.engine)
 
     @staticproperty
     def dirty(self) -> IdentitySet:

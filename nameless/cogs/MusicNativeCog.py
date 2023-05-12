@@ -1,394 +1,27 @@
 import asyncio
 import datetime
-import io
 import logging
 import random
-import threading
-from collections import deque
-from functools import partial
-from typing import IO, Any, AsyncGenerator, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import discord
-import DiscordUtils
 from discord import ClientException, VoiceClient, app_commands
-from discord.app_commands import Choice
+from discord.app_commands import Choice, Range
 from discord.ext import commands
-from discord.ext.commands import Range
 from discord.utils import MISSING, escape_markdown
-from yt_dlp import DownloadError, YoutubeDL
+from reactionmenu import ViewButton, ViewMenu
+from yt_dlp import DownloadError
 
 from nameless import Nameless
 from nameless.cogs.checks import MusicCogCheck
 from nameless.commons import Utility
+from nameless.customs.voice_backends import FFOpusAudioProcess, YTDLSource, YTMusicSource
+from nameless.customs.voice_backends.errors import FFAudioProcessNoCache
 from nameless.database import CRUD
 from nameless.ui_kit import TrackSelectDropdown, VoteMenu
 from NamelessConfig import NamelessConfig
 
-__all__ = ["MusicV2Cog"]
-
-PROVIDER_MAPPING = {
-    "youtube": "ytsearch",
-    "ytmusic": "https://music.youtube.com/search?q=",
-    "soundcloud": "scsearch",
-}
-FFMPEG_OPTS = {"before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5", "options": "-vn"}
-YTDL_OPTS = {
-    "format": "bestaudio[ext=webm][abr<=?64]/bestaudio[ext=webm]/bestaudio[ext=m4a][abr<=?64]/bestaudio[ext=m4a]/bestaudio/93/best",  # noqa: E501
-    "outtmpl": r"downloads/%(extractor)s-%(id)s-%(title)s.%(ext)s",
-    "restrictfilenames": True,
-    "nocheckcertificate": True,
-    "ignoreerrors": False,
-    "logtostderr": False,
-    "quiet": True,
-    "extract_flat": "in_playlist",
-    "no_warnings": True,
-    "default_search": "ytsearch5",
-    "playlist_items": "1-200",
-    "source_address": "0.0.0.0",
-}
-ytdl = YoutubeDL(YTDL_OPTS)
-
-
-class FFAudioProcessNoCache(BaseException):
-    pass
-
-
-class FFAudioProcessSeekError(BaseException):
-    pass
-
-
-class FFOpusAudioProcess(discord.FFmpegOpusAudio):
-    FRAME_SIZE = 3840  # each frame is about 20ms 16bit 48KHz 2ch PCM
-    ONE_SEC_FRAME_SIZE = FRAME_SIZE * 50
-
-    def __init__(
-        self,
-        source: Union[str, io.BufferedIOBase],
-        *,
-        bitrate: Optional[int] = None,
-        codec: str = "opus",
-        executable: str = "ffmpeg",
-        pipe: bool = False,
-        stderr: Optional[IO[bytes]] = None,
-        before_options: Optional[str] = None,
-        options: Optional[str] = None,
-        can_cache: bool = True,
-    ) -> None:
-        self.lock = threading.Lock()
-
-        self.stream: deque = deque()
-        self.stream_idx = 0
-
-        self.can_cache = can_cache
-        self.is_seek = False
-        self.cache_done = False
-
-        super().__init__(
-            source=source,
-            bitrate=bitrate,
-            codec=codec,
-            executable=executable,
-            pipe=pipe,
-            stderr=stderr,
-            before_options=before_options,
-            options=options,
-        )
-
-    def read(self):
-        if not self.can_cache:
-            return next(self._packet_iter, b"")
-
-        data = b""
-        if not self.cache_done:
-            data = next(self._packet_iter, b"")
-            self.stream.append(data)
-            if not data:
-                self.cache_done = True
-
-        if self.cache_done or self.is_seek:
-            data = self.stream[self.stream_idx]
-
-        self.stream_idx += 1
-        return data
-
-    def seek(self, index_offset: int):
-        if not self.can_cache:
-            raise FFAudioProcessSeekError(
-                "Can't seek because there is no cache avaliable for song that over 10mins in duration"
-            )
-        if self.stream is MISSING or self._process is MISSING:  # return if trying to seek on a clean stream
-            return
-
-        with self.lock:
-            self.is_seek = True
-            index_offset = max(index_offset * 50 + self.stream_idx, 0)
-
-            if index_offset > self.stream_idx:
-                for _ in range(index_offset - self.stream_idx):
-                    data = next(self._packet_iter, b"")
-                    if not data:
-                        break
-                    self.stream.append(data)
-
-            self.stream_idx = max(index_offset, 0)
-
-    def to_start(self):
-        if not self.can_cache:
-            raise FFAudioProcessNoCache("Can't use cache and seek on song that have over 10mins of duration")
-
-        with self.lock:
-            self.stream_idx = 0
-
-    def cleanup(self) -> None:
-        self._kill_process()
-        self._process = self._stdout = self._stdin = MISSING
-
-    def all_cleanup(self) -> None:
-        self.cleanup()
-        self.lock = self.stream = MISSING
-
-
-class YTDLSource(discord.AudioSource):
-    __slots__ = ("requester", "title", "author", "duration", "extractor", "direct", "uri", "thumbnail", "cleaned")
-
-    def __init__(self, data: dict, requester: discord.Member, *args, **kwargs):
-        if source := kwargs.get("source", None):
-            self.source: FFOpusAudioProcess = source
-
-        self.requester: discord.Member = requester
-        self.cleaned = False
-        self.id: int = data.get("id", 0)
-        self.duration: int = data.get("duration", 0)
-        self.direct: bool = kwargs.get("direct", False)
-        self.thumbnail: Optional[str] = data.get("thumbnail", None)
-        self.title: str = data.get("title", "Unknown title")
-        self.extractor: str = data.get("extractor") or kwargs.get("extractor", "None")
-        self.author: str = data.get("uploader") or data.get("channel", "Unknown artits")
-
-        if "search" in self.extractor:
-            self.uri = data.get("url")
-        else:
-            self.uri = data.get("webpage_url")
-
-    @staticmethod
-    async def __get_raw_data(search, loop=None, ytdl_cls=ytdl, **kwargs) -> Dict:
-        loop = loop or asyncio.get_event_loop()
-
-        to_run = partial(ytdl_cls.extract_info, url=search, download=False, **kwargs)
-        data: Dict = await loop.run_in_executor(None, to_run)  # type: ignore
-
-        return data
-
-    @staticmethod
-    async def _requests(http_session, url, *args, **kwargs) -> Optional[dict]:
-        async with http_session.get(url, *args, **kwargs) as resp:
-            if resp.status == 200:
-                return await resp.json()
-            raise asyncio.InvalidStateError(f"Failed to get {url}: Get {resp.status}")
-
-    @classmethod
-    async def get_related_tracks(cls, track, bot: discord.Client):
-        http_session = bot.http._HTTPClient__session  # type: ignore
-
-        try:
-            match track.extractor:
-                case "youtube":
-                    data = await cls._requests(
-                        http_session, f"https://yt.funami.tech/api/v1/videos/{track.id}?fields=recommendedVideos"
-                    )
-                    data = await cls.__get_raw_data(
-                        f"https://www.youtube.com/watch?v={random.choice(data['recommendedVideos'])['videoId']}",
-                        process=False,
-                    )
-                    return cls.info_wrapper(data, bot.user)
-
-                case "soundcloud":
-                    if (sc := getattr(NamelessConfig, "SOUNDCLOUD", None)) and (sc["user_id"] or sc["client_id"]):
-                        data = await cls.__get_raw_data(track.title)
-                        return await cls.get_related_tracks(track, bot)
-
-                    data = await cls._requests(
-                        http_session,
-                        f"https://api-v2.soundcloud.com/tracks/{track.id}/related",
-                        params={
-                            "user_id": NamelessConfig.SOUNDCLOUD["user_id"],
-                            "client_id": NamelessConfig.SOUNDCLOUD["client_id"],
-                            "limit": "5",
-                            "offset": "0",
-                        },
-                    )
-                    data = await cls.__get_raw_data(random.choice(data)["permalink_url"])  # type: ignore
-                    return cls.info_wrapper(data, bot.user)
-
-                case _:
-                    data = await cls.__get_raw_data(track.title)
-                    return await cls.get_related_tracks(track, bot)
-        except Exception:
-            return None
-
-    @staticmethod
-    def maybe_new_extractor(provider, amount) -> YoutubeDL:
-        if provider == "youtube" and amount == 5:
-            return ytdl
-
-        config = YTDL_OPTS.copy()
-        match provider:
-            case "ytmusic":
-                config.update(
-                    {
-                        "default_search": PROVIDER_MAPPING[provider],
-                        "playlist_items": f"1-{amount}",
-                    }
-                )
-            case "youtube" | "soundcloud":
-                config.update(
-                    {
-                        "default_search": f"{PROVIDER_MAPPING[provider]}{amount}",
-                    }
-                )
-        return YoutubeDL(config)
-
-    @property
-    def is_stream(self):
-        return self.direct
-
-    @classmethod
-    async def get_tracks(
-        cls, interaction: discord.Interaction, search, amount=5, provider="youtube", loop=None, process=True
-    ) -> AsyncGenerator:
-        data = await cls.__get_raw_data(
-            search, loop, ytdl_cls=cls.maybe_new_extractor(provider, amount), process=process
-        )
-        if not data:
-            return
-
-        if entries := data.get("entries", None):
-            for track in entries:
-                yield cls.info_wrapper(track, interaction.user, extra_info=data)
-        else:
-            yield cls.info_wrapper(data, interaction.user)
-
-    @classmethod
-    async def get_track(cls, interaction: discord.Interaction, search, amount=5, provider="youtube", loop=None):
-        return await anext(cls.get_tracks(interaction, search, amount, provider, loop))
-
-    @classmethod
-    def info_wrapper(cls, track, author, extra_info=None):
-        if extra_info:
-            return cls(track, author, extractor=extra_info.get("extractor"), direct=extra_info.get("direct"))
-        return cls(track, author, extractor=track.get("extractor"), direct=track.get("direct"))
-
-    @classmethod
-    async def generate_stream(cls, data, loop=None):
-        loop = loop or asyncio.get_event_loop()
-        requester = data.requester
-
-        to_run = partial(ytdl.extract_info, url=data.uri, download=False)
-        ret: dict = await loop.run_in_executor(None, to_run)  # type: ignore
-
-        return cls(
-            source=FFOpusAudioProcess(ret["url"], **FFMPEG_OPTS, can_cache=data.duration < 600, codec=ret["acodec"]),
-            data=ret,
-            requester=requester,
-        )
-
-    def read(self) -> bytes:
-        return self.source.read()
-
-    def is_opus(self) -> bool:
-        return self.source.is_opus()
-
-    def cleanup(self) -> None:
-        source: FFOpusAudioProcess
-        if source := getattr(self, "source", None):  # type: ignore
-            source.all_cleanup()
-
-        self.cleaned = True
-
-
-class YTMusicSource(YTDLSource):
-    """
-    This class is used to represent a YouTube Music stream, taken from Invidious instance.
-
-    This could be useful if you run the bot in an area where Youtube Music has been blocked or is not yet available.
-    """
-
-    PARAMS = "fields=videoThumbnails,videoId,title,viewCount,likeCount,author,authorUrl,lengthSeconds"
-
-    def __init__(self, data: dict, requester: discord.Member, *args, **kwargs):
-        super().__init__(data, requester, *args, **kwargs)
-
-    def get(self, key: str, _default: Any = None) -> Any:
-        if not hasattr(self, key):
-            return _default
-
-        return getattr(self, key)
-
-    @staticmethod
-    async def _requests(http_session, url, *args, **kwargs) -> Optional[dict]:
-        async with http_session.get(url, *args, **kwargs) as resp:
-            if resp.status == 200:
-                return await resp.json()
-            raise asyncio.InvalidStateError(f"Failed to get {url}: Get {resp.status}")
-
-    @classmethod
-    async def generate_stream(cls, data, loop=None):
-        loop = loop or asyncio.get_event_loop()
-        requester = data.requester
-
-        data.url = f"https://vid.puffyan.us/latest_version?id={data.id}&itag=250&local=true"
-
-        return cls(
-            source=FFOpusAudioProcess(
-                data.url,
-                **FFMPEG_OPTS,
-                can_cache=data.duration < 600,
-                codec="opus",
-            ),
-            data=data,
-            requester=requester,
-        )
-
-    @classmethod
-    async def indivious_get_track(cls, interaction: discord.Interaction, videoid, loop=None):
-        # data_search = await cls._requests(
-        #     ctx.bot.http._HTTPClient__session,
-        #     f"https://yt.funami.tech/api/v1/search/{videoid}?{cls.PARAMS}",
-        #     loop=loop,
-        # )
-
-        if "youtube" in videoid:
-            idx = videoid.find("?v=")
-            if idx == -1:
-                return
-
-            # dirty way to extract id from url
-            videoid = videoid[idx + 3 : idx + 3 + 11]  # noqa: E203
-
-        if len(videoid) != 11:
-            return
-
-        req_data = await cls._requests(
-            interaction.client.http._HTTPClient__session,  # pyright: ignore
-            f"https://yt.funami.tech/api/v1/videos/{videoid}?{cls.PARAMS}",
-        )
-
-        if not req_data:
-            return
-
-        data = {
-            "id": req_data["videoId"],
-            "duration": req_data["lengthSeconds"],
-            "direct": False,
-            "thumbnail": req_data["videoThumbnails"][1]["url"],
-            "title": req_data["title"],
-            "extractor": "ytmusic",
-            "uploader": req_data["author"],
-            "author_url": req_data["authorUrl"],
-            "webpage_url": f"https://music.youtube.com/watch?v={req_data['videoId']}",
-        }
-
-        return cls.info_wrapper(data, interaction.user)
+__all__ = ["MusicNativeCog"]
 
 
 class MainPlayer:
@@ -401,7 +34,6 @@ class MainPlayer:
         "signal",
         "track",
         "total_duration",
-        "position",
         "repeat",
         "task",
         "loop_play_count",
@@ -420,7 +52,6 @@ class MainPlayer:
         self.signal = asyncio.Event()
 
         self.track: YTDLSource = MISSING
-        self.position = 0
         self.total_duration = 0
 
         self.repeat = False
@@ -434,7 +65,7 @@ class MainPlayer:
             raise AttributeError(f"Try to access guild attribute, got {self._guild.__class__.__name__} instead")
 
         self.task: asyncio.Task = self.client.loop.create_task(self.create())
-        setattr(self._guild.voice_client, "is_empty", self.is_empty)
+        setattr(self._guild.voice_client, "queue_empty", self.queue.empty)
 
     @staticmethod
     def build_embed(track: YTDLSource, header: str):
@@ -459,10 +90,6 @@ class MainPlayer:
                 value=escape_markdown(track.uri) if track.uri else "N/A",
             )
         )
-
-    @property
-    def is_empty(self):
-        return self.queue.empty()
 
     def clear_queue(self):
         while not self.queue.empty():
@@ -535,7 +162,7 @@ class MainPlayer:
         return self.client.loop.create_task(self._cog.cleanup(guild))
 
 
-class MusicV2Cog(commands.Cog):
+class MusicNativeCog(commands.GroupCog, name="music"):
     def __init__(self, bot: Nameless):
         self.bot = bot
         self.players: Dict[int, MainPlayer] = {}
@@ -557,6 +184,7 @@ class MusicV2Cog(commands.Cog):
             player.task.cancel()
 
             if not player.signal.is_set():
+                print("not set")
                 player.signal.set()
 
             await player._guild.voice_client.disconnect()  # type: ignore
@@ -649,9 +277,15 @@ class MusicV2Cog(commands.Cog):
         return embeds
 
     @staticmethod
-    async def show_paginated_tracks(interaction: discord.Interaction, embeds: List[discord.Embed], **kwargs):
-        p = DiscordUtils.Pagination.AutoEmbedPaginator(interaction, **kwargs)
-        await p.run(embeds[:25])
+    async def show_paginated_tracks(interaction: discord.Interaction, embeds: List[discord.Embed]):
+        view_menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed)
+        view_menu.add_pages(embeds)
+
+        view_menu.add_button(ViewButton.back())
+        view_menu.add_button(ViewButton.end_session())
+        view_menu.add_button(ViewButton.next())
+
+        await view_menu.start()
 
     @commands.Cog.listener()
     async def on_voice_state_update(
@@ -677,9 +311,7 @@ class MusicV2Cog(commands.Cog):
             if not after.channel:
                 return await self.cleanup(member.guild.id)
 
-    music = app_commands.Group(name="music", description="Music related commands")
-
-    @music.command()
+    @app_commands.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_in_voice)
     async def connect(self, interaction: discord.Interaction):
@@ -694,7 +326,7 @@ class MusicV2Cog(commands.Cog):
         except ClientException:
             await interaction.followup.send("Already connected")
 
-    @music.command()
+    @app_commands.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.bot_in_voice)
     async def disconnect(self, interaction: discord.Interaction):
@@ -707,7 +339,7 @@ class MusicV2Cog(commands.Cog):
         except AttributeError:
             await interaction.followup.send("Already disconnected")
 
-    @music.command()
+    @app_commands.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
@@ -719,7 +351,7 @@ class MusicV2Cog(commands.Cog):
         player.repeat = not player.repeat
         await interaction.followup.send(f"Loop set to {'on' if player.repeat else 'off'}")
 
-    @music.command()
+    @app_commands.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
@@ -736,7 +368,7 @@ class MusicV2Cog(commands.Cog):
 
         await interaction.followup.send(action)
 
-    @music.command()
+    @app_commands.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
@@ -753,7 +385,7 @@ class MusicV2Cog(commands.Cog):
         vc.pause()
         await interaction.followup.send("Paused")
 
-    @music.command()
+    @app_commands.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.bot_is_silent)
@@ -770,7 +402,7 @@ class MusicV2Cog(commands.Cog):
         vc.resume()
         await interaction.followup.send("Resumed")
 
-    @music.command()
+    @app_commands.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
@@ -783,9 +415,10 @@ class MusicV2Cog(commands.Cog):
 
         vc.stop()
         player.stopped = True
+        player.clear_queue()
         await interaction.followup.send("Stopped")
 
-    @music.command()
+    @app_commands.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
@@ -800,7 +433,7 @@ class MusicV2Cog(commands.Cog):
         if await VoteMenu("skip", track.title, interaction, vc).start():
             vc.stop()
 
-    @music.command()
+    @app_commands.command()
     @app_commands.guild_only()
     @app_commands.describe(offset="Position to seek to in milliseconds, defaults to run from start")
     @app_commands.checks.has_permissions(manage_guild=True)
@@ -811,16 +444,19 @@ class MusicV2Cog(commands.Cog):
         await interaction.response.defer()
 
         player: MainPlayer = self.get_player(interaction)
-        source: FFOpusAudioProcess = player.track.source
+        source: Optional[FFOpusAudioProcess] = player.track.source
+
+        if not source:
+            return await interaction.followup.send("Not playing anything")
 
         try:
-            source.seek(offset)
-            await interaction.response.send_message(content="✅")
+            await source.seek(offset)
+            await interaction.followup.send(content="✅")
         except Exception as err:
-            await interaction.response.send_message(content=f"{err.__class__.__name__}: {str(err)}")
+            await interaction.followup.send(content=f"{err.__class__.__name__}: {str(err)}")
             logging.error("%s: %s", err.__class__.__name__, str(err))
 
-    @music.command()
+    @app_commands.command()
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
@@ -833,7 +469,7 @@ class MusicV2Cog(commands.Cog):
         player.allow_np_msg = not player.allow_np_msg
         await interaction.followup.send(f"'Now playing' delivery is now {'on' if player.allow_np_msg else 'off'}")
 
-    @music.command()
+    @app_commands.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.bot_in_voice)
     @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
@@ -866,6 +502,15 @@ class MusicV2Cog(commands.Cog):
             )
             .add_field(name="Paused", value=vc.is_paused())
             .add_field(
+                name="Playtime" if track.is_stream else "Position",
+                value=str(
+                    discord.utils.utcnow().replace(tzinfo=None) - dbg.radio_start_time
+                    if track.is_stream
+                    else f"{datetime.timedelta(seconds=track.source.position)}/"
+                    f"{datetime.timedelta(seconds=track.duration)}"
+                ),
+            )
+            .add_field(
                 name="Next track",
                 value=f"[{escape_markdown(next_tr.title)} "
                 f"by {escape_markdown(next_tr.author)}]"
@@ -875,7 +520,7 @@ class MusicV2Cog(commands.Cog):
             )
         )
 
-    @music.command()
+    @app_commands.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     async def autoplay(self, interaction: discord.Interaction):
@@ -889,6 +534,7 @@ class MusicV2Cog(commands.Cog):
 
     queue = app_commands.Group(name="queue", description="Commands related to queue management.")
 
+    @queue.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.queue_has_element)
@@ -929,9 +575,9 @@ class MusicV2Cog(commands.Cog):
     @app_commands.describe(
         search="Search query", provider="Pick a provider to search from", amount="How much results to show"
     )
-    @app_commands.choices(provider=[Choice(name=k, value=k) for k in PROVIDER_MAPPING])
+    @app_commands.choices(provider=[Choice(name=k, value=k) for k in ("ytmusic", "youtube", "soundcloud")])
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    async def add(self, interaction: discord.Interaction, search: str, provider: str = "youtube", amount: int = 5):
+    async def add(self, interaction: discord.Interaction, search: str, provider: str = "youtube", amount: int = 10):
         """Add selected track(s) to queue"""
         await interaction.response.defer()
 
@@ -941,54 +587,56 @@ class MusicV2Cog(commands.Cog):
             search = f"{search}#songs"
 
         try:
-            tracks: List[YTDLSource] = [tr async for tr in YTDLSource.get_tracks(interaction, search, amount, provider)]
+            tracks: Optional[Tuple[Union[YTDLSource, YTMusicSource]]] = tuple(
+                [tr async for tr in YTDLSource.get_tracks(interaction, search, amount, provider)]
+            )
         except DownloadError:
-            if "youtube" in search:
-                tracks = [await YTMusicSource.indivious_get_track(interaction, search)]  # type: ignore
+            if "youtube" in search:  # only check for youtube link, not search str or any other provider
+                tracks = (await YTMusicSource.indivious_get_track(interaction, search),)  # type: ignore
             else:
-                tracks = []
+                tracks = None
 
         if not tracks:
             await interaction.followup.send(f"No tracks found for '{search}' on '{provider}'.")
             return
 
-        soon_to_add_queue: List[YTDLSource] = []
-        if ":search" in tracks[0].extractor:
-            soon_to_add_queue = tracks
-        else:
-            if len(tracks) > 1:
+        extend_duration = 0
+        if len(tracks) > 1:
+            if ":search" in tracks[0].extractor:
                 dropdown: Union[discord.ui.Item[discord.ui.View], TrackSelectDropdown] = TrackSelectDropdown(
                     tracks  # pyright: ignore
                 )
                 view = discord.ui.View().add_item(dropdown)
-                await interaction.response.edit_message(content="Tracks found", view=view)
+                msg: discord.WebhookMessage = await interaction.followup.send(content="Tracks found", view=view)  # type: ignore  # noqa: E501
 
                 if await view.wait():
-                    await interaction.response.edit_message(content="Timed out!", view=None, delete_after=30)
-                    return
+                    await msg.edit(content="Timed out!", view=None)
 
                 vals = dropdown.values
+                queue_len = len(vals)
                 if not vals or "Nope" in vals:
-                    await interaction.response.edit_message(content="OK bye", delete_after=5, view=None)
-                    return
+                    await msg.edit(content="OK bye", view=None)
 
                 for val in vals:
                     idx = int(val)
-                    soon_to_add_queue.append(tracks[idx])
                     await player.queue.put(tracks[idx])
+                    extend_duration += tracks[idx].duration
+
+                await msg.delete(delay=10)
             else:
-                soon_to_add_queue = tracks
-                await player.queue.put(tracks[0])
+                queue_len = len(tracks)
+                for tr in tracks:
+                    await player.queue.put(tr)
+                    extend_duration += tr.duration
 
-        player.total_duration += sum(tr.duration for tr in soon_to_add_queue)
-        await interaction.response.edit_message(
-            content=f"Added {len(soon_to_add_queue)} tracks into the queue", view=None
-        )
-        if len(soon_to_add_queue) <= 25:
-            embeds = [player.build_embed(track, f"Requested by {track.requester}") for track in soon_to_add_queue]
-            self.bot.loop.create_task(self.show_paginated_tracks(interaction, embeds, timeout=15))
+            await interaction.followup.send(content=f"Added {queue_len} tracks into the queue")
+        else:
+            await player.queue.put(tracks[0])
+            extend_duration = tracks[0].duration
 
-    @music.command()
+        player.total_duration += extend_duration
+
+    @app_commands.command()
     @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
     @app_commands.guild_only()
     @app_commands.describe(url="Radio url")
@@ -1120,13 +768,20 @@ class MusicV2Cog(commands.Cog):
 
 
 async def setup(bot: Nameless):
-    if bot.get_cog("MusicV1Cog"):
-        raise commands.ExtensionFailed(__name__, RuntimeError("can't load MusicV1 and MusicV2 at the same time."))
+    if bot.get_cog("MusicLavalinkCog"):
+        raise commands.ExtensionFailed(
+            __name__, RuntimeError("can't load MusicLavalinkCog and MusicNativeCog at the same time.")
+        )
 
-    await bot.add_cog(MusicV2Cog(bot))
+    await bot.add_cog(MusicNativeCog(bot))
     logging.info("Cog of %s added!", __name__)
 
 
 async def teardown(bot: Nameless):
-    await bot.remove_cog("MusicV2Cog")
+    cog: MusicNativeCog = bot.get_cog("MusicNativeCog")  # type: ignore
+    if cog:
+        for k in cog.players:
+            await cog.cleanup(k)
+
+    await bot.remove_cog("MusicNativeCog")
     logging.warning("Cog of %s removed!", __name__)

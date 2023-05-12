@@ -3,7 +3,7 @@ from typing import Any, List, Optional, Union
 import discord
 import wavelink
 
-from nameless.cogs.MusicV2Cog import YTDLSource
+from nameless.cogs.MusicNativeCog import YTDLSource
 
 __all__ = ["TrackSelectDropdown"]
 

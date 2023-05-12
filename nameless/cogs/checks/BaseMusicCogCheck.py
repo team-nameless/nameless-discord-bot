@@ -17,10 +17,6 @@ class BaseMusicCogCheck(BaseCheck):
         return __class__.bot_in_voice(interaction) and __class__.user_in_voice(interaction)
 
     @staticmethod
-    def bot_must_play_track_not_stream(interaction: discord.Interaction):
-        return __class__.bot_is_playing_something(interaction) and __class__.must_not_be_a_stream(interaction)
-
-    @staticmethod
     def bot_in_voice(interaction: discord.Interaction):
         if interaction.guild and interaction.guild.voice_client is None:
             raise CheckFailure("I must be in a voice channel.")

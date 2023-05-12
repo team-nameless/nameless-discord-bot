@@ -6,6 +6,7 @@ from discord.app_commands import CheckFailure
 
 from .BaseCheck import BaseCheck
 
+
 __all__ = ["BaseMusicCogCheck"]
 
 VoiceClientT_ = Union[discord.VoiceClient, wavelink.Player]

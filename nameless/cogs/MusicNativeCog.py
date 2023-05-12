@@ -21,6 +21,7 @@ from nameless.database import CRUD
 from nameless.ui_kit import TrackSelectDropdown, VoteMenu
 from NamelessConfig import NamelessConfig
 
+
 __all__ = ["MusicNativeCog"]
 
 

@@ -4,6 +4,7 @@ from discord.app_commands import CheckFailure
 
 from .BaseMusicCogCheck import BaseMusicCogCheck
 
+
 __all__ = ["MusicLavalinkCogCheck"]
 
 

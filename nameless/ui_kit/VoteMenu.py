@@ -4,6 +4,7 @@ from typing import List, Union
 import discord
 import wavelink
 
+
 __all__ = ["VoteMenu"]
 
 VoiceClientT_ = Union[discord.VoiceClient, wavelink.Player]

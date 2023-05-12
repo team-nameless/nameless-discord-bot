@@ -7,6 +7,7 @@ from wavelink.ext.spotify import SpotifyTrack
 
 from nameless.cogs.MusicNativeCog import YTDLSource
 
+
 TrackT_ = Union[discord.AudioSource, wavelink.Playable, YTDLSource, SpotifyTrack]
 PlayerT_ = Union[discord.VoiceClient, wavelink.Player]
 

@@ -21,9 +21,11 @@ from nameless.commons import Utility
 from nameless.ui_kit import TrackSelectDropdown, VoteMenu
 from NamelessConfig import NamelessConfig
 
+
 __all__ = ["MusicLavalinkCog"]
 
 from nameless.database import CRUD
+
 
 music_default_sources: List[str] = ["youtube", "soundcloud", "ytmusic"]
 

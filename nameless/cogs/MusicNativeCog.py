@@ -142,8 +142,7 @@ class MainPlayer:
                     f"There was an error processing your song.\n" f"```css\n[{e}]\n```"
                 )
 
-            finally:
-                await self.signal.wait()
+            await self.signal.wait()  # wait for signal to set after the song played
 
             if not self.repeat:
                 if self.play_related_tracks and self.queue.empty() and not self.stopped:
@@ -158,8 +157,13 @@ class MainPlayer:
             if not self._guild.voice_client:  # random check
                 return self.destroy(self._guild)
 
-    def destroy(self, guild):
+        else:
+            return self.destroy(self._guild)
+
+    def destroy(self, guild: Optional[discord.Guild]):
         """Disconnect and cleanup the player."""
+        if not guild:
+            return  # this should not happen but anyway, just in case
         return self.client.loop.create_task(self._cog.cleanup(guild))
 
 
@@ -180,19 +184,18 @@ class MusicNativeCog(commands.GroupCog, name="music"):
 
     async def cleanup(self, guild_id: int):
         try:
-            player = self.players[guild_id]
-            player._guild.voice_client.stop()  # type: ignore
-            player.task.cancel()
+            player: Optional[MainPlayer] = self.players.pop(guild_id, None)
+            if not player:
+                return logging.warning("No player was found for guild %s. And also, this should not happen.", guild_id)
 
+            player._guild.voice_client.stop()  # type: ignore
             if not player.signal.is_set():
-                print("not set")
                 player.signal.set()
 
+            player.task.cancel()
             await player._guild.voice_client.disconnect()  # type: ignore
             if player.track:  # edge-case
                 player.track.cleanup()
-
-            del self.players[guild_id]
 
         except asyncio.CancelledError:
             pass
@@ -779,10 +782,5 @@ async def setup(bot: Nameless):
 
 
 async def teardown(bot: Nameless):
-    cog: MusicNativeCog = bot.get_cog("MusicNativeCog")  # type: ignore
-    if cog:
-        for k in cog.players:
-            await cog.cleanup(k)
-
     await bot.remove_cog("MusicNativeCog")
     logging.warning("Cog of %s removed!", __name__)

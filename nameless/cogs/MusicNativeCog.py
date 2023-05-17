@@ -117,7 +117,7 @@ class MainPlayer:
                 else:
                     self.loop_play_count += 1
                     try:
-                        self.track.source.to_start()
+                        self.track.to_start()   # type: ignore
                     except FFAudioProcessNoCache:
                         self.track = await YTDLSource.generate_stream(self.track)
 
@@ -138,7 +138,7 @@ class MainPlayer:
                     self._guild.id,
                     str(e),
                 )
-                return await self._channel.send(  # pyright: ignore
+                return await self._channel.send(  # type: ignore
                     f"There was an error processing your song.\n" f"```css\n[{e}]\n```"
                 )
 
@@ -151,11 +151,11 @@ class MainPlayer:
                         await self.queue.put(data)
 
                 self.loop_play_count = 0
-                self.track.cleanup()
+                self.track.final_cleanup()  # type: ignore
                 self.track = None
 
-            if not self._guild.voice_client:  # random check
-                return self.destroy(self._guild)
+            # if not self._guild.voice_client:  # random check
+            #     return self.destroy(self._guild)
 
         else:
             return self.destroy(self._guild)
@@ -163,7 +163,7 @@ class MainPlayer:
     def destroy(self, guild: Optional[discord.Guild]):
         """Disconnect and cleanup the player."""
         if not guild:
-            return  # this should not happen but anyway, just in case
+            return  # this should not happen tho
         return self.client.loop.create_task(self._cog.cleanup(guild))
 
 
@@ -346,7 +346,6 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
     async def loop(self, interaction: discord.Interaction):
         """Toggle loop playback of current track"""
         await interaction.response.defer()
@@ -610,23 +609,22 @@ class MusicNativeCog(commands.GroupCog, name="music"):
                 dropdown: Union[discord.ui.Item[discord.ui.View], TrackSelectDropdown] = TrackSelectDropdown(
                     tracks  # pyright: ignore
                 )
-                view = discord.ui.View().add_item(dropdown)
+                view = discord.ui.View(timeout=20).add_item(dropdown)
                 msg: discord.WebhookMessage = await interaction.followup.send(content="Tracks found", view=view)  # type: ignore  # noqa: E501
+                await msg.delete(delay=30)
 
                 if await view.wait():
-                    await msg.edit(content="Timed out!", view=None)
+                    return await msg.edit(content="Timed out!", view=None)
 
                 vals = dropdown.values
                 queue_len = len(vals)
                 if not vals or "Nope" in vals:
-                    await msg.edit(content="OK bye", view=None)
+                    return await msg.edit(content="OK bye", view=None)
 
                 for val in vals:
                     idx = int(val)
                     await player.queue.put(tracks[idx])
                     extend_duration += tracks[idx].duration
-
-                await msg.delete(delay=10)
             else:
                 queue_len = len(tracks)
                 for tr in tracks:

@@ -1,6 +1,7 @@
 import asyncio
 import io
 import json
+import logging
 import random
 import threading
 from collections import deque
@@ -77,7 +78,7 @@ class FFOpusAudioProcess(discord.FFmpegOpusAudio):
         self.lock = threading.Event()
         self.lock.set()
 
-        self.stream: deque = deque()
+        self.stream: deque[bytes] = deque()
         self.stream_idx = 0
 
         self.can_cache = can_cache
@@ -110,8 +111,8 @@ class FFOpusAudioProcess(discord.FFmpegOpusAudio):
 
         # print(self.stream_idx)
         self.stream_idx += 1
-        if not data:
-            print(f"data is None at {self.stream_idx}")
+        # if not data:
+        #     print(f"data is None at {self.stream_idx}")
         return data
 
     async def seek(self, index_offset: int):
@@ -147,37 +148,39 @@ class FFOpusAudioProcess(discord.FFmpegOpusAudio):
     def cleanup(self) -> None:
         self._kill_process()
         self._process = self._stdout = self._stdin = MISSING
+        
+    def final_cleanup(self) -> None:
+        self.lock = self.stream = MISSING
 
     def all_cleanup(self) -> None:
         self.cleanup()
-        self.lock = self.stream = MISSING
+        self.final_cleanup()
 
 
 class YTDLSource(discord.AudioSource):
     __slots__ = (
+        "source",
         "requester",
-        "title",
-        "author",
+        "id",
         "duration",
-        "extractor",
-        "direct",
-        "uri",
+        "is_stream",
         "thumbnail",
-        "cleaned",
+        "title",
+        "extractor",
+        "author",
+        "uri",
     )
 
     def __init__(
         self, data: dict, requester: discord.Member, source: Optional[FFOpusAudioProcess] = MISSING, *args, **kwargs
     ):
         self.source = source
-        if self.source:
-            setattr(self, "read", self.source.read)
-            setattr(self, "is_opus", self.source.is_opus)
+        for fn in ("read", "is_opus", "seek", "cleanup", "final_cleanup", "all_cleanup"):
+            setattr(self, fn, getattr(self.source, fn, lambda: print(fn)))
 
         self.requester: discord.Member = requester
-        self.cleaned = False
-        self.id: int = data.get("id", 0)
 
+        self.id: int = data.get("id", 0)
         self.duration: int = data.get("duration", 0)
         self.is_stream: bool = kwargs.get("direct", False)
         self.thumbnail: Optional[str] = data.get("thumbnail", None)
@@ -189,6 +192,10 @@ class YTDLSource(discord.AudioSource):
             self.uri = data.get("url")
         else:
             self.uri = data.get("webpage_url")
+            
+    @staticmethod
+    def __no_source():
+        logging.warning("No running stream found")
 
     @staticmethod
     async def __get_raw_data(search, loop=None, ytdl_cls=ytdl, **kwargs) -> Dict:
@@ -279,8 +286,8 @@ class YTDLSource(discord.AudioSource):
     @classmethod
     async def get_track(
         cls, interaction: discord.Interaction, search, amount=10, provider="youtube", loop=None
-    ) -> Self:
-        return await anext(cls.get_tracks(interaction, search, amount, provider, loop))
+    ) -> Optional[Self]:
+        return await anext(cls.get_tracks(interaction, search, amount, provider, loop))  # type: ignore
 
     @classmethod
     def info_wrapper(cls, track, author, extra_info=None) -> Self:
@@ -302,12 +309,10 @@ class YTDLSource(discord.AudioSource):
             data=ret,
             requester=requester,
         )
-
-    def cleanup(self) -> None:
+        
+    def __del__(self) -> None:
         if self.source:
-            self.source.all_cleanup()
-
-        self.cleaned = True
+            return self.source.all_cleanup()
 
 
 class YTMusicSource(YTDLSource):

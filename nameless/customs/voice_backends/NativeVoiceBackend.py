@@ -176,7 +176,7 @@ class YTDLSource(discord.AudioSource):
     ):
         self.source = source
         for fn in ("read", "is_opus", "seek", "cleanup", "final_cleanup", "all_cleanup"):
-            setattr(self, fn, getattr(self.source, fn, lambda: print(fn)))
+            setattr(self, fn, getattr(self.source, fn, self.__no_source))
 
         self.requester: discord.Member = requester
 

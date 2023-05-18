@@ -66,7 +66,14 @@ class MainPlayer:
             raise AttributeError(f"Try to access guild attribute, got {self._guild.__class__.__name__} instead")
 
         self.task: asyncio.Task = self.client.loop.create_task(self.create())
-        setattr(self._guild.voice_client, "queue_empty", self.queue.empty)
+        
+    @property
+    def queue_empty(self) -> bool:
+        return self.queue.empty()
+    
+    @property
+    def queue_size(self) -> int:
+        return self.queue.qsize()
 
     @staticmethod
     def build_embed(track: YTDLSource, header: str):
@@ -203,41 +210,6 @@ class MusicNativeCog(commands.GroupCog, name="music"):
             pass
 
     @staticmethod
-    def generate_embeds_from_tracks(
-        tracks: List,
-    ) -> List[discord.Embed]:
-        embeds: List[discord.Embed] = []
-        txt = ""
-
-        for idx, track in enumerate(tracks):
-            upcoming = (
-                f"{idx + 1} - "
-                f"[{escape_markdown(track.title)} by {escape_markdown(track.author)}]"
-                f"({track.uri})\n"
-            )
-
-            if len(txt) + len(upcoming) > 2048:
-                eb = discord.Embed(
-                    title="Tracks currently in list",
-                    color=discord.Color.orange(),
-                    description=txt,
-                )
-                embeds.append(eb)
-                txt = upcoming
-            else:
-                txt += upcoming
-
-        embeds.append(
-            discord.Embed(
-                title="Tracks currently in list",
-                color=discord.Color.orange(),
-                description=txt,
-            )
-        )
-
-        return embeds
-
-    @staticmethod
     def generate_embeds_from_queue(q: asyncio.Queue) -> List[discord.Embed]:
         # Some workaround to get list from asyncio.Queue
         copycat: List = q._queue.copy()  # type: ignore
@@ -320,7 +292,7 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.user_in_voice)
     async def connect(self, interaction: discord.Interaction):
         """Connect to your current voice channel"""
-        await interaction.response.defer()
+        await interaction.response.defer(thinking=True)
 
         await self.bot.wait_until_ready()
         try:
@@ -335,7 +307,7 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.bot_in_voice)
     async def disconnect(self, interaction: discord.Interaction):
         """Disconnect from my current voice channel"""
-        await interaction.response.defer()
+        await interaction.response.defer(thinking=True)
 
         try:
             await self.cleanup(interaction.guild.id)
@@ -348,7 +320,7 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     async def loop(self, interaction: discord.Interaction):
         """Toggle loop playback of current track"""
-        await interaction.response.defer()
+        await interaction.response.defer(thinking=True)
 
         player = self.get_player(interaction)
         player.repeat = not player.repeat
@@ -377,7 +349,7 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
     async def pause(self, interaction: discord.Interaction):
         """Pause current playback"""
-        await interaction.response.defer()
+        await interaction.response.defer(thinking=True)
 
         vc: VoiceClient = interaction.guild.voice_client  # type: ignore
 
@@ -394,7 +366,7 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.bot_is_silent)
     async def resume(self, interaction: discord.Interaction):
         """Resume current playback, if paused"""
-        await interaction.response.defer()
+        await interaction.response.defer(thinking=True)
 
         vc: VoiceClient = interaction.guild.voice_client  # type: ignore
 
@@ -411,7 +383,7 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
     async def stop(self, interaction: discord.Interaction):
         """Stop current playback."""
-        await interaction.response.defer()
+        await interaction.response.defer(thinking=True)
 
         vc: VoiceClient = interaction.guild.voice_client  # type: ignore
         player = self.get_player(interaction)
@@ -427,7 +399,7 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
     async def skip(self, interaction: discord.Interaction):
         """Skip a song."""
-        await interaction.response.defer()
+        await interaction.response.defer(thinking=True)
 
         vc: VoiceClient = interaction.guild.voice_client  # type: ignore
         player: MainPlayer = self.get_player(interaction)
@@ -444,7 +416,7 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
     async def seek(self, interaction: discord.Interaction, offset: int = 0):
         """Seek to a position in a track"""
-        await interaction.response.defer()
+        await interaction.response.defer(thinking=True)
 
         player: MainPlayer = self.get_player(interaction)
         source: Optional[FFOpusAudioProcess] = player.track.source
@@ -466,7 +438,7 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
     async def toggle_play_now(self, interaction: discord.Interaction):
         """Toggle 'Now playing' message delivery"""
-        await interaction.response.defer()
+        await interaction.response.defer(thinking=True)
         player: MainPlayer = self.get_player(interaction)
 
         player.allow_np_msg = not player.allow_np_msg
@@ -478,7 +450,7 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
     async def now_playing(self, interaction: discord.Interaction):
         """Check now playing song"""
-        await interaction.response.defer()
+        await interaction.response.defer(thinking=True)
 
         vc: VoiceClient = interaction.guild.voice_client  # type: ignore
         player: MainPlayer = self.get_player(interaction)
@@ -528,7 +500,7 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     async def autoplay(self, interaction: discord.Interaction):
         """Automatically play the next song in the queue"""
-        await interaction.response.defer()
+        await interaction.response.defer(thinking=True)
 
         player: MainPlayer = self.get_player(interaction)
         player.play_related_tracks = not player.play_related_tracks
@@ -543,7 +515,7 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.queue_has_element)
     async def view(self, interaction: discord.Interaction):
         """View current queue"""
-        await interaction.response.defer()
+        await interaction.response.defer(thinking=True)
 
         player: MainPlayer = self.get_player(interaction)
 
@@ -559,7 +531,7 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.queue_has_element)
     async def delete(self, interaction: discord.Interaction, idx: Range[int, 1]):
         """Remove track from queue"""
-        await interaction.response.defer()
+        await interaction.response.defer(thinking=True)
 
         idx -= 1
         player: MainPlayer = self.get_player(interaction)
@@ -582,7 +554,7 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     async def add(self, interaction: discord.Interaction, search: str, provider: str = "youtube", amount: int = 10):
         """Add selected track(s) to queue"""
-        await interaction.response.defer()
+        await interaction.response.defer(thinking=True)
 
         player: MainPlayer = self.get_player(interaction)
 
@@ -633,6 +605,12 @@ class MusicNativeCog(commands.GroupCog, name="music"):
 
             await interaction.followup.send(content=f"Added {queue_len} tracks into the queue")
         else:
+            if not player.queue_empty:
+                msg = await interaction.followup.send(embed=player.build_embed(tracks[0], "Added to queue"))  # type: ignore  # noqa: E501
+            else:
+                msg = await interaction.followup.send(content="✅")  # type: ignore
+
+            await msg.delete(delay=10)
             await player.queue.put(tracks[0])
             extend_duration = tracks[0].duration
 
@@ -646,7 +624,7 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.bot_is_silent)
     async def radio(self, interaction: discord.Interaction, url: str):
         """Play a radio"""
-        await interaction.response.defer()
+        await interaction.response.defer(thinking=True)
 
         if not Utility.is_an_url(url):
             await interaction.followup.send("You need to provide a direct URL")
@@ -663,7 +641,7 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.queue_has_element)
     async def move(self, interaction: discord.Interaction, before: Range[int, 1], after: Range[int, 1]):
         """Move track to new position"""
-        await interaction.response.defer()
+        await interaction.response.defer(thinking=True)
 
         player: MainPlayer = self.get_player(interaction)
         int_queue = player.queue._queue  # type: ignore
@@ -702,7 +680,7 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.checks.has_permissions(manage_guild=True)
     async def swap(self, interaction: discord.Interaction, pos1: Range[int, 1], pos2: Range[int, 1]):
         """Swap two tracks."""
-        await interaction.response.defer()
+        await interaction.response.defer(thinking=True)
 
         player: MainPlayer = self.get_player(interaction)
 
@@ -724,7 +702,7 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.checks.has_permissions(manage_guild=True)
     async def shuffle(self, interaction: discord.Interaction):
         """Shuffle the queue"""
-        await interaction.response.defer()
+        await interaction.response.defer(thinking=True)
 
         vc: VoiceClient = interaction.guild.voice_client  # type: ignore
 
@@ -737,7 +715,7 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.queue_has_element)
     async def clear(self, interaction: discord.Interaction):
         """Clear the queue"""
-        await interaction.response.defer()
+        await interaction.response.defer(thinking=True)
 
         vc = interaction.guild.voice_client  # type: ignore
         player: MainPlayer = self.get_player(interaction)
@@ -754,7 +732,7 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.checks.has_permissions(manage_guild=True)
     async def force_clear(self, interaction: discord.Interaction):
         """Clear the queue"""
-        await interaction.response.defer()
+        await interaction.response.defer(thinking=True)
         player: MainPlayer = self.get_player(interaction)
 
         try:

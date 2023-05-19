@@ -30,7 +30,6 @@ class MainPlayer:
         "client",
         "_guild",
         "_channel",
-        "_cog",
         "queue",
         "signal",
         "track",
@@ -47,7 +46,6 @@ class MainPlayer:
         self.client = interaction.client
         self._guild = interaction.guild
         self._channel = interaction.channel
-        self._cog = cog
 
         self.queue: asyncio.Queue[YTDLSource] = asyncio.Queue()
         self.signal = asyncio.Event()
@@ -137,7 +135,7 @@ class MainPlayer:
                     "We no longer connect to guild %s, but somehow we still in. Time to destroy!", self._guild.id
                 )
                 logging.error("AttributeError raised, error was: %s", err)
-                return self.destroy(self._guild)
+                return self.destroy()
 
             except Exception as e:
                 logging.error(
@@ -165,13 +163,23 @@ class MainPlayer:
             #     return self.destroy(self._guild)
 
         else:
-            return self.destroy(self._guild)
+            return self.destroy()
 
-    def destroy(self, guild: Optional[discord.Guild]):
-        """Disconnect and cleanup the player."""
-        if not guild:
-            return  # this should not happen tho
-        return self.client.loop.create_task(self._cog.cleanup(guild))
+    def destroy(self):
+        async def runner():
+            self.queue = asyncio.Queue()
+            self._guild.voice_client.stop()  # type: ignore
+
+            if not self.signal.is_set():
+                self.signal.set()
+
+            self.task.cancel()
+            await self._guild.voice_client.disconnect()  # type: ignore
+
+            if self.track:
+                self.track.all_cleanup()  # type: ignore
+                
+        return self.client.loop.create_task(runner())
 
 
 class MusicNativeCog(commands.GroupCog, name="music"):
@@ -190,24 +198,10 @@ class MusicNativeCog(commands.GroupCog, name="music"):
         return player
 
     async def cleanup(self, guild_id: int):
-        try:
-            player: Optional[MainPlayer] = self.players.pop(guild_id, None)
-            if not player:
-                return logging.warning("No player was found for guild %s. And also, this should not happen.", guild_id)
-
-            player._guild.voice_client.stop()  # type: ignore
-            if not player.signal.is_set():
-                player.signal.set()
-
-            player.task.cancel()
-            await player._guild.voice_client.disconnect()  # type: ignore
-            if player.track:  # edge-case
-                player.track.cleanup()
-
-        except asyncio.CancelledError:
-            pass
-        except KeyError:
-            pass
+        player: Optional[MainPlayer] = self.players.pop(guild_id, None)
+        if not player:
+            return logging.warning("No player was found for guild %s. And also, this should not happen.", guild_id)
+        player.destroy()
 
     @staticmethod
     def generate_embeds_from_queue(q: asyncio.Queue) -> List[discord.Embed]:
@@ -271,21 +265,44 @@ class MusicNativeCog(commands.GroupCog, name="music"):
         after: discord.VoiceState,
     ):
         """Handle voice state updates, auto-disconnect the bot, or maybe add a logging system in here :eyes:"""
-        if not self.players.get(member.guild.id):  # We're not in this channel? Let's return the function
+        # Technically auto disconnect the bot from lavalink if no member present for 120 seconds
+        player = self.players.get(member.guild.id)
+        if not player:
             return
 
-        vc = member.guild.voice_client.channel
-        if len(vc.members) == 1:  # type: ignore  # There is only one person
-            if vc.members[0].id == self.bot.user.id:  # type: ignore  # And that person is us
+        chn = before.channel if before.channel else after.channel
+        guild = before.channel.guild if before.channel else after.channel.guild
+
+        voice_members = [member for member in chn.members if member.id != self.bot.user.id]
+        bot_is_in_vc = any(member for member in chn.members if member.id == self.bot.user.id)
+
+        if bot_is_in_vc:
+            if len(voice_members) == 0:
+                logging.info(
+                    "No member present in voice channel ID:%s in guild %s, creating autoleave", chn.id, guild.id
+                )
+                self.autoleave_waiter_task[chn.id] = self.bot.loop.create_task(self.autoleave(chn))  # pyright: ignore
+                logging.debug("%s", self.autoleave_waiter_task)
+            else:
+                if self.autoleave_waiter_task:
+                    logging.info(
+                        "New member present in voice channel ID:%s in guild %s, cancel autoleave", chn.id, guild.id
+                    )
+                    self.autoleave_waiter_task[chn.id].cancel()
+                    del self.autoleave_waiter_task[chn.id]
+                    logging.debug("%s", self.autoleave_waiter_task)
+
+        # Auto disconnect the bot from lavalink if disconnected manually
+        if member.id == self.bot.user.id:
+            before_was_in_voice = before.channel is not None
+            after_not_in_noice = after.channel is None
+
+            if before_was_in_voice and after_not_in_noice:
                 logging.debug(
                     "Guild player %s still connected even if it is removed from voice, disconnecting",
-                    member.guild.id,
+                    guild.id,
                 )
-                return await self.cleanup(member.guild.id)
-
-        if member.id == self.bot.user.id:  # type: ignore  # We been kicked out of the voice chat
-            if not after.channel:
-                return await self.cleanup(member.guild.id)
+                await self.cleanup(guild.id)
 
     @app_commands.command()
     @app_commands.guild_only()

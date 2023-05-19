@@ -265,7 +265,6 @@ class MusicNativeCog(commands.GroupCog, name="music"):
         after: discord.VoiceState,
     ):
         """Handle voice state updates, auto-disconnect the bot, or maybe add a logging system in here :eyes:"""
-        # Technically auto disconnect the bot from lavalink if no member present for 120 seconds
         player = self.players.get(member.guild.id)
         if not player:
             return
@@ -278,21 +277,8 @@ class MusicNativeCog(commands.GroupCog, name="music"):
 
         if bot_is_in_vc:
             if len(voice_members) == 0:
-                logging.info(
-                    "No member present in voice channel ID:%s in guild %s, creating autoleave", chn.id, guild.id
-                )
-                self.autoleave_waiter_task[chn.id] = self.bot.loop.create_task(self.autoleave(chn))  # pyright: ignore
-                logging.debug("%s", self.autoleave_waiter_task)
-            else:
-                if self.autoleave_waiter_task:
-                    logging.info(
-                        "New member present in voice channel ID:%s in guild %s, cancel autoleave", chn.id, guild.id
-                    )
-                    self.autoleave_waiter_task[chn.id].cancel()
-                    del self.autoleave_waiter_task[chn.id]
-                    logging.debug("%s", self.autoleave_waiter_task)
+                await self.cleanup(guild.id)
 
-        # Auto disconnect the bot from lavalink if disconnected manually
         if member.id == self.bot.user.id:
             before_was_in_voice = before.channel is not None
             after_not_in_noice = after.channel is None

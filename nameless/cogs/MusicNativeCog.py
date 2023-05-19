@@ -456,7 +456,7 @@ class MusicNativeCog(commands.GroupCog, name="music"):
         player: MainPlayer = self.get_player(interaction)
         track: YTDLSource = player.track
 
-        dbg = CRUD.get_or_create_guild_record(interaction.guild)
+        dbg = CRUD.get_or_create_guild_record(discord_guild=interaction.guild)
         if not dbg:
             logging.error("Oh no. The database is gone! What do we do now?!!")
             raise AttributeError(f"Can't find guild id '{interaction.guild.id}'. Or maybe the database is gone?")

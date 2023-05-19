@@ -25,7 +25,7 @@ class MusicCogCheck(BaseMusicCogCheck):
     def queue_has_element(interaction: discord.Interaction):
         vc: discord.VoiceClient = interaction.guild.voice_client  # pyright: ignore
 
-        if vc and vc.queue_empty():  # type: ignore
+        if vc and vc.queue_empty:  # type: ignore
             raise CheckFailure("I need to have something in the queue.")
 
         return True

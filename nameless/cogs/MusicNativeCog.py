@@ -272,8 +272,8 @@ class MusicNativeCog(commands.GroupCog, name="music"):
         chn = before.channel if before.channel else after.channel
         guild = before.channel.guild if before.channel else after.channel.guild
 
-        voice_members = [member for member in chn.members if member.id != self.bot.user.id]
-        bot_is_in_vc = any(member for member in chn.members if member.id == self.bot.user.id)
+        voice_members = tuple(m for m in chn.members if member.id != self.bot.user.id)
+        bot_is_in_vc = any(m for m in chn.members if member.id == self.bot.user.id)
 
         if bot_is_in_vc:
             if len(voice_members) == 0:

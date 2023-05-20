@@ -73,6 +73,10 @@ class MainPlayer:
     def queue_size(self) -> int:
         return self.queue.qsize()
 
+    @property
+    def is_playing(self) -> bool:
+        return self.track is not MISSING
+
     @staticmethod
     def build_embed(track: YTDLSource, header: str):
         return (
@@ -157,7 +161,7 @@ class MainPlayer:
 
                 self.loop_play_count = 0
                 self.track.final_cleanup()  # type: ignore
-                self.track = None
+                self.track = MISSING
 
             # if not self._guild.voice_client:  # random check
             #     return self.destroy(self._guild)
@@ -608,7 +612,7 @@ class MusicNativeCog(commands.GroupCog, name="music"):
 
             await interaction.followup.send(content=f"Added {queue_len} tracks into the queue")
         else:
-            if not player.queue_empty:
+            if not player.queue_empty and player.is_playing:
                 msg = await interaction.followup.send(embed=player.build_embed(tracks[0], "Added to queue"))  # type: ignore  # noqa: E501
             else:
                 msg = await interaction.followup.send(content="✅")  # type: ignore

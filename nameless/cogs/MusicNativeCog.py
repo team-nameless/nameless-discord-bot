@@ -64,11 +64,11 @@ class MainPlayer:
             raise AttributeError(f"Try to access guild attribute, got {self._guild.__class__.__name__} instead")
 
         self.task: asyncio.Task = self.client.loop.create_task(self.create())
-        
+
     @property
     def queue_empty(self) -> bool:
         return self.queue.empty()
-    
+
     @property
     def queue_size(self) -> int:
         return self.queue.qsize()
@@ -122,7 +122,7 @@ class MainPlayer:
                 else:
                     self.loop_play_count += 1
                     try:
-                        self.track.to_start()   # type: ignore
+                        self.track.to_start()  # type: ignore
                     except FFAudioProcessNoCache:
                         self.track = await YTDLSource.generate_stream(self.track)
 
@@ -178,7 +178,7 @@ class MainPlayer:
 
             if self.track:
                 self.track.all_cleanup()  # type: ignore
-                
+
         return self.client.loop.create_task(runner())
 
 

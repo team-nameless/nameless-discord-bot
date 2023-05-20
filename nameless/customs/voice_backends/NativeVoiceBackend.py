@@ -148,7 +148,7 @@ class FFOpusAudioProcess(discord.FFmpegOpusAudio):
     def cleanup(self) -> None:
         self._kill_process()
         self._process = self._stdout = self._stdin = MISSING
-        
+
     def final_cleanup(self) -> None:
         self.lock = self.stream = MISSING
 
@@ -192,7 +192,7 @@ class YTDLSource(discord.AudioSource):
             self.uri = data.get("url")
         else:
             self.uri = data.get("webpage_url")
-            
+
     @staticmethod
     def __no_source():
         logging.warning("No running stream found")
@@ -309,7 +309,7 @@ class YTDLSource(discord.AudioSource):
             data=ret,
             requester=requester,
         )
-        
+
     def __del__(self) -> None:
         if self.source:
             return self.source.all_cleanup()

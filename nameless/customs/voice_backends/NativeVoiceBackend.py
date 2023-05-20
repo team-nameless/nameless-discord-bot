@@ -175,7 +175,7 @@ class YTDLSource(discord.AudioSource):
         self, data: dict, requester: discord.Member, source: Optional[FFOpusAudioProcess] = MISSING, *args, **kwargs
     ):
         self.source = source
-        for fn in ("read", "is_opus", "seek", "cleanup", "final_cleanup", "all_cleanup"):
+        for fn in ("read", "is_opus", "seek", "cleanup", "final_cleanup", "all_cleanup", "to_start"):
             setattr(self, fn, getattr(self.source, fn, self.__no_source))
 
         self.requester: discord.Member = requester

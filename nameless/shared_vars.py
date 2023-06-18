@@ -1,39 +1,42 @@
+import functools
 import logging
+import os
 import re
 import sys
 from datetime import datetime
-from typing import List
 
-import requests
 from discord import Permissions
 
 from nameless import customs
-from nameless.database import CRUD
 
-
-# Database setup
-crud_database: CRUD
 
 # Logging
 stdout_handler = logging.StreamHandler(sys.stdout)
 stdout_handler.setFormatter(customs.ColoredFormatter())
+additional_handlers: list = []
 
 # Patterns
 cogs_regex = re.compile(r"^(?!_.).*Cog.py")
 
-# Meta
-upstream_version_txt_url = "https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt"
-start_time: datetime = datetime.min
-additional_handlers: List = []
-__nameless_current_version__ = "1.5.4"
+# Commands
+loaded_cogs_list: list[str] = []
+unloaded_cogs_list: list[str] = []
 
-try:
-    __nameless_upstream_version__ = requests.get(upstream_version_txt_url, timeout=10).text
-except requests.exceptions.ConnectTimeout:
-    __nameless_upstream_version__ = ""
+
+@functools.lru_cache
+def get_current_nameless_version() -> str:
+    current_file_directory: str = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+    with open(f"{current_file_directory}{os.sep}version.txt") as version_file:
+        return version_file.read()
+
+
+upstream_version_txt_url: str = ""
+start_time: datetime = datetime.min
+__nameless_current_version__: str = get_current_nameless_version()
+__nameless_upstream_version__: str = ""
 
 # Perms
-needed_permissions = Permissions.none()
+needed_permissions: Permissions = Permissions.none()
 needed_permissions.manage_roles = True
 needed_permissions.manage_channels = True
 needed_permissions.kick_members = True

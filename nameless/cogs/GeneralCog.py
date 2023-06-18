@@ -16,37 +16,36 @@ __all__ = ["GeneralCog"]
 
 class GeneralCog(commands.Cog):
     def __init__(self, bot: Nameless) -> None:
+        super().__init__()
         self.bot = bot
 
-    @commands.hybrid_command()
-    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
-    @app_commands.describe(member="Target member, you by default")
-    async def user(
+    @app_commands.command()
+    @app_commands.describe(member="Target member to view, you as default if not selected.")
+    async def view_user(
         self,
-        ctx: commands.Context,
+        interaction: discord.Interaction,
         member: Optional[Union[discord.Member, discord.User]],
     ):
         """View someone's information"""
-        await ctx.defer()
+        await interaction.response.defer()
 
-        member = member if member else ctx.author
+        member = member if member else interaction.user
 
         account_create_date = member.created_at
         join_date = member.joined_at  # pyright: ignore
 
         flags = [flag.replace("_", " ").title() for flag, has in member.public_flags if has]
 
-        # should add to cache if possible
-        mutual_guilds: List[str] = [g.name for g in ctx.bot.guilds if g.get_member(member.id)]
+        mutual_guilds: List[str] = [g.name for g in interaction.user.mutual_guilds]
 
-        embed = (
+        embed: discord.Embed = (
             discord.Embed(
                 description=f"User ID: {member.id}",
                 timestamp=datetime.datetime.now(),
                 title=f"Something about {member}",
                 color=discord.Color.orange(),
             )
-            .set_thumbnail(url=member.avatar.url)  # pyright: ignore
+            .set_thumbnail(url=member.display_avatar.url)
             .add_field(
                 name="Account creation date",
                 value=f"<t:{int(account_create_date.timestamp())}:R>",
@@ -62,44 +61,42 @@ class GeneralCog(commands.Cog):
             .add_field(name="Bot?", value=member.bot)
             .add_field(name="Badges", value=", ".join(flags) if flags else "None")
             .add_field(
-                name="Mutual guilds with me",
+                name="Mutual guilds with you",
                 value=", ".join(mutual_guilds) if mutual_guilds else "None",
             )
         )
 
-        await ctx.send(embed=embed)
+        await interaction.followup.send(embed=embed)
 
-    @commands.hybrid_command()
-    @commands.guild_only()
-    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
-    async def guild(self, ctx: commands.Context):
+    @app_commands.command()
+    @app_commands.guild_only()
+    async def view_guild(self, interaction: discord.Interaction):
         """View this guild's information"""
-        await ctx.defer()
+        await interaction.response.defer()
 
-        guild = ctx.guild
-        guild_create_date = guild.created_at  # pyright: ignore
-        members = guild.members  # pyright: ignore
+        guild = interaction.guild
+
+        guild_create_date = guild.created_at
+        members = guild.members
 
         bots_count = len([member for member in members if member.bot])
         humans_count = len([member for member in members if not member.bot])
         total_count = bots_count + humans_count
-        public_threads_count = len([thread for thread in guild.threads if not thread.is_private()])  # pyright: ignore
-        events = guild.scheduled_events  # pyright: ignore
-        boosters_count = len(guild.premium_subscribers)  # pyright: ignore
-        boosts_count = guild.premium_subscription_count  # pyright: ignore
-        boost_lvl = guild.premium_tier  # pyright: ignore
+        public_threads_count = len([thread for thread in guild.threads if not thread.is_private()])
+        events = guild.scheduled_events
+        boosters_count = len(guild.premium_subscribers)
+        boosts_count = guild.premium_subscription_count
+        boost_lvl = guild.premium_tier
         is_boosted = boosts_count > 0
 
         embed = (
             discord.Embed(
-                description=f"Guild ID: {guild.id}"  # pyright: ignore
-                f"- Owner {guild.owner}"  # pyright: ignore
-                f"- Shard #{guild.shard_id}",  # pyright: ignore
+                description=f"Guild ID: {guild.id} - Owner {guild.owner} - Shard #{guild.shard_id}",
                 timestamp=datetime.datetime.now(),
-                title=f"Something about '{guild.name}'",  # pyright: ignore
+                title=f"Something about '{guild.name}'",
                 color=discord.Color.orange(),
             )
-            .set_thumbnail(url=guild.banner.url if guild.banner else "")  # pyright: ignore
+            .set_thumbnail(url=guild.icon.url if guild.icon else "")
             .add_field(
                 name="Guild creation date",
                 value=f"<t:{int(guild_create_date.timestamp())}:R>",
@@ -110,9 +107,9 @@ class GeneralCog(commands.Cog):
             )
             .add_field(
                 name="Channel(s)",
-                value=f"{len(guild.channels)} channel(s) - {public_threads_count} public thread(s)",  # pyright: ignore
+                value=f"{len(guild.channels)} channel(s) - {public_threads_count} public thread(s)",
             )
-            .add_field(name="Role(s) count", value=str(len(guild.roles)))  # pyright: ignore
+            .add_field(name="Role(s) count", value=str(len(guild.roles)))
             .add_field(name="Pending event(s) count", value=f"{len(events)} pending event(s)")
             .add_field(
                 name="Boost(s)",
@@ -120,23 +117,22 @@ class GeneralCog(commands.Cog):
                 if is_boosted
                 else "Not boosted",
             )
+            .set_image(url=guild.banner.url if guild.banner else "")
         )
 
-        await ctx.send(embed=embed)
+        await interaction.followup.send(embed=embed)
 
-    @commands.hybrid_command()
-    @commands.guild_only()
-    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
-    async def the_bot(self, ctx: commands.Context):
+    @app_commands.command()
+    async def view_the_bot(self, interaction: discord.Interaction):
         """View my information"""
-        await ctx.defer()
+        await interaction.response.defer()
 
-        servers_count = len(ctx.bot.guilds)
-        total_members_count = sum(len(guild.members) for guild in ctx.bot.guilds)
+        servers_count = len(interaction.client.guilds)
+        total_members_count = sum(len(guild.members) for guild in interaction.client.guilds)
         uptime = int(shared_vars.start_time.timestamp())
         bot_inv = (
             f"https://discord.com/api/oauth2/authorize"
-            f"?client_id={ctx.bot.user.id}"
+            f"?client_id={interaction.client.user.id}"
             f"&permissions={shared_vars.needed_permissions.value}"
             f"&scope=bot%20applications.commands"
         )
@@ -152,7 +148,7 @@ class GeneralCog(commands.Cog):
         except NotFound:
             pass
 
-        embed = (
+        embed: discord.Embed = (
             discord.Embed(
                 title="Something about me!",
                 color=discord.Color.orange(),
@@ -164,7 +160,7 @@ class GeneralCog(commands.Cog):
                     "made by [Swyrin#7193](https://github.com/Swyreee) and [FoxeiZ](https://github.com/FoxeiZ)",
                 ),
             )
-            .set_thumbnail(url=ctx.bot.user.avatar.url)
+            .set_thumbnail(url=interaction.client.user.display_avatar.url)
             .add_field(name="Servers count", value=f"{servers_count}")
             .add_field(name="Members count", value=f"{total_members_count}")
             .add_field(name="Last launch/Uptime", value=f"<t:{uptime}:R>")
@@ -181,7 +177,7 @@ class GeneralCog(commands.Cog):
             .add_field(
                 name="Invite link",
                 value=f"[Click this]({bot_inv}) or click me then 'Add to Server'"
-                if ctx.bot.application.bot_public
+                if interaction.client.application.bot_public
                 else "N/A",
             )
             .add_field(
@@ -190,14 +186,14 @@ class GeneralCog(commands.Cog):
             )
         )
 
-        await ctx.send(embed=embed)
+        await interaction.followup.send(embed=embed)
 
 
 async def setup(bot: Nameless):
     await bot.add_cog(GeneralCog(bot))
-    logging.info("Cog of %s added!", __name__)
+    logging.info("%s cog added!", __name__)
 
 
 async def teardown(bot: Nameless):
     await bot.remove_cog("GeneralCog")
-    logging.warning("Cog of %s removed!", __name__)
+    logging.warning("%s cog removed!", __name__)

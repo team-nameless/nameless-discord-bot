@@ -1,6 +1,7 @@
 NamelessConfig.py
 *.db
 *.db-journal
+.ruff_cache
 
 # Personal run file
 run.sh

@@ -1,12 +1,7 @@
 [tool.pyright]
-include = [
-    "nameless",
-    "tests",
-    "NamelessConfig_example.py",
-    "NamelessConfig.py",
-    "main.py",
-]
 exclude = [
+    "venv",
+    ".venv",
     "alembic",
     "**/__pycache__",
 ]
@@ -31,3 +26,25 @@ multi_line_output = 3
 line-length = 120
 target-version = ['py310']
 include = '\.pyi?$'
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+fix = true
+ignore = ["E999"]
+select = ["E", "F", "Q"]
+exclude = [
+    ".git",
+    "alembic",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".venv",
+    "__pypackages__",
+    "__pycache__",
+    "venv",
+]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["E402", "F401", "F403"]
+"nameless/database/models.py" = ["F403", "F405"]
+"nameless/cogs/ModeratorCog.py" = ["E999"]

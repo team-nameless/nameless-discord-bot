@@ -9,7 +9,7 @@
       "type": "python",
       "request": "launch",
       "module": "main",
-      "justMyCode": false,
+      "justMyCode": true,
       "args": ["-OO"],
     }
   ]

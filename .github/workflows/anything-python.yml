@@ -50,13 +50,13 @@ jobs:
         run: |
           pyright
 
-      - name: Linting (flake8)
+      - name: Linting (ruff)
         run: |
-          flake8 --select=E
+          ruff nameless main.py NamelessConfig_example.py
 
-      - name: Linting (pylint)
+      - name: Non-modern code check (pyupgrade)
         run: |
-          pylint **/*.py --disable=W,R,C
+          pyupgrade --py310-plus nameless/*.py
 
       - name: Run tests and return coverages (pytest & friends)
         run: |

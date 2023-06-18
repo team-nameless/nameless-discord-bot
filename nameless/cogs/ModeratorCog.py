@@ -1,247 +1,397 @@
 import logging
-from typing import Awaitable, Callable
+from datetime import timedelta
+from typing import Awaitable, Callable, Literal
 
 import discord
 from discord import Forbidden, HTTPException, app_commands
+from discord.app_commands import Range
 from discord.ext import commands
 
 import nameless
-from nameless.customs.DiscordWaiter import DiscordWaiter
-from nameless.shared_vars import crud_database
-from NamelessConfig import NamelessConfig
+from nameless.database.crud import CRUD
 
 
 __all__ = ["ModeratorCog"]
 
+from nameless.ui_kit import YesNoButtonPrompt
 
-class ModeratorCog(commands.Cog):
-    def __init__(self, bot: nameless.Nameless) -> None:
+
+class ModeratorCog(commands.GroupCog, name="mod"):
+    def __init__(self, bot: nameless.Nameless):
         self.bot = bot
 
-    @commands.hybrid_group(fallback="do-not-use")
-    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
-    @commands.guild_only()
-    async def mod(self, ctx: commands.Context):
-        """Nothing here!"""
-        await ctx.send("You found the matrix!")
-
     @staticmethod
-    async def __generic_ban_kick(
-        ctx: commands.Context,
+    async def __generic_execute(
+        interaction: discord.Interaction,
+        member: discord.Member,
         reason: str,
         action: str,
-        caller: Callable,
-        d=-1,
+        *,
+        action_function: Callable,
+        delete_past_message_days=-1,
     ):
-        client = ctx.bot
+        await interaction.response.defer()
 
-        await ctx.send(f"Mention members you want to {action} with reason {reason}")
+        if member.id in [interaction.user.id, interaction.client.user.id]:
+            await interaction.followup.send("You can not do this to yourself, or me.")
+            return
 
-        msg: discord.Message = await client.wait_for("message", check=DiscordWaiter.message_waiter(ctx), timeout=30)
-        mentioned_members = msg.mentions
-        responses = []
+        response = f"Trying to {action} member {member.display_name}#{member.discriminator}. "
 
-        for member in mentioned_members:
-            response = f"Trying to {action} member {member.display_name}#{member.discriminator}. "
-
-            if member.id == ctx.author.id:
-                response += "And that is you."
-            elif member.id == client.user.id:
-                response += "And that is me."
+        try:
+            if delete_past_message_days != -1:
+                await action_function(member, reason=reason, delete_message_days=delete_past_message_days)
             else:
-                try:
-                    # ignore kwargs typings
-                    if d != -1:
-                        await caller(member, reason=reason, delete_message_days=d)
-                    else:
-                        await caller(member, reason=reason)
-                except Forbidden:
-                    response += "And I lack the permissions to do it."
-                except HTTPException:
-                    response += "And Discord refused to do it."
+                await action_function(member, reason=reason)
 
-            responses.append(response)
+            response += "And it was successful."
+        except Forbidden:
+            response += "And I lack the permissions to do it."
+        except HTTPException:
+            response += "And Discord refused to do it."
 
-        await ctx.send("\n".join(responses))
+        await interaction.followup.send(response)
 
     @staticmethod
     async def __generic_warn(
-        ctx: commands.Context,
+        interaction: discord.Interaction,
         member: discord.Member,
         reason: str,
         val: int,
-        zero_fn: Callable[[commands.Context, discord.Member, str], Awaitable[None]],
-        three_fn: Callable[[commands.Context, discord.Member, str], Awaitable[None]],
-        diff_fn: Callable[[commands.Context, discord.Member, str, int, int], Awaitable[None]],
+        zero_fn: Callable[[discord.Interaction, discord.Member, str], Awaitable[None]],
+        max_fn: Callable[[discord.Interaction, discord.Member, str], Awaitable[None]],
+        diff_fn: Callable[[discord.Interaction, discord.Member, str, int, int], Awaitable[None]],
     ):
-        await ctx.defer()
+        await interaction.response.defer()
 
-        u, _ = crud_database.get_or_create_user_record(member)
-
-        if (u.warn_count == 0 and val < 0) or (u.warn_count == 3 and val > 0):
-            await ctx.send(f"The user already have {u.warn_count} warn(s).")
+        if member.id in [interaction.user.id, interaction.client.user.id]:
+            await interaction.followup.send("You can not do this to yourself, or me.")
             return
 
-        u.warn_count += val
-        crud_database.save_changes()
+        db_user = CRUD.get_or_create_user_record(member)
+        db_guild = CRUD.get_or_create_guild_record(interaction.guild)
 
-        if u.warn_count == 0:
-            await zero_fn(ctx, member, reason)
-        elif u.warn_count == 3:
-            await three_fn(ctx, member, reason)
+        max_warn_count = db_guild.max_warn_count
+
+        if (db_user.warn_count == 0 and val < 0) or (db_user.warn_count == max_warn_count and val > 0):
+            await interaction.followup.send(content=f"The user already have {db_user.warn_count} warn(s).")
+            return
+
+        db_user.warn_count += val
+        CRUD.save_changes()
+
+        if db_user.warn_count == 0:
+            await zero_fn(interaction, member, reason)
+        elif db_user.warn_count == max_warn_count:
+            await max_fn(interaction, member, reason)
         else:
-            await diff_fn(ctx, member, reason, u.warn_count, u.warn_count - val)
+            await diff_fn(interaction, member, reason, db_user.warn_count, db_user.warn_count - val)
 
-        await ctx.send(
-            f"{'Removed' if val < 0 else 'Added'} {abs(val)} warn to {member.mention} with reason: {reason}\n"
-            f"Now they have {u.warn_count} warn(s)"
+        await interaction.followup.send(
+            content=f"{'Removed' if val < 0 else 'Added'} {abs(val)} warning(s) to {member.mention} "
+            f"with reason: {reason}\n"
+            f"Now they are having {db_user.warn_count} warning(s)"
         )
 
     @staticmethod
     async def __generic_mute(
-        ctx: commands.Context,
+        interaction: discord.Interaction,
         member: discord.Member,
         reason: str,
         mute: bool = True,
     ):
-        await ctx.defer()
+        await interaction.response.defer()
 
-        is_muted = member.is_timed_out()
-        if is_muted:
-            if not mute:
-                await member.timeout(None, reason=reason)
-                await ctx.send("Unmuted")
-            else:
-                await ctx.send("Already muted")
-        else:
-            if mute:
-                await member.timeout(discord.utils.utcnow().replace(day=7), reason=reason)
-                await ctx.send("Muted")
-            else:
-                await ctx.send("Already unmuted")
+        if member.id in [interaction.user.id, interaction.client.user.id]:
+            await interaction.followup.send("You can not do this to yourself, or me.")
+            return
 
-    @mod.command()
-    @commands.guild_only()
-    @commands.has_guild_permissions(ban_members=True)
-    @commands.bot_has_guild_permissions(ban_members=True)
-    @app_commands.checks.has_permissions(ban_members=True)
-    @app_commands.checks.bot_has_permissions(ban_members=True)
-    @app_commands.describe(delete_message_days="Past message days to delete", reason="Ban reason")
-    async def ban(
-        self,
-        ctx: commands.Context,
-        delete_message_days: int = 0,
-        reason: str = "Rule violation",
-    ):
-        """Ban members, in batch"""
-        if not 0 <= delete_message_days <= 7:
-            await ctx.send("delete_message_days must satisfy 0 <= delete_message_days <= 7")
-        else:
-            await self.__generic_ban_kick(
-                ctx,
-                reason,
-                "ban",
-                ctx.guild.ban,  # pyright: ignore
-                delete_message_days,
+        db_guild = CRUD.get_or_create_guild_record(interaction.guild)
+
+        try:
+            mute_role = (
+                interaction.guild.get_role(db_guild.mute_role_id)
+                or [role for role in interaction.guild.roles if role.name == "muted by nameless*"][0]
+            )
+        except IndexError:
+            mute_role = None
+
+        use_native_timeout = db_guild.is_timeout_preferred
+
+        if not use_native_timeout and not mute_role:
+            prompt = YesNoButtonPrompt()
+            prompt.timeout = 30
+
+            m = await interaction.followup.send(
+                "Mute role not configured. Do you want me to create a temporary role?", view=prompt
             )
 
-    @mod.command()
-    @commands.guild_only()
-    @commands.has_guild_permissions(kick_members=True)
-    @commands.bot_has_guild_permissions(kick_members=True)
-    @app_commands.checks.has_permissions(kick_members=True)
-    @app_commands.checks.bot_has_permissions(kick_members=True)
-    @app_commands.describe(reason="Kick reason")
-    async def kick(
-        self,
-        ctx: commands.Context,
-        reason: str = "Rule violation",
-    ):
-        """Kick members, in batch"""
-        await self.__generic_ban_kick(ctx, reason, "kick", ctx.guild.kick)  # pyright: ignore
+            is_timed_out = await prompt.wait()
 
-    @mod.command()
-    @commands.guild_only()
-    @commands.has_guild_permissions(moderate_members=True)
+            if is_timed_out:
+                await m.edit(content="Timed out", view=None)  # pyright: ignore
+                return
+            else:
+                perms = discord.Permissions.text()
+
+                perms.send_messages = False
+                perms.send_messages_in_threads = False
+                perms.add_reactions = False
+
+                role = await interaction.guild.create_role(
+                    name="muted by nameless*", reason="temporary role creation", permissions=perms
+                )
+
+                mute_role = role
+                db_guild.mute_role_id = role.id
+                CRUD.save_changes()
+
+                await m.edit(content="Creation complete!", view=None)  # pyright: ignore
+
+        if not use_native_timeout:
+            if not mute_role:
+                await interaction.followup.send("No mean of muting the member. Exiting....")
+                return
+
+        if db_guild.is_timeout_preferred or mute_role is None:
+            is_muted = member.is_timed_out()
+
+            if is_muted:
+                if not mute:
+                    await member.timeout(None, reason=reason)
+                    await interaction.followup.send(f"Lifting timeout for {member.mention}")
+                else:
+                    await interaction.followup.send(f"Timeout already applied for {member.mention}")
+            else:
+                if mute:
+                    await member.timeout(db_guild.mute_timeout_interval, reason=reason)
+                    await interaction.followup.send(f"Applying timeout for {member.mention}")
+                else:
+                    await interaction.followup.send(f"Timeout already lifted for {member.mention}")
+
+        elif mute_role is not None:
+            is_muted = any([role.id == mute_role.id for role in member.roles])
+            if is_muted:
+                if not mute:
+                    await member.remove_roles(mute_role, reason=reason)
+                    await interaction.followup.send(f"Removed mute role for {member.mention}")
+                else:
+                    await interaction.followup.send(f"Already muted {member.mention} with mute role!")
+            else:
+                if mute:
+                    await member.add_roles(mute_role, reason=reason)
+                    await interaction.followup.send(f"Muted {member.mention} with mute role!")
+                else:
+                    await interaction.followup.send(f"Mute role already removed for {member.mention}")
+
+    @app_commands.command()
+    @app_commands.guild_only()
+    @app_commands.checks.has_permissions(ban_members=True)
+    @app_commands.checks.bot_has_permissions(ban_members=True)
+    @app_commands.describe(
+        member="Member to execute",
+        action="Action to execute",
+        delete_past_message_days="Past message days to delete (only in 'ban' action)",
+        reason="Reason to execute",
+    )
+    async def execute(
+        self,
+        interaction: discord.Interaction,
+        member: discord.Member,
+        action: Literal["ban", "kick"],
+        reason: str = "Bad behavior",
+        delete_past_message_days: Range[int, 0, 7] = 0,
+    ):
+        """Execute an action to a member"""
+
+        await self.__generic_execute(
+            interaction,
+            member,
+            reason,
+            action,
+            action_function=interaction.guild.ban if action == "ban" else interaction.guild.kick,  # pyright: ignore
+            delete_past_message_days=delete_past_message_days,
+        )
+
+    @app_commands.command()
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(moderate_members=True)
-    @app_commands.describe(member="Target member", reason="Warn addition reason")
+    @app_commands.describe(
+        member="Target member",
+        reason="Reason for addition",
+        count="Warn count, useful for varied warning count per violation",
+    )
     async def warn_add(
         self,
-        ctx: commands.Context,
+        interaction: discord.Interaction,
         member: discord.Member,
+        count: Range[int, 1] = 1,
         reason: str = "Rule violation",
     ):
-        """Add a warning to a member"""
+        """Add warning(s) to a member"""
 
-        async def zero_fn(_ctx: commands.Context, m: discord.Member, r: str):
+        async def zero_fn(_interaction: discord.Interaction, _member: discord.Member, _reason: str):
             pass
 
-        async def diff_fn(_ctx: commands.Context, m: discord.Member, r: str, curr: int, prev: int):
+        async def diff_fn(
+            _interaction: discord.Interaction, _member: discord.Member, _reason: str, curr: int, prev: int
+        ):
             pass
 
-        async def three_fn(_ctx: commands.Context, m: discord.Member, r: str):
-            await m.timeout(discord.utils.utcnow().replace(day=7), reason=r)
+        async def max_fn(_interaction: discord.Interaction, _member: discord.Member, _reason: str):
+            await self.__generic_mute(_interaction, _member, _reason)
 
-        await ModeratorCog.__generic_warn(ctx, member, reason, 1, zero_fn, three_fn, diff_fn)
+        await ModeratorCog.__generic_warn(interaction, member, reason, count, zero_fn, max_fn, diff_fn)
 
-    @mod.command()
-    @commands.guild_only()
-    @commands.has_guild_permissions(moderate_members=True)
+    @app_commands.command()
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(moderate_members=True)
-    @app_commands.describe(member="Target member", reason="Warn removal reason")
+    @app_commands.describe(
+        member="Target member",
+        reason="Reason for removal",
+        count="Warn count, useful for varied warning count per violation",
+    )
     async def warn_remove(
         self,
-        ctx: commands.Context,
+        interaction: discord.Interaction,
         member: discord.Member,
+        count: Range[int, 1] = 1,
         reason: str = "Good behavior",
     ):
-        """Remove a warning from a member"""
+        """Remove warning(s) from a member"""
 
-        async def zero_fn(_ctx: commands.Context, m: discord.Member, r: str):
+        async def zero_fn(_interaction: discord.Interaction, _member: discord.Member, _reason: str):
             pass
 
-        async def diff_fn(_ctx: commands.Context, m: discord.Member, r: str, current: int, prev: int):
-            if prev == 3:
-                await m.timeout(None, reason=r)
+        async def diff_fn(
+            _interaction: discord.Interaction, _member: discord.Member, _reason: str, current: int, prev: int
+        ):
+            db_guild = CRUD.get_or_create_guild_record(interaction.guild)
+            if prev == db_guild.max_warn_count:
+                await self.__generic_mute(_interaction, _member, _reason, False)
 
-        async def three_fn(_ctx: commands.Context, m: discord.Member, r: str):
+        async def max_fn(_interaction: discord.Interaction, _member: discord.Member, _reason: str):
             pass
 
-        await ModeratorCog.__generic_warn(ctx, member, reason, -1, zero_fn, three_fn, diff_fn)
+        await ModeratorCog.__generic_warn(interaction, member, reason, -count, zero_fn, max_fn, diff_fn)
 
-    @mod.command()
-    @commands.guild_only()
-    @commands.has_guild_permissions(moderate_members=True)
+    @app_commands.command()
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(moderate_members=True)
     @app_commands.describe(member="Target member", reason="Mute reason")
     async def mute(
         self,
-        ctx: commands.Context,
+        interaction: discord.Interaction,
         member: discord.Member,
         reason: str = "Rule violation",
     ):
         """Mute a member"""
-        await self.__generic_mute(ctx, member, reason)
+        await self.__generic_mute(interaction, member, reason)
 
-    @mod.command(description="Unmute a member")
-    @commands.guild_only()
-    @commands.has_guild_permissions(moderate_members=True)
+    @app_commands.command()
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(moderate_members=True)
     @app_commands.describe(member="Target member", reason="Unmute reason")
     async def unmute(
         self,
-        ctx: commands.Context,
+        interaction: discord.Interaction,
         member: discord.Member,
         reason: str = "Good behavior",
     ):
-        await self.__generic_mute(ctx, member, reason, False)
+        """Unmute a member"""
+        await self.__generic_mute(interaction, member, reason, False)
+
+    @app_commands.command()
+    @app_commands.guild_only()
+    @app_commands.checks.has_permissions(moderate_members=True, manage_guild=True)
+    @app_commands.describe(count="Maximum warn count.")
+    async def set_max_warn_count(self, interaction: discord.Interaction, count: Range[int, 1]):
+        """Set max warn count."""
+        await interaction.response.defer()
+
+        db_guild = CRUD.get_or_create_guild_record(interaction.guild)
+        db_guild.max_warn_count = count
+        CRUD.save_changes()
+
+        await interaction.followup.send(content=f"Set max warning count to `{count}` warn(s).")
+
+    @app_commands.command()
+    @app_commands.guild_only()
+    @app_commands.checks.has_permissions(moderate_members=True, manage_guild=True)
+    @app_commands.describe(role="New mute role.")
+    async def set_mute_role(self, interaction: discord.Interaction, role: discord.Role):
+        """Set mute role."""
+        await interaction.response.defer()
+
+        db_guild = CRUD.get_or_create_guild_record(interaction.guild)
+        db_guild.mute_role_id = role.id
+        CRUD.save_changes()
+
+        await interaction.followup.send(content=f"Set mute role to `{role.name}` with ID `{role.id}`.")
+
+    @app_commands.command()
+    @app_commands.guild_only()
+    @app_commands.checks.has_permissions(moderate_members=True, manage_guild=True)
+    async def clear_mute_role_selection(self, interaction: discord.Interaction):
+        """Clear mute role selection."""
+        await interaction.response.defer()
+
+        db_guild = CRUD.get_or_create_guild_record(interaction.guild)
+        db_guild.mute_role_id = 0
+        CRUD.save_changes()
+
+        await interaction.followup.send(content="Cleared mute role selection.")
+
+    @app_commands.command()
+    @app_commands.guild_only()
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def toggle_native_timeout(self, interaction: discord.Interaction):
+        """Toggle using native 'Timeout' feature instead of using 'Mute role'"""
+        await interaction.response.defer()
+        db_guild = CRUD.get_or_create_guild_record(interaction.guild)
+        db_guild.is_timeout_preferred = not db_guild.is_timeout_preferred
+        CRUD.save_changes()
+
+        await interaction.followup.send(
+            f"Use native `Timeout` feature: {'on' if db_guild.is_timeout_preferred else 'off'}"
+        )
+
+    @app_commands.command()
+    @app_commands.guild_only()
+    @app_commands.checks.has_permissions(moderate_members=True, manage_guild=True)
+    @app_commands.describe(duration="Default mute duration.")
+    async def set_mute_timeout_duration(
+        self, interaction: discord.Interaction, duration: Literal["60s", "5m", "10m", "1h", "1d", "1w"]
+    ):
+        """Set default mute duration for timeout."""
+        await interaction.response.defer()
+
+        db_guild = CRUD.get_or_create_guild_record(interaction.guild)
+        delta: timedelta = timedelta(seconds=60)
+
+        match duration:
+            case "5m":
+                delta = timedelta(minutes=5)
+            case "10m":
+                delta = timedelta(minutes=10)
+            case "1h":
+                delta = timedelta(hours=1)
+            case "1d":
+                delta = timedelta(days=1)
+            case "1w":
+                delta = timedelta(weeks=1)
+
+        db_guild.mute_timeout_interval = delta
+        CRUD.save_changes()
+
+        await interaction.followup.send(f"Set mute timeout duration to {delta}")
 
 
 async def setup(bot: nameless.Nameless):
     await bot.add_cog(ModeratorCog(bot))
-    logging.info("Cog of %s added!", __name__)
+    logging.info("%s cog added!", __name__)
 
 
 async def teardown(bot: nameless.Nameless):
     await bot.remove_cog("ModeratorCog")
-    logging.warning("Cog of %s removed!", __name__)
+    logging.warning("%s cog removed!", __name__)

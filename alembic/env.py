@@ -4,7 +4,7 @@ from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
 
-import NamelessConfig
+import nameless
 from alembic import context
 from nameless.commons import Utility
 from nameless.database import Base
@@ -13,10 +13,7 @@ from nameless.database import Base
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-try:
-    db_url, a, b, c, d, e, f, g = Utility.get_db_url(NamelessConfig.NamelessConfig)
-except ModuleNotFoundError:
-    db_url, a, b, c, d, e, f, g = Utility.get_db_url()
+db_url, *and_the_rest = Utility.get_db_url()
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -30,8 +27,7 @@ config.set_main_option("sqlalchemy.url", db_url)
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = Base.metadata
-
+target_metadata = nameless.database.models.Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -39,7 +35,7 @@ target_metadata = Base.metadata
 # ... etc.
 
 
-def run_migrations_offline():
+def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
     This configures the context with just a URL
@@ -63,7 +59,7 @@ def run_migrations_offline():
         context.run_migrations()
 
 
-def run_migrations_online():
+def run_migrations_online() -> None:
     """Run migrations in 'online' mode.
 
     In this scenario we need to create an Engine

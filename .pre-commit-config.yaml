@@ -4,27 +4,34 @@ repos:
       - id: black
         name: black
         entry: black
-        always_run: true
-        language: system
-        pass_filenames: false
-        fail_fast: true
-        args:
-          [
-            ".",
-            "--check",
-            "--diff",
-          ]
+        language: python_venv
+        pass_filenames: true
+        fail_fast: false
+        types:
+          - python
 
       - id: isort
         name: isort
         entry: isort
-        always_run: true
-        language: system
-        pass_filenames: false
-        fail_fast: true
-        args:
-          [
-            ".",
-            "--check",
-            "--diff",
-          ]
+        language: python_venv
+        pass_filenames: true
+        fail_fast: false
+        types:
+          - python
+
+      - id: pyupgrade
+        name: pyupgrade
+        entry: pyupgrade
+        language: python_venv
+        pass_filenames: true
+        fail_fast: false
+        types:
+          - python
+
+      - id: ruff
+        name: ruff
+        entry: ruff
+        language: python_venv
+        pass_filenames: true
+        types:
+          - python

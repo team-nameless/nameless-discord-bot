@@ -4,7 +4,7 @@ repos:
       - id: black
         name: black
         entry: black
-        language: system
+        language: python_venv
         pass_filenames: true
         fail_fast: false
         types:
@@ -13,26 +13,25 @@ repos:
       - id: isort
         name: isort
         entry: isort
-        language: system
+        language: python_venv
         pass_filenames: true
         fail_fast: false
         types:
           - python
 
-
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.3.1
-    hooks:
       - id: pyupgrade
+        name: pyupgrade
+        entry: pyupgrade
+        language: python_venv
+        pass_filenames: true
         fail_fast: false
         types:
-        - python
+          - python
 
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: 'v0.0.224'
-    hooks:
       - id: ruff
-        fail_fast: false
-        args: [ "--force-exclude" ]
+        name: ruff
+        entry: ruff
+        language: python_venv
+        pass_filenames: true
         types:
           - python

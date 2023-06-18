@@ -21,7 +21,11 @@ from .errors import FFAudioProcessNoCache
 
 __all__ = ["YTDLSource", "YTMusicSource", "FFOpusAudioProcess"]
 
-FFMPEG_OPTS = {"before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5", "options": "-vn"}
+FFMPEG_OPTS: dict[str, Any] = {
+    "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
+    "options": "-vn"
+}
+
 YTDL_OPTS = {
     "format": "bestaudio[ext=webm]/bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio[ext=m4a]/bestaudio/93/best",  # noqa: E501
     "outtmpl": r"downloads/%(extractor)s-%(id)s-%(title)s.%(ext)s",

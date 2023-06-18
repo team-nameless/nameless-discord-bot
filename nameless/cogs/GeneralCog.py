@@ -36,8 +36,7 @@ class GeneralCog(commands.Cog):
 
         flags = [flag.replace("_", " ").title() for flag, has in member.public_flags if has]
 
-        # should add to cache if possible
-        mutual_guilds: List[str] = [g.name for g in interaction.user.guilds if g.get_member(member.id)]
+        mutual_guilds: List[str] = [g.name for g in interaction.user.mutual_guilds]
 
         embed: discord.Embed = (
             discord.Embed(

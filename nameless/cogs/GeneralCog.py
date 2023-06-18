@@ -37,7 +37,7 @@ class GeneralCog(commands.Cog):
         flags = [flag.replace("_", " ").title() for flag, has in member.public_flags if has]
 
         # should add to cache if possible
-        mutual_guilds: List[str] = [g.name for g in interaction.client.guilds if g.get_member(member.id)]
+        mutual_guilds: List[str] = [g.name for g in interaction.user.guilds if g.get_member(member.id)]
 
         embed: discord.Embed = (
             discord.Embed(
@@ -62,7 +62,7 @@ class GeneralCog(commands.Cog):
             .add_field(name="Bot?", value=member.bot)
             .add_field(name="Badges", value=", ".join(flags) if flags else "None")
             .add_field(
-                name="Mutual guilds with me",
+                name="Mutual guilds with you",
                 value=", ".join(mutual_guilds) if mutual_guilds else "None",
             )
         )

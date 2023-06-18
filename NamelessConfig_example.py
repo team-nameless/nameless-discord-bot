@@ -74,6 +74,7 @@ class NamelessConfig:
     # Available options:    Config,
     #                       Moderator,
     #                       MusicV1 (requires `LAVALINK` to be properly provided),
+    #                       MusicV2 (MusicV1 must not be loaded)
     #                       Osu (requires `OSU` to be properly provided),
     #                       Owner
     COGS: List[LiteralString] = [
@@ -137,4 +138,11 @@ class NamelessConfig:
     OSU: Dict[LiteralString, Any] = {
         "client_id": 0,
         "client_secret": "",
+    }
+
+    # Configurations for musicv2 commands
+    # This is optional, but highly recommended
+    SOUNDCLOUD: Dict[LiteralString, Any] = {
+        "user_id": 0,
+        "client_id": "",
     }

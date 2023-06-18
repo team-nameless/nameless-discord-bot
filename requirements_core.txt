@@ -2,6 +2,8 @@ sqlalchemy
 ossapi
 discord.py
 discord.py[speed]
+discord.py[voice]
+yt-dlp
 reactionmenu
 wavelink
 alembic

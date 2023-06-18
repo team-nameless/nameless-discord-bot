@@ -1,11 +1,13 @@
 import math
-from typing import List
+from typing import List, Union
 
 import discord
 import wavelink
 
 
 __all__ = ["VoteMenu"]
+
+VoiceClientT_ = Union[discord.VoiceClient, wavelink.Player]
 
 
 class VoteMenuView(discord.ui.View):
@@ -51,7 +53,7 @@ class VoteMenu:
         action: str,
         content: str,
         interaction: discord.Interaction,
-        voice_client: wavelink.Player,
+        voice_client: VoiceClientT_,
     ):
         self.action = action
         self.content = f"{content[:50]}..."

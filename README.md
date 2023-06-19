@@ -1,16 +1,5 @@
 # nameless
 
-> :warning: Look like you are at `feat/v2` branch!
-> 
-> This branch containing breaking changes that is **not** compatible with stable version (`main`)
-> and not guaranteed to be stable to be used in production.
-> 
-> However, we **do** welcome contributions to this branch, so if you can, please
-> create a Discord bot instance, do some testings, either personally or with friends
-> and provide us feedbacks via  Pull Request/Issues, that helps us a lot! Thank you.
-> 
-> Or if you do not have the best condition to host a Discord bot, a star does help too! <3
-
 A rewrite of [original nameless*](https://github.com/FoxeiZ/nameless), now with collaborations.
 
 [![Last Commit](https://badgen.net/github/last-commit/nameless-on-discord/nameless/main)]()

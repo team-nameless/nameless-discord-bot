@@ -53,7 +53,7 @@ class NamelessConfig:
         "source_code": "https://github.com/nameless-on-discord/nameless",
         # A link leading to the RAW version.txt file, used for upstream version checking
         # If this is a falsy value, https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt
-        "version_txt": "https://raw.githubusercontent.com/nameless-on-discord/nameless/feat/v2/version.txt",
+        "version_txt": "https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt",
         # Bot support server URL
         # This should be a valid Discord invite URL, or a URL that leads to a valid Discord invite URL
         "support_server_url": "",

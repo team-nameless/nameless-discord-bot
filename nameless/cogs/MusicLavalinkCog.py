@@ -253,7 +253,6 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
             if not track.is_stream:
                 await chn.send(f"Playing: **{track.title}** from **{track.author}** ({track.uri})")  # pyright: ignore
 
-
     async def __preprocess_radio_then_play(
         self, interaction: discord.Interaction, message: discord.WebhookMessage, url: str, is_radio: bool = False
     ):

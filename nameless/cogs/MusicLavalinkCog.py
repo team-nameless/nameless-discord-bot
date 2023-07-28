@@ -277,7 +277,7 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
                 raise AppCommandError("Radio track must be a stream")
 
             setattr(vc, "should_send_play_now", True)
-            await chn.send(f"Streaming music from {url}")  # pyright: ignore
+            await interaction.channel.send(f"Streaming music from {url}")  # pyright: ignore
             vc.queue.loop = True
             await vc.play(track)
         else:

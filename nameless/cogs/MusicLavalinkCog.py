@@ -244,10 +244,15 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
         chn = player.guild.get_channel(getattr(player, "trigger_channel_id"))
 
         if chn is not None and getattr(player, "play_now_allowed") and getattr(player, "should_send_play_now"):
+            """
             if track.is_stream:
                 await chn.send(f"Streaming music from {track.uri}")  # pyright: ignore
             else:
                 await chn.send(f"Playing: **{track.title}** from **{track.author}** ({track.uri})")  # pyright: ignore
+            """
+            if not track.is_stream:
+                await chn.send(f"Playing: **{track.title}** from **{track.author}** ({track.uri})")  # pyright: ignore
+
 
     async def __preprocess_radio_then_play(
         self, interaction: discord.Interaction, message: discord.WebhookMessage, url: str, is_radio: bool = False
@@ -273,6 +278,7 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
                 raise AppCommandError("Radio track must be a stream")
 
             setattr(vc, "should_send_play_now", True)
+            await chn.send(f"Streaming music from {url}")  # pyright: ignore
             vc.queue.loop = True
             await vc.play(track)
         else:

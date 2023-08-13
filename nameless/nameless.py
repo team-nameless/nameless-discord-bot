@@ -36,7 +36,7 @@ class Nameless(commands.AutoShardedBot):
 
         self.log_level: int = logging.DEBUG if is_debug else logging.INFO
         self.is_debug = is_debug
-        
+
         self.allow_updates_check: bool = allow_updates_check
 
         self.loggers: list[logging.Logger] = [
@@ -274,8 +274,8 @@ class Nameless(commands.AutoShardedBot):
                     logger.parent.handlers.append(handler)
                 logger.parent.propagate = False
 
-    @staticmethod
-    async def construct_shared_vars():
+
+    async def construct_shared_vars(self):
         """
         Constructs variables to shared_vars.py.
         """

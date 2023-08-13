@@ -9,6 +9,7 @@ from discord.ext import commands
 from nameless import Nameless
 from NamelessConfig import NamelessConfig
 
+
 DEBUG_FLAG = "--debug"
 UPDATE_CHECK_FLAG = "--allow-updates-check"
 

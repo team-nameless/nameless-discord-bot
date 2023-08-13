@@ -6,8 +6,8 @@ import sqlalchemy
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.util import IdentitySet
-from nameless import shared_vars
 
+from nameless import shared_vars
 from nameless.commons import Utility
 
 from .models import Base, DbGuild, DbUser

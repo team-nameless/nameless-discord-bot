@@ -1,4 +1,3 @@
-import logging
 from typing import Optional, Tuple
 from urllib.parse import quote_plus as qp, urlparse
 

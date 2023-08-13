@@ -2,6 +2,7 @@
 
 import sys
 
+
 cog_name = sys.argv[1] + "Cog"
 
 cog_template = f"""

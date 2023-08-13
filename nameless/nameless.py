@@ -46,13 +46,13 @@ class Nameless(commands.AutoShardedBot):
             logging.getLogger("sqlalchemy.pool"),
             logging.getLogger("ossapi.ossapiv2"),
         ]
-        self.description = getattr(NamelessConfig, "BOT_DESCRIPTION", "")
+        self.description = NamelessConfig.__description__
 
     def check_for_updates(self):
         if not self.allow_updates_check:
             logging.warning("Your bot might fall behind updates, consider using flag '--allow-updates-check'")
         else:
-            nameless_version = version.parse(shared_vars.__nameless_current_version__)
+            nameless_version = version.parse(NamelessConfig.__version__)
             upstream_version = version.parse(shared_vars.__nameless_upstream_version__)
 
             logging.info(
@@ -72,7 +72,7 @@ class Nameless(commands.AutoShardedBot):
         # Sometimes os.cwd() is bad
         current_path = os.path.dirname(__file__)
 
-        if cogs := getattr(NamelessConfig, "COGS", []):
+        if cogs := NamelessConfig.COGS:
             allowed_cogs = list(filter(shared_vars.cogs_regex.match, os.listdir(f"{current_path}{os.sep}cogs")))
 
             for cog_name in cogs:
@@ -133,16 +133,16 @@ class Nameless(commands.AutoShardedBot):
             logging.warning("Please wait at least one hour before using global commands")
 
     async def on_ready(self):
-        if status := getattr(NamelessConfig, "STATUS", {}):
+        if status := NamelessConfig.STATUS:
             logging.info("Setting presence")
-            url = status.get("url", None)
+            url = status.DISCORD_ACTIVITY.URL
 
             await self.change_presence(
-                status=status.get("user_status", discord.Status.online),
+                status=status.TYPE,
                 activity=discord.Activity(
-                    type=status.get("type", discord.ActivityType.playing),
-                    name=status.get("name", "something"),
-                    url=url if url else None,
+                    type=status.DISCORD_ACTIVITY.TYPE,
+                    name=status.DISCORD_ACTIVITY.NAME,
+                    url=url or None,
                 ),
             )
         else:
@@ -283,18 +283,9 @@ class Nameless(commands.AutoShardedBot):
         shared_vars.start_time = datetime.now()
         # shared_vars.crud_database = CRUD()
 
-        meta = getattr(NamelessConfig, "META", {})
-
-        # The default value is "", so an additional or might work
-        shared_vars.__nameless_current_version__ = meta.get("version", None) or shared_vars.__nameless_current_version__
-        shared_vars.upstream_version_txt_url = (
-            meta.get("version_txt", None)
-            or "https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt"
-        )
-
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(shared_vars.upstream_version_txt_url, timeout=10) as response:
+                async with session.get(NamelessConfig.META.UPSTREAM_VERSION_FILE, timeout=10) as response:
                     if 200 <= response.status <= 299:
                         shared_vars.__nameless_upstream_version__ = await response.text()
                     else:
@@ -308,7 +299,6 @@ class Nameless(commands.AutoShardedBot):
 
         # Debug data
         logging.debug("Bot start time: %s", shared_vars.start_time)
-        logging.debug(shared_vars.upstream_version_txt_url)
 
     def start_bot(self):
-        self.run(getattr(NamelessConfig, "TOKEN", ""), log_handler=None)
+        self.run(NamelessConfig.TOKEN, log_handler=None)

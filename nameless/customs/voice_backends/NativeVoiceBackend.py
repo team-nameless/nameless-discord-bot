@@ -227,7 +227,7 @@ class YTDLSource(discord.AudioSource):
                     return cls.info_wrapper(data, bot.user)
 
                 case "soundcloud":
-                    if (sc := getattr(NamelessConfig, "SOUNDCLOUD", None)) and (sc["user_id"] or sc["client_id"]):
+                    if (sc := NamelessConfig.MUSIC.SOUNDCLOUD) and (sc.USER_ID or sc.CLIENT_ID):
                         data = await cls.__get_raw_data(track.title)
                         return await cls.get_related_tracks(track, bot)
 
@@ -235,8 +235,8 @@ class YTDLSource(discord.AudioSource):
                         http_session,
                         f"https://api-v2.soundcloud.com/tracks/{track.id}/related",
                         params={
-                            "user_id": NamelessConfig.SOUNDCLOUD["user_id"],
-                            "client_id": NamelessConfig.SOUNDCLOUD["client_id"],
+                            "user_id": sc.USER_ID,
+                            "client_id": sc.CLIENT_ID,
                             "limit": "10",
                             "offset": "0",
                         },

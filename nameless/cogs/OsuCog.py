@@ -44,8 +44,8 @@ class OsuCog(commands.GroupCog, name="osu"):
     def __init__(self, bot: Nameless):
         self.bot = bot
         self.api = Ossapi(
-            NamelessConfig.OSU["client_id"],
-            NamelessConfig.OSU["client_secret"],
+            NamelessConfig.OSU.CLIENT_ID,
+            NamelessConfig.OSU.CLIENT_SECRET,
         )
 
     @app_commands.command()
@@ -362,7 +362,7 @@ class OsuCog(commands.GroupCog, name="osu"):
 
 
 async def setup(bot: Nameless):
-    if (osu := getattr(NamelessConfig, "OSU", None)) and osu.get("client_id", "") and osu.get("client_secret", ""):
+    if NamelessConfig.OSU.CLIENT_ID and NamelessConfig.OSU.CLIENT_SECRET:
         await bot.add_cog(OsuCog(bot))
         logging.info("%s cog added!", __name__)
     else:

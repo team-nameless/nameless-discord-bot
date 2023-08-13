@@ -19,31 +19,15 @@ class Utility:
         Get the database connection URL based on the config and its components.
         :return: Database connection URL with components.
         """
-        dialect: str
-        driver: str
-        username: str
-        password: str
-        host: str
-        port: Optional[int]
-        db_name: str
-
-        if db := getattr(NamelessConfig, "DATABASE", {}):
-            dialect = db.get("dialect", "sqlite")
-            driver = db.get("driver", "")
-            username = db.get("username", "")
-            password = db.get("password", "")
-            host = db.get("host", "")
-            port = db.get("port")
-            db_name = db.get("db_name", "nameless.db")
-        else:
-            logging.warning("Falling back to SQLite")
-            dialect = "sqlite"
-            driver = ""
-            username = ""
-            password = ""
-            host = ""
-            port = None
-            db_name = "nameless.db"
+        db = NamelessConfig.DATABASE
+        
+        dialect: str = db.DIALECT
+        driver: str = db.DRIVER
+        username: str = db.USERNAME
+        password: str = db.PASSWORD
+        host: str = db.HOST
+        port: Optional[int] = db.PORT
+        db_name: str = db.NAME
 
         pdriver: str = qp(f"+{driver}", safe="+") if driver else ""
         ppassword: str = qp(f":{password}", safe=":") if password else ""

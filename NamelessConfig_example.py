@@ -120,7 +120,8 @@ class NamelessOsu:
 
 class NamelessConfig:
     # Current version of nameless.
-    __version__ = "2.1.0"
+    # I ill advise you to NOT change this line
+    __version__ = open("version.txt", "r").read().strip()
 
     # Bot description string
     __description__ = "Just a bot"

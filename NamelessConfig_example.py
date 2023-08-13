@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
 import discord
 from typing_extensions import LiteralString
@@ -7,13 +7,130 @@ from typing_extensions import LiteralString
 __all__ = ["NamelessConfig"]
 
 
+class NamelessMetadata:
+    # Any source control link, official repo by default.
+    SOURCE_CODE_URL: LiteralString = "https://github.com/nameless-on-discord/nameless"
+
+    # A link leading to the RAW version.txt file, used for upstream version checking
+    UPSTREAM_VERSION_FILE: LiteralString = (
+        "https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt"
+    )
+
+    # A link to the bot support server.
+    SUPPORT_SERVER_URL: LiteralString = ""
+
+
+class NamelessStatusFromDiscordActivity:
+    # Activity type
+    TYPE: discord.ActivityType = discord.ActivityType.playing
+
+    # Name of the activity
+    NAME: LiteralString = "something"
+
+    # URL to the stream, only available for streaming activitiy
+    URL: Optional[LiteralString] = None
+
+
+class NamelessStatusFromCustomActivity:
+    # Custom status line.
+    CONTENT: LiteralString = ""
+
+    # Emoji to be used in the custom status
+    EMOJI: LiteralString = ""
+
+
+class NamelessStatus:
+    # Discord status
+    PRESENCE: discord.Status = discord.Status.online
+
+    # Discord activity
+    DISCORD_ACTIVITY: NamelessStatusFromDiscordActivity = NamelessStatusFromDiscordActivity()
+
+    # Custom activity, priortized over Discord activity.
+    CUSTOM_ACTIVITY: NamelessStatusFromCustomActivity = NamelessStatusFromCustomActivity()
+
+
+class NamelessDatabase:
+    # Nameless' database connection string components.
+    # Read more: https://docs.sqlalchemy.org/en/14/core/engines.html#database-urls
+    DIALECT: LiteralString = "sqlite"
+    DRIVER: LiteralString = ""
+    USERNAME: LiteralString = ""
+    PASSWORD: LiteralString = ""
+    HOST: LiteralString = ""
+    PORT: Optional[int] = None
+    NAME: LiteralString = "nameless.db"
+
+
+class NamelessMusicNode:
+    def __init__(self, *, host: str, port: int, password: str, secure: bool = False) -> None:
+        self.host = host
+        self.port = port
+        self.password = password
+        self.secure = secure
+
+
+class NamelessMusicSpotifyClient:
+    # Get it here: https://developer.spotify.com/dashboard/
+    CLIENT_ID: LiteralString = ""
+    CLIENT_SECRET: LiteralString = ""
+
+
+class NamelessMusicSoundcloudClient:
+    # Get it here: https://developers.soundcloud.com/
+    USER_ID: LiteralString = ""
+    CLIENT_ID: LiteralString = ""
+
+
+class NamelessMusic:
+    NODES: list[NamelessMusicNode] = [
+        NamelessMusicNode(host="0.0.0.0", port=2333, password="youshallnotpass"),
+    ]
+
+    SPOTIFY: NamelessMusicSpotifyClient = NamelessMusicSpotifyClient()
+
+    SOUNDCLOUD: NamelessMusicSoundcloudClient = NamelessMusicSoundcloudClient()
+
+
+class NamelessIntent:
+    # Choose when to receive texts
+    # This will potentially slow down the bot if your bot is in many (large) guilds
+    # This will decide whether the bot should:
+    # - Receive text commands
+    # - Receive response from prompts (will use default values)
+    # (Requires "MESSAGE CONTENT" intent to be enabled on bot dashboard if this sets to True)
+    # (Might require verification if the bot is over 100 guilds)
+    # NOTE: MENTION PREFIX IS ENABLED BY DEFAULT!!!!!
+    MESSAGE: bool = False
+
+    # Choose when to receive member events
+    # This will potentially slow down the bot if your bot is in many (large) guilds
+    # This will decide whether the bot should:
+    # - Receive guild member event (for welcome/goodbye notifications)
+    # (Requires "GUILD MEMBERS" intent to be enabled on bot dashboard if this sets to True)
+    # (Might require verification if the bot is over 100 guilds)
+    MEMBER: bool = True
+
+
+class NamelessOsu:
+    # Get it here: https://osu.ppy.sh/docs/index.html#client-credentials-grant
+    CLIENT_ID: int = 0
+    CLIENT_SECRET: LiteralString = ""
+
+
 class NamelessConfig:
+    # Current version of nameless.
+    __version__ = "2.1.0"
+
+    # Bot description string
+    __description__ = "Just a bot"
+
     # Add owners to Nameless
     # The bot creator is added by default
     # Bot team members are added by default
     # If you have nothing other than "the bot creator" and "team members", leave this as []
     # Otherwise, leave their IDs here: Right-click on a user -> Copy ID
-    OWNERS: List[int] = []
+    OWNERS: list[int] = []
 
     # Enable stuffs for developers
     # Set to True if you know what you are doing
@@ -24,51 +141,12 @@ class NamelessConfig:
     # Then pick your client, then go to Bot->Copy Token
     TOKEN: LiteralString = ""
 
-    # Choose when to receive texts
-    # This will potentially slow down the bot if your bot is in many (large) guilds
-    # This will decide whether the bot should:
-    # - Receive text commands
-    # - Receive response from prompts (will use default values)
-    # (Requires "MESSAGE CONTENT" intent to be enabled on bot dashboard if this sets to True)
-    # (Might require verification if the bot is over 100 guilds)
-    RECEIVE_TEXTS: bool = False
-
-    # Choose when to receive member events
-    # This will potentially slow down the bot if your bot is in many (large) guilds
-    # This will decide whether the bot should:
-    # - Receive guild member event (for welcome/goodbye notifications)
-    # (Requires "GUILD MEMBERS" intent to be enabled on bot dashboard if this sets to True)
-    # (Might require verification if the bot is over 100 guilds)
-    RECEIVE_MEMBER_EVENTS: bool = True
-
-    # Choose when to receive mention prefix
-    # This is unaffected by the RECEIVE_TEXT setting since Discord allow mentions to the bot, despite "MESSAGE CONTENT"
-    # intent is disabled
-    RECEIVE_MENTION_PREFIX: bool = True
-
     # Metadata of the bot
-    META: Dict[LiteralString, Any] = {
-        # Any source control link
-        # Use falsy values for closed source (like when you have a private fork), but remember to comply the license.
-        "source_code": "https://github.com/nameless-on-discord/nameless",
-        # A link leading to the RAW version.txt file, used for upstream version checking
-        # If this is a falsy value, https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt
-        "version_txt": "https://raw.githubusercontent.com/nameless-on-discord/nameless/main/version.txt",
-        # Bot support server URL
-        # This should be a valid Discord invite URL, or a URL that leads to a valid Discord invite URL
-        "support_server_url": "",
-        # Bot custom version, should be a string:
-        # Falsy value will use the value provided in nameless/shared_vars.py
-        "version": None,
-        # Bot description
-        # Placeholders: {source_code} - META[source_code], or "original nameless repo" if META[source_code] is ""
-        #                               If it was set to None, set to literal "{source_code}"
-        "bot_description": "Just a bot",
-    }
+    META: NamelessMetadata = NamelessMetadata()
 
     # Guild IDs to register commands
     # Leave empty array for global (slash commands takes one hour to mitigate, text takes immediately)
-    GUILDS: List[int] = []
+    GUILDS: list[int] = []
 
     # Choose which cog(s) to load
     # Available options:    Config,
@@ -77,7 +155,7 @@ class NamelessConfig:
     #                       MusicV2 (MusicV1 must not be loaded)
     #                       Osu (requires `OSU` to be properly provided),
     #                       Owner
-    COGS: List[LiteralString] = [
+    COGS: list[LiteralString] = [
         "MusicLavalink",
         "Owner",
         "General",
@@ -87,62 +165,17 @@ class NamelessConfig:
     ]
 
     # Guild prefixes for text commands
-    PREFIXES: List[LiteralString] = ["nameless."]
+    PREFIXES: list[LiteralString] = ["nameless."]
 
     # Bot status
-    # For example: "Playing with me"
-    STATUS: Dict[LiteralString, Any] = {
-        # Allowed: watching, competing, playing, listening, streaming
-        "type": discord.ActivityType.watching,
-        "name": "you",
-        # Allowed: dnd, idle, online, invisible, offline
-        "user_status": discord.Status.dnd,
-        # if "type" is "discord.ActivityType.streaming"
-        "url": "",
-    }
+    STATUS: NamelessStatus = NamelessStatus()
 
     # Database configuration
-    # It is recommended that you set a simple database such as SQLite
-    # Please note: Install driver BY YOURSELF if NOT using SQLite.
-    # For example with PostgreSQL: pip install psycopg2-binary, then use "psycopg2" as "driver" below.
-    # If you are too lazy to set this, leave this as default.
-    DATABASE: Optional[Dict[LiteralString, Any]] = {
-        "dialect": "sqlite",
-        "driver": "",
-        "username": "",
-        "password": "",
-        "host": "",
-        "port": None,
-        "db_name": "nameless.db",
-    }
+    DATABASE: NamelessDatabase = NamelessDatabase()
 
-    # Configurations for Lavalink servers for music commands
-    LAVALINK: Dict[LiteralString, Any] = {
-        # Your lavalink node configurations
-        # Each node config is a dictionary with the following keys:
-        #   host (str),
-        #   port (int),
-        #   password (str),
-        #   is_secure (bool)
-        "nodes": [],
-        # Configuration for spotify integrations, safe to ignore
-        # You can get these from here: https://developer.spotify.com/dashboard/applications
-        "spotify": {
-            "client_id": "",
-            "client_secret": "",
-        },
-    }
+    # Music configuration
+    # Has both Lavalink & Native configuration fields
+    MUSIC: NamelessMusic = NamelessMusic()
 
     # Configurations for osu! commands
-    # How-to: https://osu.ppy.sh/docs/index.html#client-credentials-grant
-    OSU: Dict[LiteralString, Any] = {
-        "client_id": 0,
-        "client_secret": "",
-    }
-
-    # Configurations for musicv2 commands
-    # This is optional, but highly recommended
-    SOUNDCLOUD: Dict[LiteralString, Any] = {
-        "user_id": 0,
-        "client_id": "",
-    }
+    OSU: NamelessOsu = NamelessOsu()

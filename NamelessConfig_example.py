@@ -41,7 +41,7 @@ class NamelessStatusFromCustomActivity:
 
 class NamelessStatus:
     # Discord status
-    PRESENCE: discord.Status = discord.Status.online
+    STATUS: discord.Status = discord.Status.online
 
     # Discord activity
     DISCORD_ACTIVITY: NamelessStatusFromDiscordActivity = NamelessStatusFromDiscordActivity()
@@ -136,6 +136,8 @@ class NamelessConfig:
     # Enable stuffs for developers
     # Set to True if you know what you are doing
     DEV: bool = False
+    
+    INTENT: NamelessIntent = NamelessIntent()
 
     # Bot token
     # Go to here: https://discord.com/developers/applications/

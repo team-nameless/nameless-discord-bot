@@ -9,8 +9,9 @@ from discord.ext import commands
 from nameless import Nameless
 from NamelessConfig import NamelessConfig
 
-
+DEBUG_FLAG = "--debug"
 UPDATE_CHECK_FLAG = "--allow-updates-check"
+
 args = sys.argv[1:]
 
 intents = discord.Intents.default()
@@ -19,6 +20,7 @@ intents.members = NamelessConfig.INTENT.MEMBER
 
 nameless = Nameless(
     intents=intents,
+    is_debug=DEBUG_FLAG in args,
     command_prefix=commands.when_mentioned_or(*NamelessConfig.PREFIXES),
     allow_updates_check=UPDATE_CHECK_FLAG in args,
     description=NamelessConfig.__description__,

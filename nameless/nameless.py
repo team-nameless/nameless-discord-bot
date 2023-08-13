@@ -28,15 +28,16 @@ class Nameless(commands.AutoShardedBot):
         self,
         *args,
         command_prefix,
+        is_debug: bool = False,
+        allow_updates_check: bool = False,
         **kwargs,
     ):
         super().__init__(command_prefix, *args, **kwargs)
 
-        self.log_level: int = kwargs.get(
-            "log_level",
-            logging.DEBUG if getattr(NamelessConfig, "DEV", False) else logging.INFO,
-        )
-        self.allow_updates_check: bool = kwargs.get("allow_updates_check", False)
+        self.log_level: int = logging.DEBUG if is_debug else logging.INFO
+        self.is_debug = is_debug
+        
+        self.allow_updates_check: bool = allow_updates_check
 
         self.loggers: list[logging.Logger] = [
             logging.getLogger(),
@@ -121,7 +122,7 @@ class Nameless(commands.AutoShardedBot):
         logging.info("Registering commands")
         await self.__register_all_cogs()
 
-        if ids := getattr(NamelessConfig, "GUILDS", []):
+        if ids := NamelessConfig.GUILDS:
             for _id in ids:
                 logging.info("Syncing commands with guild ID %d", _id)
                 sf = discord.Object(_id)
@@ -244,14 +245,14 @@ class Nameless(commands.AutoShardedBot):
             if user in the_app.team.members:
                 return True
 
-        owner_list = getattr(NamelessConfig, "OWNERS", [])
+        owner_list = NamelessConfig.OWNERS
         if user.id in owner_list:
             return True
 
         return False
 
     def patch_loggers(self) -> None:
-        if getattr(NamelessConfig, "DEV", False):
+        if self.is_debug:
             file_handler = logging.FileHandler(filename="nameless.log", mode="w", delay=True)
             file_handler.setFormatter(logging.Formatter("%(asctime)s - [%(levelname)s] [%(name)s] %(message)s"))
             shared_vars.additional_handlers.append(file_handler)
@@ -281,6 +282,7 @@ class Nameless(commands.AutoShardedBot):
         logging.info("Populating nameless/shared_vars.py")
 
         shared_vars.start_time = datetime.now()
+        shared_vars.is_debug = self.is_debug
         # shared_vars.crud_database = CRUD()
 
         try:

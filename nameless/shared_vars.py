@@ -20,6 +20,8 @@ cogs_regex = re.compile(r"^(?!_.).*Cog.py")
 loaded_cogs_list: list[str] = []
 unloaded_cogs_list: list[str] = []
 
+# Variables
+is_debug: bool = False
 start_time: datetime = datetime.min
 __nameless_upstream_version__: str = ""
 

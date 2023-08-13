@@ -871,7 +871,7 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
 
 async def setup(bot: Nameless):
-    if (lvl := getattr(NamelessConfig, "LAVALINK", None)) and lvl.get("nodes", []):
+    if NamelessConfig.MUSIC.NODES:
         await bot.add_cog(MusicLavalinkCog(bot))
         logging.info("%s cog added!", __name__)
     else:

@@ -33,9 +33,7 @@ music_default_sources: List[str] = ["youtube", "soundcloud", "ytmusic"]
 class MusicLavalinkCog(commands.GroupCog, name="music"):
     def __init__(self, bot: Nameless):
         self.bot = bot
-        self.can_use_spotify = bool(
-            (sp := NamelessConfig.MUSIC.SPOTIFY) and sp.CLIENT_ID and sp.CLIENT_SECRET
-        )
+        self.can_use_spotify = bool((sp := NamelessConfig.MUSIC.SPOTIFY) and sp.CLIENT_ID and sp.CLIENT_SECRET)
 
         if not self.can_use_spotify:
             logging.warning("Spotify command option will be removed since you did not provide enough credentials.")

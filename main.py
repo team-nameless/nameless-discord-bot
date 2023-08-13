@@ -6,8 +6,8 @@ from discord import InteractionResponded
 from discord.app_commands import AppCommandError, errors
 from discord.ext import commands
 
-from NamelessConfig import NamelessConfig
 from nameless import Nameless
+from NamelessConfig import NamelessConfig
 
 
 UPDATE_CHECK_FLAG = "--allow-updates-check"

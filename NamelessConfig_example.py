@@ -136,7 +136,7 @@ class NamelessConfig:
     # Enable stuffs for developers
     # Set to True if you know what you are doing
     DEV: bool = False
-    
+
     INTENT: NamelessIntent = NamelessIntent()
 
     # Bot token

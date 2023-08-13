@@ -20,7 +20,7 @@ class Utility:
         :return: Database connection URL with components.
         """
         db = NamelessConfig.DATABASE
-        
+
         dialect: str = db.DIALECT
         driver: str = db.DRIVER
         username: str = db.USERNAME

@@ -139,7 +139,7 @@ class Nameless(commands.AutoShardedBot):
             url = status.DISCORD_ACTIVITY.URL
 
             await self.change_presence(
-                status=status.TYPE,
+                status=status.STATUS,
                 activity=discord.Activity(
                     type=status.DISCORD_ACTIVITY.TYPE,
                     name=status.DISCORD_ACTIVITY.NAME,

@@ -26,10 +26,10 @@ class Nameless(commands.AutoShardedBot):
 
     def __init__(
         self,
-        *args,
         command_prefix,
         is_debug: bool = False,
         allow_updates_check: bool = False,
+        *args,
         **kwargs,
     ):
         super().__init__(command_prefix, *args, **kwargs)
@@ -273,7 +273,6 @@ class Nameless(commands.AutoShardedBot):
                 for handler in shared_vars.additional_handlers:
                     logger.parent.handlers.append(handler)
                 logger.parent.propagate = False
-
 
     async def construct_shared_vars(self):
         """

@@ -7,8 +7,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.util import IdentitySet
 
+from nameless import shared_vars
 from nameless.commons import Utility
-from NamelessConfig import NamelessConfig
 
 from .models import Base, DbGuild, DbUser
 
@@ -37,7 +37,7 @@ class CRUD:
     engine = create_engine(
         db_url,
         logging_name=db_name,
-        hide_parameters=not getattr(NamelessConfig, "DEV", False),
+        hide_parameters=not shared_vars.is_debug,
     )
 
     _session = sessionmaker(bind=engine)

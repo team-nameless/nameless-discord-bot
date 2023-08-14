@@ -137,12 +137,12 @@ class GeneralCog(commands.Cog):
             f"&scope=bot%20applications.commands"
         )
 
-        nameless_meta = getattr(NamelessConfig, "META", {})
-        github_link = nameless_meta.get("github", "https://github.com/nameless-on-discord/nameless")
+        nameless_meta = NamelessConfig.META
+        github_link = nameless_meta.SOURCE_CODE_URL
         support_inv = ""
 
         try:
-            if sp_url := getattr(NamelessConfig, "SUPPORT_SERVER_URL", ""):
+            if sp_url := nameless_meta.SUPPORT_SERVER_URL:
                 inv = await self.bot.fetch_invite(sp_url)
                 support_inv = inv.url
         except NotFound:
@@ -153,12 +153,7 @@ class GeneralCog(commands.Cog):
                 title="Something about me!",
                 color=discord.Color.orange(),
                 timestamp=datetime.datetime.now(),
-                description=getattr(
-                    NamelessConfig,
-                    "BOT_DESCRIPTION",
-                    f"I am a bot created from [nameless*]({github_link}) code "
-                    "made by [Swyrin#7193](https://github.com/Swyreee) and [FoxeiZ](https://github.com/FoxeiZ)",
-                ),
+                description=NamelessConfig.__description__.replace("{github_link}", github_link),
             )
             .set_thumbnail(url=interaction.client.user.display_avatar.url)
             .add_field(name="Servers count", value=f"{servers_count}")
@@ -166,7 +161,7 @@ class GeneralCog(commands.Cog):
             .add_field(name="Last launch/Uptime", value=f"<t:{uptime}:R>")
             .add_field(
                 name="Bot version",
-                value=shared_vars.__nameless_current_version__,
+                value=NamelessConfig.__version__,
             )
             .add_field(name="Library version", value=f"discord.py v{discord.__version__}")
             .add_field(

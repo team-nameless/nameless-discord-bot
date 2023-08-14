@@ -1,6 +1,4 @@
-import functools
 import logging
-import os
 import re
 import sys
 from datetime import datetime
@@ -22,17 +20,9 @@ cogs_regex = re.compile(r"^(?!_.).*Cog.py")
 loaded_cogs_list: list[str] = []
 unloaded_cogs_list: list[str] = []
 
-
-@functools.lru_cache
-def get_current_nameless_version() -> str:
-    current_file_directory: str = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    with open(f"{current_file_directory}{os.sep}version.txt") as version_file:
-        return version_file.read()
-
-
-upstream_version_txt_url: str = ""
+# Variables
+is_debug: bool = False
 start_time: datetime = datetime.min
-__nameless_current_version__: str = get_current_nameless_version()
 __nameless_upstream_version__: str = ""
 
 # Perms

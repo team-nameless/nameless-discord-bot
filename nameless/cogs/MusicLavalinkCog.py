@@ -33,9 +33,7 @@ music_default_sources: List[str] = ["youtube", "soundcloud", "ytmusic"]
 class MusicLavalinkCog(commands.GroupCog, name="music"):
     def __init__(self, bot: Nameless):
         self.bot = bot
-        self.can_use_spotify = bool(
-            (sp := NamelessConfig.LAVALINK.get("spotify")) and sp.get("client_id") and sp.get("client_secret")
-        )
+        self.can_use_spotify = bool((sp := NamelessConfig.MUSIC.SPOTIFY) and sp.CLIENT_ID and sp.CLIENT_SECRET)
 
         if not self.can_use_spotify:
             logging.warning("Spotify command option will be removed since you did not provide enough credentials.")
@@ -164,19 +162,19 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
         nodes = [
             wavelink.Node(
-                uri=f"{node['host']}:{node['port']}",
-                secure=node["is_secure"],
-                password=node["password"],
+                uri=f"{node.host}:{node.port}",
+                secure=node.secure,
+                password=node.password,
             )
-            for node in NamelessConfig.LAVALINK["nodes"]
+            for node in NamelessConfig.MUSIC.NODES
         ]
 
         await wavelink.NodePool.connect(
             client=self.bot,
             nodes=nodes,
             spotify=spotify.SpotifyClient(
-                client_id=NamelessConfig.LAVALINK["spotify"]["client_id"],
-                client_secret=NamelessConfig.LAVALINK["spotify"]["client_secret"],
+                client_id=NamelessConfig.MUSIC.SPOTIFY.CLIENT_ID,
+                client_secret=NamelessConfig.MUSIC.SPOTIFY.CLIENT_SECRET,
             )
             if self.can_use_spotify
             else None,
@@ -873,7 +871,7 @@ class MusicLavalinkCog(commands.GroupCog, name="music"):
 
 
 async def setup(bot: Nameless):
-    if (lvl := getattr(NamelessConfig, "LAVALINK", None)) and lvl.get("nodes", []):
+    if NamelessConfig.MUSIC.NODES:
         await bot.add_cog(MusicLavalinkCog(bot))
         logging.info("%s cog added!", __name__)
     else:

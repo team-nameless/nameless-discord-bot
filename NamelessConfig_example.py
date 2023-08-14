@@ -133,10 +133,6 @@ class NamelessConfig:
     # Otherwise, leave their IDs here: Right-click on a user -> Copy ID
     OWNERS: list[int] = []
 
-    # Enable stuffs for developers
-    # Set to True if you know what you are doing
-    DEV: bool = False
-
     INTENT: NamelessIntent = NamelessIntent()
 
     # Bot token

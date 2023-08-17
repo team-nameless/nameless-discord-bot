@@ -1,4 +1,3 @@
-
 name: "Code Scanning"
 
 on:
@@ -14,8 +13,6 @@ on:
       - 'feat/**'
       - 'fix/**'
       - 'main'
-    tags-ignore:
-      - '*'
 
 jobs:
   codeql:

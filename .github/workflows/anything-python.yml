@@ -13,8 +13,6 @@ on:
       - 'feat/**'
       - 'fix/**'
       - 'main'
-    tags-ignore:
-      - '*'
 
 jobs:
   python:

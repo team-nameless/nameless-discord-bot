@@ -7,6 +7,7 @@ repos:
         language: python_venv
         pass_filenames: true
         fail_fast: false
+        additional_dependencies: [black==23.3.0]
         types:
           - python
 
@@ -16,6 +17,7 @@ repos:
         language: python_venv
         pass_filenames: true
         fail_fast: false
+        additional_dependencies: [isort==5.12.0]
         types:
           - python
 
@@ -25,6 +27,7 @@ repos:
         language: python_venv
         pass_filenames: true
         fail_fast: false
+        additional_dependencies: [pyupgrade==3.6.0]
         types:
           - python
 
@@ -33,5 +36,7 @@ repos:
         entry: ruff
         language: python_venv
         pass_filenames: true
+        fail_fast: false
+        additional_dependencies: [ruff==0.0.272]
         types:
           - python

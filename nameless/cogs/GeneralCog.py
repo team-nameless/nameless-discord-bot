@@ -20,7 +20,7 @@ class GeneralCog(commands.Cog):
         self.bot = bot
 
     @app_commands.command()
-    @app_commands.describe(member="Target member to view, you as default if not selected.")
+    @app_commands.describe(member="Target member to view, you as default.")
     async def view_user(
         self,
         interaction: discord.Interaction,
@@ -42,24 +42,21 @@ class GeneralCog(commands.Cog):
             discord.Embed(
                 description=f"User ID: {member.id}",
                 timestamp=datetime.datetime.now(),
-                title=f"Something about {member}",
+                title=f"Something about @{member.display_name}"
+                + (" (👑)" if isinstance(member, discord.Member) and member.guild.owner == member else "")
+                + (" (🤖)" if member.bot else ""),
                 color=discord.Color.orange(),
             )
             .set_thumbnail(url=member.display_avatar.url)
             .add_field(
-                name="Account creation date",
-                value=f"<t:{int(account_create_date.timestamp())}:R>",
+                name="Created since",
+                value=f"<t:{int(account_create_date.timestamp())}:R> (<t:{int(account_create_date.timestamp())}:f>)",
             )
             .add_field(
-                name="Membership date",
-                value=f"<t:{int(join_date.timestamp())}:R>",  # pyright: ignore
+                name="Membership since",
+                value=f"<t:{int(join_date.timestamp())}:R> (<t:{int(join_date.timestamp())}:f>)",  # pyright: ignore
             )
-            .add_field(
-                name="Guild owner?",
-                value=member.guild.owner == member,  # pyright: ignore
-            )
-            .add_field(name="Bot?", value=member.bot)
-            .add_field(name="Badges", value=", ".join(flags) if flags else "None")
+            .add_field(name="Badges", value=", ".join(flags) if flags else "None", inline=False)
             .add_field(
                 name="Mutual guilds with you",
                 value=", ".join(mutual_guilds) if mutual_guilds else "None",
@@ -98,22 +95,22 @@ class GeneralCog(commands.Cog):
             )
             .set_thumbnail(url=guild.icon.url if guild.icon else "")
             .add_field(
-                name="Guild creation date",
-                value=f"<t:{int(guild_create_date.timestamp())}:R>",
+                name="Creation date",
+                value=f"<t:{int(guild_create_date.timestamp())}:R> <t:{int(guild_create_date.timestamp())}:f>",
             )
             .add_field(
-                name="Member(s)",
+                name="Members",
                 value=f"Bot(s): {bots_count}\n" f"Human(s): {humans_count}\n" f"Total: {total_count}",
             )
             .add_field(
-                name="Channel(s)",
+                name="Channels",
                 value=f"{len(guild.channels)} channel(s) - {public_threads_count} public thread(s)",
             )
-            .add_field(name="Role(s) count", value=str(len(guild.roles)))
-            .add_field(name="Pending event(s) count", value=f"{len(events)} pending event(s)")
+            .add_field(name="Roles", value=str(len(guild.roles)))
+            .add_field(name="Events", value=f"{len(events)} pending event(s)")
             .add_field(
-                name="Boost(s)",
-                value=f"{boosts_count} boost(s) from {boosters_count} booster(s) reaching lvl. {boost_lvl}"
+                name="Boosts",
+                value=f"{boosts_count} boost(s) from {boosters_count} booster(s) - Level {boost_lvl}"
                 if is_boosted
                 else "Not boosted",
             )
@@ -177,7 +174,7 @@ class GeneralCog(commands.Cog):
             )
             .add_field(
                 name="Support server",
-                value=f"[Click this]({support_inv})" if support_inv else "N/A",
+                value=f"[Click me!]({support_inv})" if support_inv else "N/A",
             )
         )
 

@@ -10,6 +10,8 @@
 		"KevinRose.vsc-python-indent",
 		"tamasfe.even-better-toml",
 		"ms-python.python",
+		"ms-python.black-formatter",
+		"ms-python.isort",
 		"Gruntfuggly.todo-tree",
 		"ms-python.vscode-pylance",
 		"yzhang.markdown-all-in-one",

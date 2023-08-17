@@ -124,6 +124,8 @@ class NamelessConfig:
     __version__ = open("version.txt", "r").read().strip()
 
     # Bot description string
+    # Placeholders:
+    # - {github_url} - The link to the bot's github repo 
     __description__ = "Just a bot"
 
     # Add owners to Nameless

@@ -19,7 +19,6 @@ from nameless.customs.voice_backends import FFOpusAudioProcess, YTDLSource, YTMu
 from nameless.customs.voice_backends.errors import FFAudioProcessNoCache
 from nameless.database import CRUD
 from nameless.ui_kit import TrackSelectDropdown, VoteMenu
-from NamelessConfig import NamelessConfig
 
 
 __all__ = ["MusicNativeCog"]
@@ -533,7 +532,6 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.guild_only()
     @app_commands.describe(idx="The index to remove (1-based)")
     @app_commands.checks.has_permissions(manage_guild=True)
-    @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.queue_has_element)
     async def delete(self, interaction: discord.Interaction, idx: Range[int, 1]):
@@ -624,7 +622,6 @@ class MusicNativeCog(commands.GroupCog, name="music"):
         player.total_duration += extend_duration
 
     @app_commands.command()
-    @app_commands.guilds(*getattr(NamelessConfig, "GUILD_IDs", []))
     @app_commands.guild_only()
     @app_commands.describe(url="Radio url")
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
@@ -642,7 +639,6 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @queue.command()
     @app_commands.guild_only()
     @app_commands.describe(before="Old position", after="New position")
-    @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.queue_has_element)
@@ -668,7 +664,6 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.guild_only()
     @app_commands.describe(pos="Current position", diff="Relative difference")
     @app_commands.checks.has_permissions(manage_guild=True)
-    @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.queue_has_element)
     async def move_relative(self, interaction: discord.Interaction, pos: Range[int, 1], diff: Range[int, 0]):
@@ -683,7 +678,6 @@ class MusicNativeCog(commands.GroupCog, name="music"):
         pos1="First track position (1-indexed)",
         pos2="Second track position (1-indexed)",
     )
-    @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
     async def swap(self, interaction: discord.Interaction, pos1: Range[int, 1], pos2: Range[int, 1]):
         """Swap two tracks."""
@@ -705,7 +699,6 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.queue_has_element)
-    @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
     async def shuffle(self, interaction: discord.Interaction):
         """Shuffle the queue"""
@@ -735,7 +728,6 @@ class MusicNativeCog(commands.GroupCog, name="music"):
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.queue_has_element)
-    @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
     async def force_clear(self, interaction: discord.Interaction):
         """Clear the queue"""

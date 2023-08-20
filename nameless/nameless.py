@@ -28,7 +28,6 @@ class Nameless(commands.AutoShardedBot):
         self,
         command_prefix,
         is_debug: bool = False,
-        allow_updates_check: bool = False,
         *args,
         **kwargs,
     ):
@@ -36,8 +35,6 @@ class Nameless(commands.AutoShardedBot):
 
         self.log_level: int = logging.DEBUG if is_debug else logging.INFO
         self.is_debug = is_debug
-
-        self.allow_updates_check: bool = allow_updates_check
 
         self.loggers: list[logging.Logger] = [
             logging.getLogger(),
@@ -50,24 +47,21 @@ class Nameless(commands.AutoShardedBot):
         self.description = NamelessConfig.__description__
 
     def check_for_updates(self):
-        if not self.allow_updates_check:
-            logging.warning("Your bot might fall behind updates, consider using flag '--allow-updates-check'")
+        nameless_version = version.parse(NamelessConfig.__version__)
+        upstream_version = version.parse(shared_vars.__nameless_upstream_version__)
+
+        logging.info(
+            "Current version: %s - Upstream version: %s",
+            nameless_version,
+            upstream_version,
+        )
+
+        if nameless_version < upstream_version:
+            logging.warning("You need to update your code!")
+        elif nameless_version == upstream_version:
+            logging.info("You are using latest version!")
         else:
-            nameless_version = version.parse(NamelessConfig.__version__)
-            upstream_version = version.parse(shared_vars.__nameless_upstream_version__)
-
-            logging.info(
-                "Current version: %s - Upstream version: %s",
-                nameless_version,
-                upstream_version,
-            )
-
-            if nameless_version < upstream_version:
-                logging.warning("You need to update your code!")
-            elif nameless_version == upstream_version:
-                logging.info("You are using latest version!")
-            else:
-                logging.warning("You are using a version NEWER than original code!")
+            logging.warning("You are using a version NEWER than original code!")
 
     async def __register_all_cogs(self):
         # Sometimes os.cwd() is bad

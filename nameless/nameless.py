@@ -66,44 +66,41 @@ class Nameless(commands.AutoShardedBot):
     async def __register_all_cogs(self):
         # Sometimes os.cwd() is bad
         current_path = os.path.dirname(__file__)
+        allowed_cogs = list(filter(shared_vars.cogs_regex.match, os.listdir(f"{current_path}{os.sep}cogs")))
+        cogs = NamelessConfig.COGS
 
-        if cogs := NamelessConfig.COGS:
-            allowed_cogs = list(filter(shared_vars.cogs_regex.match, os.listdir(f"{current_path}{os.sep}cogs")))
+        for cog_name in cogs:
+            fail_reason = ""
+            full_qualified_name = f"nameless.cogs.{cog_name}Cog"
 
-            for cog_name in cogs:
-                fail_reason = ""
-                full_qualified_name = f"nameless.cogs.{cog_name}Cog"
-
-                if cog_name + "Cog.py" in allowed_cogs:
-                    try:
-                        await self.load_extension(full_qualified_name)
-                        shared_vars.loaded_cogs_list.append(full_qualified_name)
-                    except commands.ExtensionError as ex:
-                        fail_reason = str(ex)
-                        shared_vars.unloaded_cogs_list.append(full_qualified_name)
-
-                    can_load = fail_reason == ""
-                else:
-                    can_load = False
-                    fail_reason = "It does not exist in 'allowed_cogs' list."
-
-                if not can_load:
-                    logging.error("Unable to load %s! %s", cog_name, fail_reason, stack_info=True)
+            if cog_name + "Cog.py" in allowed_cogs:
+                try:
+                    await self.load_extension(full_qualified_name)
+                    shared_vars.loaded_cogs_list.append(full_qualified_name)
+                except commands.ExtensionError as ex:
+                    fail_reason = str(ex)
                     shared_vars.unloaded_cogs_list.append(full_qualified_name)
 
-            # Convert .py files to valid module names
-            loaded_cog_modules = [f"nameless.cogs.{cog.replace('.py', '')}Cog" for cog in cogs]
-            allowed_cog_modules = [f"nameless.cogs.{cog.replace('.py', '')}" for cog in allowed_cogs]
-            excluded_cogs = list(set(set(allowed_cog_modules) - set(loaded_cog_modules)))
-            shared_vars.unloaded_cogs_list.extend(excluded_cogs)
+                can_load = fail_reason == ""
+            else:
+                can_load = False
+                fail_reason = "It does not exist in 'allowed_cogs' list."
 
-            # An extra set() to exclude cogs ignored by load failure.
-            shared_vars.unloaded_cogs_list = list(set(shared_vars.unloaded_cogs_list))
+            if not can_load:
+                logging.error("Unable to load %s! %s", cog_name, fail_reason, stack_info=True)
+                shared_vars.unloaded_cogs_list.append(full_qualified_name)
 
-            logging.debug("Loaded cog list: [ %s ]", ", ".join(shared_vars.loaded_cogs_list))
-            logging.debug("Excluded cog list: [ %s ]", ", ".join(shared_vars.unloaded_cogs_list))
-        else:
-            logging.warning("NamelessConfig.COGS is None or non-existence, nothing will be loaded.")
+        # Convert .py files to valid module names
+        loaded_cog_modules = [f"nameless.cogs.{cog.replace('.py', '')}Cog" for cog in cogs]
+        allowed_cog_modules = [f"nameless.cogs.{cog.replace('.py', '')}" for cog in allowed_cogs]
+        excluded_cogs = list(set(set(allowed_cog_modules) - set(loaded_cog_modules)))
+        shared_vars.unloaded_cogs_list.extend(excluded_cogs)
+
+        # An extra set() to exclude cogs ignored by load failure.
+        shared_vars.unloaded_cogs_list = list(set(shared_vars.unloaded_cogs_list))
+
+        logging.debug("Loaded cog list: [ %s ]", ", ".join(shared_vars.loaded_cogs_list))
+        logging.debug("Excluded cog list: [ %s ]", ", ".join(shared_vars.unloaded_cogs_list))
 
     async def on_shard_ready(self, shard_id: int):
         logging.info("Shard #%s is ready", shard_id)

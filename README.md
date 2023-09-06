@@ -3,6 +3,7 @@
 ## This 👏 is 👏 *nameless** 👏
 
 *We need a logo right here.*
+*This branch is only for archiving purposes. Process with caution!!*
 
 An upgrade of [original nameless*](https://github.com/FoxeiZ/nameless), with [collaborative efforts 💪](https://github.com/nameless-on-discord/nameless/graphs/contributors). Written with ~~bloatwares~~ *usability and customizations* in mind.
 

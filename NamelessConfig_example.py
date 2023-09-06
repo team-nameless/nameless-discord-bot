@@ -118,6 +118,11 @@ class NamelessOsu:
     CLIENT_SECRET: LiteralString = ""
 
 
+class NamelessBlacklist:
+    USER_BLACKLIST: list[int] = []
+    GUILD_BLACKLIST: list[int] = []
+
+
 class NamelessConfig:
     # Current version of nameless.
     # I ill advise you to NOT change this line
@@ -125,7 +130,7 @@ class NamelessConfig:
 
     # Bot description string
     # Placeholders:
-    # - {github_url} - The link to the bot's github repo 
+    # - {github_url} - The link to the bot's github repo
     __description__ = "Just a bot"
 
     # Add owners to Nameless
@@ -135,6 +140,9 @@ class NamelessConfig:
     # Otherwise, leave their IDs here: Right-click on a user -> Copy ID
     OWNERS: list[int] = []
 
+    BLACKLISTS: NamelessBlacklist = NamelessBlacklist()
+
+    # Gateway intents to run
     INTENT: NamelessIntent = NamelessIntent()
 
     # Bot token

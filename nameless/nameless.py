@@ -7,6 +7,7 @@ import aiohttp
 import discord
 from discord.ext import commands
 from discord.ext.commands import errors
+from discord.message import Message
 from packaging import version
 from sqlalchemy.orm import close_all_sessions
 
@@ -225,7 +226,7 @@ class Nameless(commands.AutoShardedBot):
 
         await super().close()
 
-    async def is_owner(self, user: discord.User, /) -> bool:
+    async def is_owner(self, user: discord.User | discord.Member, /) -> bool:
         the_app = self.application
         assert the_app is not None
 
@@ -291,6 +292,23 @@ class Nameless(commands.AutoShardedBot):
 
         # Debug data
         logging.debug("Bot start time: %s", shared_vars.start_time)
+
+    async def on_message(self, message: Message):
+        if not self.is_blacklisted(message.author, message.guild):
+            await super().on_message(message)
+
+    def is_blacklisted(self, user: discord.User | discord.Member, guild: discord.Guild | None) -> bool:
+        # The owners, even if they are in the blacklist, can still use the bot
+        if self.is_owner(user):
+            return False
+
+        if guild.id in NamelessConfig.BLACKLISTS.GUILD_BLACKLIST:
+            return True
+
+        if user.id in NamelessConfig.BLACKLISTS.USER_BLACKLIST:
+            return True
+
+        return False
 
     def start_bot(self):
         self.run(NamelessConfig.TOKEN, log_handler=None)

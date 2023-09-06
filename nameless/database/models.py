@@ -3,7 +3,7 @@ from typing import Union
 
 import discord
 from sqlalchemy import Column
-from sqlalchemy.orm import declarative_base  # pyright: ignore
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql.sqltypes import *
 
 

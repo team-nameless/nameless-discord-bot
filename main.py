@@ -7,6 +7,7 @@ from discord.app_commands import AppCommandError, errors
 from discord.ext import commands
 
 from nameless import Nameless
+from nameless.customs.NamelessCommandTree import NamelessCommandTree
 from NamelessConfig import NamelessConfig
 
 
@@ -20,6 +21,7 @@ intents.members = NamelessConfig.INTENT.MEMBER
 
 nameless = Nameless(
     intents=intents,
+    tree_cls=NamelessCommandTree,
     is_debug=DEBUG_FLAG in args,
     command_prefix=commands.when_mentioned_or(*NamelessConfig.PREFIXES),
     description=NamelessConfig.__description__,

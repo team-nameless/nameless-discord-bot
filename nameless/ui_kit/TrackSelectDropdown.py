@@ -1,18 +1,14 @@
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional
 
 import discord
 import wavelink
 
-from nameless.cogs.MusicNativeCog import YTDLSource
-
 
 __all__ = ["TrackSelectDropdown"]
 
-TrackT_ = Union[wavelink.Playable, YTDLSource]
-
 
 class TrackSelectDropdown(discord.ui.Select):
-    def __init__(self, tracks: List[TrackT_]):
+    def __init__(self, tracks: List[wavelink.Playable]):
         options = [
             discord.SelectOption(
                 label="I don't see my results here",

@@ -285,12 +285,12 @@ class Nameless(commands.AutoShardedBot):
         logging.debug("Bot start time: %s", shared_vars.start_time)
 
     async def on_message(self, message: Message):
-        if not self.is_blacklisted(message.author, message.guild):
+        if not await self.is_blacklisted(message.author, message.guild):
             await super().on_message(message)
 
-    def is_blacklisted(self, user: discord.User | discord.Member, guild: discord.Guild | None) -> bool:
+    async def is_blacklisted(self, user: discord.User | discord.Member, guild: discord.Guild | None) -> bool:
         # The owners, even if they are in the blacklist, can still use the bot
-        if self.is_owner(user):
+        if await self.is_owner(user):
             return False
 
         if guild.id in NamelessConfig.BLACKLISTS.GUILD_BLACKLIST:

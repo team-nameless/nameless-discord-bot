@@ -2,12 +2,14 @@ import discord
 from discord import ui
 
 
-__all__ = ["GreeterMessageModal"]
+__all__ = ["NamelessModal"]
 
 
-class GreeterMessageModal(ui.Modal, title="New greeter text"):
-    def __init__(self, initial_text: str | None = None):
+class NamelessModal(ui.Modal):
+    def __init__(self, *, title: str, initial_text: str | None = None):
         super().__init__()
+
+        self.title = title
 
         if initial_text is not None:
             self.text.default = initial_text

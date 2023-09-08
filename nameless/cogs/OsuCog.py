@@ -11,7 +11,7 @@ from reactionmenu import ViewButton, ViewMenu
 
 from nameless import Nameless
 from nameless.database import CRUD
-from nameless.ui_kit import YesNoButtonPrompt
+from nameless.ui_kit import NamelessYNPrompt
 from NamelessConfig import NamelessConfig
 
 
@@ -198,7 +198,7 @@ class OsuCog(commands.GroupCog, name="osu"):
 
             # fail inclusion prompt
             if not is_from_context and request == "recent_scores":
-                fail_prompt = YesNoButtonPrompt()
+                fail_prompt = NamelessYNPrompt()
                 fail_prompt.timeout = 30
                 m = await m.edit(content="Do you want to include fail scores?", view=fail_prompt)
 

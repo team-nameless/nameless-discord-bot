@@ -3,17 +3,16 @@ from datetime import timedelta
 from typing import Awaitable, Callable, Literal
 
 import discord
-from discord import Forbidden, HTTPException, app_commands
+from discord import HTTPException, app_commands
 from discord.app_commands import Range
 from discord.ext import commands
 
 import nameless
 from nameless.database.crud import CRUD
+from nameless.ui_kit import NamelessYNPrompt
 
 
 __all__ = ["ModeratorCog"]
-
-from nameless.ui_kit import YesNoButtonPrompt
 
 
 class ModeratorCog(commands.GroupCog, name="mod"):
@@ -45,7 +44,7 @@ class ModeratorCog(commands.GroupCog, name="mod"):
                 await action_function(member, reason=reason)
 
             response += "And it was successful."
-        except Forbidden:
+        except discord.Forbidden:
             response += "And I lack the permissions to do it."
         except HTTPException:
             response += "And Discord refused to do it."
@@ -119,7 +118,7 @@ class ModeratorCog(commands.GroupCog, name="mod"):
         use_native_timeout = db_guild.is_timeout_preferred
 
         if not use_native_timeout and not mute_role:
-            prompt = YesNoButtonPrompt()
+            prompt = NamelessYNPrompt()
             prompt.timeout = 30
 
             m = await interaction.followup.send(

@@ -15,11 +15,10 @@ from discord.ext import commands
 from discord.utils import escape_markdown
 
 from nameless import Nameless, shared_vars
+from nameless.customs import Autocomplete
 
 
 __all__ = ["OwnerCog"]
-
-from nameless.customs import Autocomplete
 
 
 class OwnerCog(commands.Cog):

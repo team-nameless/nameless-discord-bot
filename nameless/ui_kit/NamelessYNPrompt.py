@@ -1,10 +1,10 @@
 import discord
 
 
-__all__ = ["YesNoButtonPrompt"]
+__all__ = ["NamelessYNPrompt"]
 
 
-class YesNoButtonPrompt(discord.ui.View):
+class NamelessYNPrompt(discord.ui.View):
     def __init__(self):
         super().__init__()
         self.is_confirmed = False

@@ -9,7 +9,7 @@ from discord.ext import commands
 import nameless
 from nameless.cogs.checks import BaseCheck
 from nameless.database import CRUD
-from nameless.ui_kit import GreeterMessageModal
+from nameless.ui_kit import NamelessModal
 
 
 __all__ = ["ConfigCog"]
@@ -92,7 +92,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         """Change greeter welcome message"""
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
 
-        modal = GreeterMessageModal(db_guild.welcome_message if edit_text else None)
+        modal = NamelessModal(title="New welcome text", initial_text=db_guild.welcome_message if edit_text else None)
         modal.text.label = "Greeter welcome text"
 
         await interaction.response.send_modal(modal)
@@ -112,7 +112,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         """Change goodbye message"""
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
 
-        modal = GreeterMessageModal(db_guild.goodbye_message if edit_text else None)
+        modal = NamelessModal(title="New goodbye text", initial_text=db_guild.goodbye_message if edit_text else None)
         modal.text.label = "Greeter goodbye text"
 
         await interaction.response.send_modal(modal)

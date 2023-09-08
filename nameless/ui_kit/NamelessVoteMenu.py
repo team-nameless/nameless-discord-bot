@@ -5,12 +5,12 @@ import discord
 import wavelink
 
 
-__all__ = ["VoteMenu"]
+__all__ = ["NamelessVoteMenu"]
 
 VoiceClientT_ = Union[discord.VoiceClient, wavelink.Player]
 
 
-class VoteMenuView(discord.ui.View):
+class NamelessVoteMenuView(discord.ui.View):
     __slots__ = ("user", "value")
 
     def __init__(self):
@@ -37,7 +37,7 @@ class VoteMenuView(discord.ui.View):
         return True
 
 
-class VoteMenu:
+class NamelessVoteMenu:
     __slots__ = (
         "action",
         "content",
@@ -58,7 +58,7 @@ class VoteMenu:
         self.action = action
         self.content = f"{content[:50]}..."
         self.interaction = interaction
-        self.max_vote_user = math.ceil(len(voice_client.channel.members) / 2)
+        self.max_vote_user = math.ceil(len(voice_client.channel.members) / 2)  # pyright: ignore
         self.total_vote = 1
 
         self.approve_member: List[str] = [interaction.user.mention]
@@ -71,7 +71,7 @@ class VoteMenu:
         await self.interaction.response.edit_message(embed=self.__eb())
 
         while len(self.disapprove_member) < self.max_vote_user and len(self.approve_member) < self.max_vote_user:
-            menu = VoteMenuView()
+            menu = NamelessVoteMenuView()
             await self.interaction.response.edit_message(embed=self.__eb(), view=menu)
             await menu.wait()
 

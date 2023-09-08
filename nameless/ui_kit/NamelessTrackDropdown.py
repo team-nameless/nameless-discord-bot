@@ -1,15 +1,19 @@
-from typing import Any, List, Optional
+from typing import List
 
 import discord
 import wavelink
 
+from nameless.ui_kit import NamelessDropdown
 
-__all__ = ["TrackSelectDropdown"]
+
+__all__ = ["NamelessTrackDropdown"]
 
 
-class TrackSelectDropdown(discord.ui.Select):
+class NamelessTrackDropdown(NamelessDropdown):
     def __init__(self, tracks: List[wavelink.Playable]):
-        options = [
+        super().__init__()
+        
+        self.options = [
             discord.SelectOption(
                 label="I don't see my results here",
                 description="Nothing here!",
@@ -24,16 +28,9 @@ class TrackSelectDropdown(discord.ui.Select):
             )
             for index, track in enumerate(tracks[:25])
         ]
+        
+        self.custom_id = "music-pick-select"
+        self.placeholder = "Choose your tracks"
+        self.min_values = 1
+        self.max_values = 10
 
-        super().__init__(
-            custom_id="music-pick-select",
-            placeholder="Choose your tracks",
-            min_values=1,
-            max_values=10,
-            options=options,
-        )
-
-    async def callback(self, _: discord.Interaction) -> Any:
-        v: Optional[discord.ui.View] = self.view
-        if v:
-            v.stop()

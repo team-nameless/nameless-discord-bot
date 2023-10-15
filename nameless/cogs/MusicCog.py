@@ -179,21 +179,21 @@ class MusicCog(commands.GroupCog, name="music"):
             if self.can_use_spotify
             else None,
         )
-        
+
         if not self.is_ready.is_set():
             self.is_ready.set()
 
     @commands.Cog.listener()
     async def on_wavelink_node_ready(self, node: wavelink.Node):
         logging.info("Node {%s} (%s) is ready!", node.id, node.uri)
-        
+
     @staticmethod
     async def list_voice_state_change(before: discord.VoiceState, after: discord.VoiceState):
         """Method to check what has been updated in voice state."""
         # diff = []
         # for k in before.__slots__:
         #     if getattr(before, k) != getattr(after, k):
-        #         diff.append(k)      
+        #         diff.append(k)
         return [k for k in before.__slots__ if getattr(before, k) != getattr(after, k)]
 
     @commands.Cog.listener()
@@ -207,7 +207,7 @@ class MusicCog(commands.GroupCog, name="music"):
         changes = await self.list_voice_state_change(before, after)
         if "channel" not in changes:
             return
-        
+
         # Technically auto disconnect the bot from lavalink if no member present for 120 seconds
         chn = before.channel if before.channel else after.channel
         guild = chn.guild
@@ -330,7 +330,7 @@ class MusicCog(commands.GroupCog, name="music"):
         Connect to your current voice channel.
         """
         await interaction.response.defer()
-        
+
         # A rare case where LavaLink node is slow to connect and causes an error
         if not self.is_ready.is_set():
             await interaction.followup.send("Waiting for the bot to connect to all Lavalink nodes...")

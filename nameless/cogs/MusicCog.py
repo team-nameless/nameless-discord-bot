@@ -186,6 +186,15 @@ class MusicCog(commands.GroupCog, name="music"):
     @commands.Cog.listener()
     async def on_wavelink_node_ready(self, node: wavelink.Node):
         logging.info("Node {%s} (%s) is ready!", node.id, node.uri)
+        
+    @staticmethod
+    async def list_voice_state_change(before: discord.VoiceState, after: discord.VoiceState):
+        """Method to check what has been updated in voice state."""
+        # diff = []
+        # for k in before.__slots__:
+        #     if getattr(before, k) != getattr(after, k):
+        #         diff.append(k)      
+        return [k for k in before.__slots__ if getattr(before, k) != getattr(after, k)]
 
     @commands.Cog.listener()
     async def on_voice_state_update(
@@ -194,9 +203,15 @@ class MusicCog(commands.GroupCog, name="music"):
         before: discord.VoiceState,
         after: discord.VoiceState,
     ):
+        # only handle member join/leave voice chat
+        changes = await self.list_voice_state_change(before, after)
+        if "channel" not in changes:
+            return
+        
         # Technically auto disconnect the bot from lavalink if no member present for 120 seconds
         chn = before.channel if before.channel else after.channel
-        guild = before.channel.guild if before.channel else after.channel.guild
+        guild = chn.guild
+        # guild = before.channel.guild if before.channel else after.channel.guild
 
         voice_members = [member for member in chn.members if member.id != self.bot.user.id]
         bot_is_in_vc = any(member for member in chn.members if member.id == self.bot.user.id)

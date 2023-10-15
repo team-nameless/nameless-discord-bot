@@ -550,17 +550,21 @@ class MusicCog(commands.GroupCog, name="music"):
 
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
         track: wavelink.Playable = vc.current  # pyright: ignore
-        print(vc.position)
 
         thumbnail_url: str = await track.fetch_thumbnail() if isinstance(track, wavelink.YouTubeTrack) else ""
 
         is_stream = track.is_stream
         dbg = CRUD.get_or_create_guild_record(interaction.guild)
 
+        def add_icon():
+            icon = "⏸️" if vc.is_paused() else "▶️"
+            icon += "🔂" if vc.queue.loop else ("🔁" if vc.queue.loop_all else "")
+            return icon
+
         embed = (
             discord.Embed(timestamp=datetime.datetime.now(), color=discord.Color.orange())
             .set_author(
-                name="Now playing track",
+                name=f"{add_icon()} Now playing {'stream' if is_stream else 'track'}",
                 icon_url=interaction.user.display_avatar.url,
             )
             .add_field(
@@ -584,8 +588,8 @@ class MusicCog(commands.GroupCog, name="music"):
                     else f"{convert_time(vc.position)}/{convert_time(track.length)}"
                 ),
             )
-            .add_field(name="Looping", value="This is a stream" if is_stream else vc.queue.loop)
-            .add_field(name="Paused", value=vc.is_paused())
+            # .add_field(name="Looping", value="This is a stream" if is_stream else vc.queue.loop)
+            # .add_field(name="Paused", value=vc.is_paused())
             .set_thumbnail(url=thumbnail_url)
         )
 

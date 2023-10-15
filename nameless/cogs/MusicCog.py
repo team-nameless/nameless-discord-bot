@@ -33,6 +33,7 @@ class MusicCog(commands.GroupCog, name="music"):
     def __init__(self, bot: Nameless):
         self.bot = bot
         self.can_use_spotify = bool((sp := NamelessConfig.MUSIC.SPOTIFY) and sp.CLIENT_ID and sp.CLIENT_SECRET)
+        self.is_ready = asyncio.Event()
 
         if not self.can_use_spotify:
             logging.warning("Spotify command option will be removed since you did not provide enough credentials.")
@@ -178,6 +179,9 @@ class MusicCog(commands.GroupCog, name="music"):
             if self.can_use_spotify
             else None,
         )
+        
+        if not self.is_ready.is_set():
+            self.is_ready.set()
 
     @commands.Cog.listener()
     async def on_wavelink_node_ready(self, node: wavelink.Node):
@@ -274,7 +278,7 @@ class MusicCog(commands.GroupCog, name="music"):
         if tracks:
             track = tracks[0]
             if is_radio and not track.is_stream:
-                raise AppCommandError("Radio track must be a stream")
+                raise AppCommandError("Radio track must be a direct URL to a stream.")
 
             setattr(vc, "should_send_play_now", True)
             await interaction.channel.send(f"Streaming music from {url}")  # pyright: ignore
@@ -311,6 +315,11 @@ class MusicCog(commands.GroupCog, name="music"):
         Connect to your current voice channel.
         """
         await interaction.response.defer()
+        
+        # A rare case where LavaLink node is slow to connect and causes an error
+        if not self.is_ready.is_set():
+            await interaction.followup.send("Waiting for the bot to connect to all Lavalink nodes...")
+            await self.is_ready.wait()
 
         try:
             await interaction.user.voice.channel.connect(cls=wavelink.Player, self_deaf=True)  # pyright: ignore

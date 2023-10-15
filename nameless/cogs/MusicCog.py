@@ -535,10 +535,22 @@ class MusicCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.bot_is_playing_something)
     async def now_playing(self, interaction: discord.Interaction, show_next_track: bool = True):
         """Check now playing song"""
+
+        def convert_time(milli):
+            td = str(datetime.timedelta(milliseconds=milli)).split(".")[0].split(":")
+            after_td = []
+            for t in td:
+                if t == "0":
+                    continue
+                after_td.append(t.zfill(2))
+
+            return ":".join(after_td)
+
         await interaction.response.defer()
 
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
         track: wavelink.Playable = vc.current  # pyright: ignore
+        print(vc.position)
 
         thumbnail_url: str = await track.fetch_thumbnail() if isinstance(track, wavelink.YouTubeTrack) else ""
 
@@ -569,8 +581,7 @@ class MusicCog(commands.GroupCog, name="music"):
                 value=str(
                     discord.utils.utcnow().replace(tzinfo=None) - dbg.radio_start_time
                     if is_stream
-                    else f"{datetime.timedelta(milliseconds=vc.position)}/"
-                    f"{datetime.timedelta(milliseconds=track.length)}"
+                    else f"{convert_time(vc.position)}/{convert_time(track.length)}"
                 ),
             )
             .add_field(name="Looping", value="This is a stream" if is_stream else vc.queue.loop)

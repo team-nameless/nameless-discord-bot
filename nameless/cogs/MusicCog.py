@@ -251,7 +251,7 @@ class MusicCog(commands.GroupCog, name="music"):
                 build_title = track.title if not track.uri else f"[{track.title}](<{track.uri}>)"
                 build_artist = f"by {track.author}" if track.author else ""
                 await chn.send(f"Playing: {build_title} {build_artist}")  # pyright: ignore
-                # await chn.send(f"Playing: **{track.title}** from **{track.author}** ({track.uri})")  # pyright: ignore
+                # await chn.send(f"Playing: **{track.title}** from **{track.author}** ({track.uri})")
 
     async def __preprocess_radio_then_play(
         self, interaction: discord.Interaction, message: discord.WebhookMessage, url: str, is_radio: bool = False
@@ -333,9 +333,14 @@ class MusicCog(commands.GroupCog, name="music"):
         """Disconnect from my current voice channel"""
         await interaction.response.defer()
 
+        vc = interaction.guild.voice_client  # type: ignore
+        if not vc:
+            await interaction.followup.send("I am not connected to a voice channel")
+            return
+
         try:
-            await interaction.guild.voice_client.disconnect(force=True)
-            interaction.guild.voice_client.cleanup()
+            await vc.disconnect(force=True)
+            vc.cleanup()
             await interaction.followup.send("Disconnected from my own voice channel")
         except AttributeError:
             await interaction.followup.send("I am already disconnected!")

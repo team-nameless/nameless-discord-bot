@@ -1,10 +1,12 @@
 import discord
+import wavelink
 from discord.app_commands import CheckFailure
+
 from nameless.cogs.checks import BaseCheck
 
-import wavelink
 
 __all__ = ["MusicCogCheck"]
+
 
 class MusicCogCheck(BaseCheck):
     @staticmethod
@@ -28,7 +30,7 @@ class MusicCogCheck(BaseCheck):
     @staticmethod
     def bot_must_play_track_not_stream(interaction: discord.Interaction):
         return MusicCogCheck.bot_is_playing_something(interaction) and MusicCogCheck.must_not_be_a_stream(interaction)
-    
+
     @staticmethod
     def user_and_bot_in_voice(interaction: discord.Interaction):
         return MusicCogCheck.bot_in_voice(interaction) and MusicCogCheck.user_in_voice(interaction)
@@ -68,7 +70,7 @@ class MusicCogCheck(BaseCheck):
     @staticmethod
     def bot_is_playing_something(interaction: discord.Interaction):
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
-        
+
         if vc and not vc.is_playing():
             raise CheckFailure("I need to play something.")
 

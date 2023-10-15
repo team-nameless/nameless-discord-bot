@@ -12,7 +12,7 @@ __all__ = ["NamelessTrackDropdown"]
 class NamelessTrackDropdown(NamelessDropdown):
     def __init__(self, tracks: List[wavelink.Playable]):
         super().__init__()
-        
+
         self.options = [
             discord.SelectOption(
                 label="I don't see my results here",
@@ -28,9 +28,8 @@ class NamelessTrackDropdown(NamelessDropdown):
             )
             for index, track in enumerate(tracks[:25])
         ]
-        
+
         self.custom_id = "music-pick-select"
         self.placeholder = "Choose your tracks"
         self.min_values = 1
         self.max_values = 10
-

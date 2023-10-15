@@ -318,6 +318,7 @@ class MusicCog(commands.GroupCog, name="music"):
             setattr(vc, "should_send_play_now", True)
             setattr(vc, "play_now_allowed", True)
             setattr(vc, "trigger_channel_id", interaction.channel.id)
+            setattr(vc, "auto_play_queue", True)
             vc.autoplay = True
         except ClientException:
             await interaction.followup.send("Already connected")
@@ -381,6 +382,19 @@ class MusicCog(commands.GroupCog, name="music"):
 
         vc.queue.loop_all = not vc.queue.loop_all
         await interaction.followup.send(f"Queue loop set to {'on' if vc.queue.loop_all else 'off'}")
+
+    @app_commands.command()
+    @app_commands.guild_only()
+    async def toggle_autoplay_queue(self, interaction: discord.Interaction):
+        """Toggle autoplay of current queue."""
+        await interaction.response.defer()
+
+        vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
+
+        setattr(vc, "auto_play_queue", not getattr(vc, "auto_play_queue", False))
+        await interaction.followup.send(
+            f"Queue auto play set to {'on' if getattr(vc, 'auto_play_queue', False) else 'off'}"
+        )
 
     @app_commands.command()
     @app_commands.guild_only()
@@ -644,6 +658,8 @@ class MusicCog(commands.GroupCog, name="music"):
         await interaction.response.defer()
 
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
+        play_after = not vc.is_playing() and vc.queue.is_empty and getattr(vc, "auto_play_queue", False)
+        print(f"DEBUG: play_after: {play_after}")
 
         if search_cls := self.resolve_direct_url(search):
             track = (await vc.current_node.get_tracks(search_cls, search))[0]
@@ -654,6 +670,9 @@ class MusicCog(commands.GroupCog, name="music"):
 
             vc.queue.put(track)
             await interaction.followup.send(f"Added `{track.title}` into the queue")
+
+            if play_after:
+                await vc.play(vc.queue.get(), populate=vc.autoplay)  # type: ignore
             return
 
         sources: Dict[str, Any] = {
@@ -700,6 +719,9 @@ class MusicCog(commands.GroupCog, name="music"):
 
         embeds = self.generate_embeds_from_tracks(soon_to_add_queue)
         self.bot.loop.create_task(self.show_paginated_tracks(interaction, embeds))
+
+        if play_after:
+            await vc.play(vc.queue.get(), populate=vc.autoplay)  # type: ignore
 
     @queue.command()
     @app_commands.guild_only()

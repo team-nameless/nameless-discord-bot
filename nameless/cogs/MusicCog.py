@@ -248,7 +248,10 @@ class MusicCog(commands.GroupCog, name="music"):
                 await chn.send(f"Playing: **{track.title}** from **{track.author}** ({track.uri})")  # pyright: ignore
             """
             if not track.is_stream:
-                await chn.send(f"Playing: **{track.title}** from **{track.author}** ({track.uri})")  # pyright: ignore
+                build_title = track.title if not track.uri else f"[{track.title}](<{track.uri}>)"
+                build_artist = f"by {track.author}" if track.author else ""
+                await chn.send(f"Playing: {build_title} {build_artist}")  # pyright: ignore
+                # await chn.send(f"Playing: **{track.title}** from **{track.author}** ({track.uri})")  # pyright: ignore
 
     async def __preprocess_radio_then_play(
         self, interaction: discord.Interaction, message: discord.WebhookMessage, url: str, is_radio: bool = False

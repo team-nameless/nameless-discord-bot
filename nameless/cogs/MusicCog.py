@@ -659,7 +659,6 @@ class MusicCog(commands.GroupCog, name="music"):
 
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
         play_after = not vc.is_playing() and vc.queue.is_empty and getattr(vc, "auto_play_queue", False)
-        print(f"DEBUG: play_after: {play_after}")
 
         if search_cls := self.resolve_direct_url(search):
             track = (await vc.current_node.get_tracks(search_cls, search))[0]

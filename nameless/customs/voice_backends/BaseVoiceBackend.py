@@ -1,173 +1,125 @@
-from typing import Any, Callable, Coroutine, List, Union
+import asyncio
+import json
+from typing import Optional
 
-import discord
+import aiohttp
 import wavelink
-from discord.ext import commands
-from wavelink.ext.spotify import SpotifyTrack
+from wavelink import NodePool, TrackEventPayload
+from wavelink.enums import TrackSource
+from wavelink.exceptions import QueueEmpty
 
 
-TrackT_ = Union[discord.AudioSource, wavelink.Playable, SpotifyTrack]
-PlayerT_ = Union[discord.VoiceClient, wavelink.Player]
-
-
-class BaseVoiceCog(commands.GroupCog, name="voice"):
+class Player(wavelink.Player):
     @staticmethod
-    async def sync_async_runner(callback: Callable) -> Any:
-        """Why wavelink. Why you make me do this..."""
-        ret = callback()
-        if isinstance(ret, Coroutine):
-            return await ret
+    async def requests(http_session: aiohttp.ClientSession, url, *args, **kwargs) -> Optional[dict]:
+        async with http_session.post(url, *args, **kwargs) as resp:
+            if resp.status == 200:
+                try:
+                    return await resp.json()
+                except json.JSONDecodeError:
+                    return None
 
-        return ret
+            raise asyncio.InvalidStateError(f"Failed to get {url}: Get {resp.status}")
 
-    async def initialize(self, interaction: discord.Interaction, guild):
-        raise NotImplementedError(f"{__class__.__name__}.initialize is not implemented")
+    async def _populate_youtube(
+        self, session: aiohttp.ClientSession, track: wavelink.Playable
+    ) -> Optional[list[wavelink.Playable]]:
+        data = await self.requests(
+            session,
+            "https://www.youtube.com/youtubei/v1/next?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8",
+            json={
+                "context": {
+                    "client": {
+                        "hl": "en",
+                        "gl": "US",
+                        "clientName": "WEB",
+                        "clientVersion": "2.20220809.02.00",
+                        "originalUrl": "https://www.youtube.com",
+                        "platform": "DESKTOP",
+                    },
+                },
+                "videoId": track.identifier,
+                "racyCheckOk": True,
+                "contentCheckOk": True,
+            },
+            headers={
+                "Origin": "https://www.youtube.com",
+                "Referer": "https://www.youtube.com/",
+            },
+        )
 
-    async def connect(self, interaction: discord.Interaction, channel: discord.VoiceChannel):
-        await interaction.response.defer()
-        await interaction.followup.send("`connect` is not define in this bot")
-
-    async def leave(self, interaction: discord.Interaction, channel: discord.VoiceChannel):
-        await interaction.response.defer()
-        await interaction.followup.send("`leave` is not define in this bot")
-
-    async def play(self, interaction: discord.Interaction, source: TrackT_, *args):
-        """Start playing the queue."""
-        await interaction.response.defer()
-
-        vc: PlayerT_ = interaction.guild.voice_client  # pyright: ignore
-
-        # When the user switch from radio -> normal queued track
-        vc.queue.loop = False  # type: ignore
-        setattr(vc, "should_send_play_now", True)
-
-        await interaction.followup.send("The queue should be playing now.")
-        await vc.play(vc.queue.get(), populate=vc.autoplay)  # pyright: ignore
-
-    async def pause(self, interaction: discord.Interaction):
-        """Pause current track"""
-        await interaction.response.defer()
-
-        vc: PlayerT_ = interaction.guild.voice_client  # type: ignore
-
-        if vc.is_paused():
-            await interaction.followup.send("Already paused")
+        if not data:
             return
 
-        ret = vc.pause()
-        if isinstance(ret, Coroutine):
-            await ret
+        related = data["contents"]["twoColumnWatchNextResults"]["secondaryResults"]["secondaryResults"]["results"]
 
-        await interaction.followup.send("Paused")
+        for item in related:
+            res = item.get("compactRadioRenderer", False)
 
-    async def resume(self, interaction: discord.Interaction):
-        """Resume current playback, if paused"""
-        await interaction.response.defer()
+            if not res:
+                continue
 
-        vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
+            playlist = await NodePool.get_playlist(res["shareUrl"], cls=wavelink.YouTubePlaylist, node=None)  # type: ignore  # noqa: E501
+            return playlist.tracks  # type: ignore
 
-        if not vc.is_paused():
-            await interaction.followup.send("Already resuming")
-            return
+        playlist = []
+        for item in related:
+            res = item.get("compactVideoRenderer", False)
 
-        await vc.resume()
-        await interaction.followup.send("Resumed")
+            if not res:
+                continue
 
-    async def toggle_loop_track(self, interaction: discord.Interaction):
-        """Toggle loop of current track."""
-        await interaction.response.defer()
+            playlist.append(await NodePool.get_tracks(f"https://www.youtube.com/watch?v={res['videoId']}", wavelink.YouTubeTrack)[0])  # type: ignore  # noqa: E501
+        return playlist
 
-        vc: PlayerT_ = interaction.guild.voice_client  # type: ignore
-        if not vc.queue:  # type: ignore
-            return
-
-        vc.queue.loop = not vc.queue.loop  # type: ignore
-        setattr(vc, "should_send_play_now", not vc.queue.loop)  # type: ignore
-        await interaction.followup.send(f"Track loop set to {'on' if vc.queue.loop else 'off'}")  # type: ignore
-
-    async def toggle_loop_queue(self, interaction: discord.Interaction):
-        """Toggle loop of current queue."""
-        await interaction.response.defer()
-
-        vc: PlayerT_ = interaction.guild.voice_client  # pyright: ignore
-
-        if vc.queue.loop:  # type: ignore
-            await interaction.followup.send("You must have track looping disabled before using this.")
-            return
-
-        vc.queue.loop_all = not vc.queue.loop_all  # type: ignore
-        await interaction.followup.send(f"Queue loop set to {'on' if vc.queue.loop_all else 'off'}")  # type: ignore
-
-    async def toggle_now_playing(self, interaction: discord.Interaction):
-        """Toggle 'Now playing' message delivery on every non-looping track."""
-        await interaction.response.defer()
-
-        vc: PlayerT_ = interaction.guild.voice_client  # pyright: ignore
-        setattr(vc, "play_now_allowed", not getattr(vc, "play_now_allowed"))
-
-        await interaction.followup.send(f"'Now playing' is now {'on' if getattr(vc, 'play_now_allowed') else 'off'}")
-
-    async def toggle_autoplay(self, interaction: discord.Interaction):
-        await interaction.response.defer()
-        await interaction.followup.send("`toggle_autoplay` is not define in this bot")
-
-    async def radio(self, interaction: discord.Interaction, source: str):
-        await interaction.response.defer()
-        await interaction.followup.send("`radio` is not define in this bot")
-
-    async def skip(self, interaction: discord.Interaction):
-        await interaction.response.defer()
-        await interaction.followup.send("`skip` is not define in this bot")
-
-    async def seek_percent(self, interaction: discord.Interaction, percent: int):
-        await interaction.response.defer()
-        await interaction.followup.send("`seek_percent` is not define in this bot")
-
-    async def seek(self, interaction: discord.Interaction, milisecond: int):
-        await interaction.response.defer()
-        await interaction.followup.send("`seek` is not define in this bot")
-
-    async def now_playing(self, interaction: discord.Interaction):
-        await interaction.response.defer()
-        await interaction.followup.send("`now_playing` is not define in this bot")
-
-    async def queue_view(self, interaction: discord.Interaction):
-        ...
-
-    async def queue_view_autoplay(self, interaction: discord.Interaction):
-        ...
-
-    async def queue_add(self, interaction: discord.Interaction, source: TrackT_):
-        ...
-
-    async def queue_add_playlist(self, interaction: discord.Interaction, source: str):
-        ...
-
-    async def queue_delete(self, interaction: discord.Interaction, index: int):
-        ...
-
-    async def queue_move(self, interaction: discord.Interaction, _from: int, _to: int):
-        ...
-
-    async def queue_move_relative(self, interaction: discord.Interaction, _from: int, _difference: int):
-        ...
-
-    async def queue_swap(self, interaction: discord.Interaction, q: List, pos1: int, pos2: int):
-        """Swap two tracks."""
-        await interaction.response.defer()
-        q_length = len(q)
-
-        if not (1 <= pos1 <= q_length and 1 <= pos2 <= q_length):
-            await interaction.followup.send(f"Invalid position(s): ({pos1}, {pos2})")
-            return
-
-        q[pos1 - 1], q[pos2 - 1] = q[pos2 - 1], q[pos1 - 1]
-        await interaction.followup.send(f"Swapped track #{pos1} and #{pos2}")
-
-
-class ExampleCog(BaseVoiceCog):
-    def __init__(self) -> None:
+    async def _populate_local(self, session: aiohttp.ClientSession, track: wavelink.Playable):
         pass
 
-    async def test_swap(self, interaction: discord.Interaction, pos1: int, pos2: int):
-        return await super().queue_swap(interaction, [1, 2, 3], pos1, pos2)
+    async def _populate_soundcloud(self, session: aiohttp.ClientSession, track: wavelink.Playable):
+        pass
+
+    async def _populate_ytmusic(self, session: aiohttp.ClientSession, track: wavelink.Playable):
+        pass
+
+    async def _populate(self, payload: TrackEventPayload):
+        func_ = {
+            TrackSource.Local: self._populate_local,
+            TrackSource.YouTube: self._populate_youtube,
+            TrackSource.SoundCloud: self._populate_soundcloud,
+            TrackSource.YouTubeMusic: self._populate_youtube,
+        }
+        node = NodePool().get_node()
+        return await func_[payload.track.source](node._session, payload.track)
+
+    async def _auto_play_event(self, payload: TrackEventPayload) -> None:
+        if not self.autoplay:
+            return
+
+        if payload.reason == "REPLACED":
+            return
+
+        if self.queue.loop:
+            try:
+                track = self.queue.get()
+            except QueueEmpty:
+                return
+
+            await self.play(track)  # pyright: ignore
+            return
+
+        if self.queue:
+            populate = len(self.auto_queue) < self._auto_threshold
+            await self.play(self.queue.get(), populate=populate)  # pyright: ignore
+
+            return
+
+        if not self.auto_queue:
+            _q = await self._populate(payload)
+            if _q:
+                for t in _q:
+                    self.auto_queue.put(t)
+
+        await self.queue.put_wait(await self.auto_queue.get_wait())
+        populate = self.auto_queue.is_empty
+
+        await self.play(await self.queue.get_wait(), populate=populate)  # pyright: ignore

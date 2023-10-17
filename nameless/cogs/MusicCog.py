@@ -22,6 +22,8 @@ from nameless.database import CRUD
 from nameless.ui_kit import NamelessTrackDropdown, NamelessVoteMenu
 from NamelessConfig import NamelessConfig
 
+from nameless.customs.voice_backends import BaseVoiceBackend
+
 
 __all__ = ["MusicCog"]
 
@@ -337,7 +339,7 @@ class MusicCog(commands.GroupCog, name="music"):
             await self.is_ready.wait()
 
         try:
-            await interaction.user.voice.channel.connect(cls=wavelink.Player, self_deaf=True)  # pyright: ignore
+            await interaction.user.voice.channel.connect(cls=BaseVoiceBackend.Player, self_deaf=True)  # pyright: ignore
             await interaction.followup.send("Connected to your voice channel")
 
             vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore

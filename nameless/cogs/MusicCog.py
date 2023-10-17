@@ -18,11 +18,10 @@ from wavelink.ext import spotify
 from nameless import Nameless
 from nameless.cogs.checks.MusicCogCheck import MusicCogCheck
 from nameless.commons import Utility
+from nameless.customs.voice_backends import BaseVoiceBackend
 from nameless.database import CRUD
 from nameless.ui_kit import NamelessTrackDropdown, NamelessVoteMenu
 from NamelessConfig import NamelessConfig
-
-from nameless.customs.voice_backends import BaseVoiceBackend
 
 
 __all__ = ["MusicCog"]

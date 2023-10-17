@@ -466,8 +466,8 @@ class MusicCog(commands.GroupCog, name="music"):
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
-    @app_commands.check(MusicCogCheck.queue_has_element)
-    async def skip(self, interaction: discord.Interaction):
+    @app_commands.describe(bypass_loop="Whether to bypass track looping")
+    async def skip(self, interaction: discord.Interaction, bypass_loop: bool = False):
         """Skip a song. Even if it is looping."""
         await interaction.response.defer()
 
@@ -479,12 +479,17 @@ class MusicCog(commands.GroupCog, name="music"):
 
         if await NamelessVoteMenu("skip", track.title, interaction, vc).start():
             if vc.queue.loop:
+                if bypass_loop:
+                    vc.queue._loaded = None
                 current_play_now_state = getattr(vc, "should_send_play_now")
                 setattr(vc, "should_send_play_now", True)
                 should_set_play_now_again = True
 
             await vc.stop()
-            await interaction.followup.send("Next track should be played now")
+            if vc.queue.is_empty:
+                await interaction.followup.send("✅")
+            else:
+                await interaction.followup.send("Next track should be played now")
 
             if should_set_play_now_again:
                 setattr(vc, "should_send_play_now", current_play_now_state)

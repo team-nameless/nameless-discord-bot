@@ -11,7 +11,7 @@ reportOptionalMemberAccess = "warning"
 reportOptionalSubscript = "warning"
 reportUnusedImport = "warning"
 useLibraryCodeForTypes = true
-pythonVersion = "3.10"
+pythonVersion = "3.11"
 typeCheckingMode = "basic"
 
 [tool.isort]
@@ -24,12 +24,12 @@ multi_line_output = 3
 
 [tool.black]
 line-length = 120
-target-version = ['py310']
+target-version = ['py311']
 include = '\.pyi?$'
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
+target-version = "py311"
 fix = true
 ignore = ["E999"]
 select = ["E", "F", "Q"]

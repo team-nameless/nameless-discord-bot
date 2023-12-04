@@ -36,25 +36,13 @@ jobs:
         run: |
           cp NamelessConfig_example.py NamelessConfig.py
 
-      - name: Code format checking (black)
+      - name: Code format checking
         run: |
-          black . --check --diff
+          ruff format . --diff
 
-      - name: Code format checking (isort)
+      - name: Code linting
         run: |
-          isort . --check --diff
-
-      - name: Type annotation checking (pyright)
-        run: |
-          pyright
-
-      - name: Linting (ruff)
-        run: |
-          ruff nameless main.py NamelessConfig_example.py
-
-      - name: Non-modern code check (pyupgrade)
-        run: |
-          pyupgrade --py310-plus nameless/*.py
+          ruff lint . --diff
 
       - name: Run tests and return coverages (pytest & friends)
         run: |

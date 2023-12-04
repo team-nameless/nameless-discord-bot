@@ -88,7 +88,7 @@ class Nameless(commands.AutoShardedBot):
                 fail_reason = "It does not exist in 'allowed_cogs' list."
 
             if not can_load:
-                logging.error("Unable to load %s! %s", cog_name, fail_reason, stack_info=True)
+                logging.error("Unable to load %s! %s", cog_name, fail_reason, stack_info=False)
                 shared_vars.unloaded_cogs_list.append(full_qualified_name)
 
         # Convert .py files to valid module names

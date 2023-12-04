@@ -27,7 +27,7 @@ class NamelessStatusFromDiscordActivity:
     # Name of the activity
     NAME: LiteralString = "something"
 
-    # URL to the stream, only available for streaming activitiy
+    # URL to the stream, only available for streaming activity
     URL: Optional[LiteralString] = None
 
 
@@ -46,7 +46,7 @@ class NamelessStatus:
     # Discord activity
     DISCORD_ACTIVITY: NamelessStatusFromDiscordActivity = NamelessStatusFromDiscordActivity()
 
-    # Custom activity, priortized over Discord activity.
+    # Custom activity, prioritized over Discord activity.
     CUSTOM_ACTIVITY: NamelessStatusFromCustomActivity = NamelessStatusFromCustomActivity()
 
 
@@ -125,12 +125,12 @@ class NamelessBlacklist:
 
 class NamelessConfig:
     # Current version of nameless.
-    # I ill advise you to NOT change this line
+    # I ill-advise you to NOT change this line
     __version__ = open("version.txt", "r").read().strip()
 
     # Bot description string
     # Placeholders:
-    # - {github_url} - The link to the bot's github repo
+    # - {github_url} - The link to the bots GitHub repo
     __description__ = "Just a bot"
 
     # Add owners to Nameless
@@ -146,7 +146,7 @@ class NamelessConfig:
     INTENT: NamelessIntent = NamelessIntent()
 
     # Bot token
-    # Go to here: https://discord.com/developers/applications/
+    # Go here: https://discord.com/developers/applications/
     # Then pick your client, then go to Bot->Copy Token
     TOKEN: LiteralString = ""
 

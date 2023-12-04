@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import sys
 from datetime import datetime
 
 import aiohttp
@@ -13,13 +14,10 @@ from sqlalchemy.orm import close_all_sessions
 
 from nameless import shared_vars
 from nameless.database import CRUD
-from nameless.shared_vars import stdout_handler
 from NamelessConfig import NamelessConfig
 
 
 __all__ = ["Nameless"]
-
-logging.getLogger().handlers[:] = [shared_vars.stdout_handler]
 
 
 class Nameless(commands.AutoShardedBot):
@@ -235,27 +233,25 @@ class Nameless(commands.AutoShardedBot):
         return False
 
     def patch_loggers(self) -> None:
-        if self.is_debug:
-            file_handler = logging.FileHandler(filename="nameless.log", mode="w", delay=True)
-            file_handler.setFormatter(logging.Formatter("%(asctime)s - [%(levelname)s] [%(name)s] %(message)s"))
-            shared_vars.additional_handlers.append(file_handler)
+        stdout_log_handler = logging.StreamHandler(sys.stdout)
+        stdout_log_handler.setFormatter(logging.Formatter("%(asctime)s - [%(levelname)s] [%(name)s] %(message)s"))
 
         for logger in self.loggers:
             if logger.name != "root":
-                logger.handlers[:] = [stdout_handler]
                 logger.propagate = False
 
+            if logger.name == "root":
+                logger.name = "nameless"
+
+            logger.handlers[:] = [stdout_log_handler]
             logger.setLevel(self.log_level)
 
-            for handler in shared_vars.additional_handlers:
-                logger.handlers.append(handler)
+            parent = logger.parent
 
-            if logger.parent:
-                logger.parent.setLevel(self.log_level)
-                logger.parent.handlers[:] = [stdout_handler]
-                for handler in shared_vars.additional_handlers:
-                    logger.parent.handlers.append(handler)
-                logger.parent.propagate = False
+            while parent:
+                parent.setLevel(self.log_level)
+                parent.propagate = False
+                parent = parent.parent
 
     async def construct_shared_vars(self):
         """

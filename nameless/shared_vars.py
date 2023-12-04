@@ -1,17 +1,8 @@
-import logging
 import re
-import sys
 from datetime import datetime
 
 from discord import Permissions
 
-from nameless import customs
-
-
-# Logging
-stdout_handler = logging.StreamHandler(sys.stdout)
-stdout_handler.setFormatter(customs.ColoredFormatter())
-additional_handlers: list = []
 
 # Patterns
 cogs_regex = re.compile(r"^(?!_.).*Cog.py")

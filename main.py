@@ -49,5 +49,4 @@ async def on_app_command_error(interaction: discord.Interaction, err: AppCommand
 # from nameless.database import CRUD
 # CRUD.in_case_of_getting_f_up()
 
-nameless.patch_loggers()
 nameless.start_bot()

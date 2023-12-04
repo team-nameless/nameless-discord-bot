@@ -275,4 +275,5 @@ class Nameless(commands.AutoShardedBot):
         return False
 
     def start_bot(self):
+        self.patch_loggers()
         self.run(NamelessConfig.TOKEN, log_handler=None)

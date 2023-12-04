@@ -1,8 +1,7 @@
-from typing import Callable
+from collections.abc import Callable
 
 import discord
 from discord.ext import commands
-
 
 __all__ = ["DiscordWaiter"]
 

@@ -1,8 +1,6 @@
-from typing import Optional
+from typing import LiteralString
 
 import discord
-from typing_extensions import LiteralString
-
 
 __all__ = ["NamelessConfig"]
 
@@ -28,7 +26,7 @@ class NamelessStatusFromDiscordActivity:
     NAME: LiteralString = "something"
 
     # URL to the stream, only available for streaming activity
-    URL: Optional[LiteralString] = None
+    URL: LiteralString | None = None
 
 
 class NamelessStatusFromCustomActivity:
@@ -58,7 +56,7 @@ class NamelessDatabase:
     USERNAME: LiteralString = ""
     PASSWORD: LiteralString = ""
     HOST: LiteralString = ""
-    PORT: Optional[int] = None
+    PORT: int | None = None
     NAME: LiteralString = "nameless.db"
 
 
@@ -83,9 +81,7 @@ class NamelessMusicSoundcloudClient:
 
 
 class NamelessMusic:
-    NODES: list[NamelessMusicNode] = [
-        NamelessMusicNode(host="0.0.0.0", port=2333, password="youshallnotpass"),
-    ]
+    NODES: list[NamelessMusicNode] = [NamelessMusicNode(host="0.0.0.0", port=2333, password="youshallnotpass")]
 
     SPOTIFY: NamelessMusicSpotifyClient = NamelessMusicSpotifyClient()
 
@@ -126,7 +122,7 @@ class NamelessBlacklist:
 class NamelessConfig:
     # Current version of nameless.
     # I ill-advise you to NOT change this line
-    __version__ = open("version.txt", "r").read().strip()
+    __version__ = open("version.txt").read().strip()
 
     # Bot description string
     # Placeholders:
@@ -164,14 +160,7 @@ class NamelessConfig:
     #                       MusicV2 (MusicV1 must not be loaded)
     #                       Osu (requires `OSU` to be properly provided),
     #                       Owner
-    COGS: list[LiteralString] = [
-        "MusicLavalink",
-        "Owner",
-        "General",
-        "Config",
-        "Moderator",
-        "Osu",
-    ]
+    COGS: list[LiteralString] = ["MusicLavalink", "Owner", "General", "Config", "Moderator", "Osu"]
 
     # Guild prefixes for text commands
     PREFIXES: list[LiteralString] = ["nameless."]

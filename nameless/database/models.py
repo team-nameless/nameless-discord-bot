@@ -1,11 +1,9 @@
 from datetime import datetime, timedelta
-from typing import Union
 
 import discord
 from sqlalchemy import Column
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql.sqltypes import *
-
 
 __all__ = ["Base", "DbUser", "DbGuild"]
 
@@ -13,10 +11,7 @@ Base = declarative_base()
 
 
 class DbUser(Base):
-    def __init__(
-        self,
-        _id: Union[discord.User, int],
-    ):
+    def __init__(self, _id: discord.User | int):
         super().__init__()
         self.discord_id = _id.id if isinstance(_id, discord.User) else _id
 
@@ -28,10 +23,7 @@ class DbUser(Base):
 
 
 class DbGuild(Base):
-    def __init__(
-        self,
-        _id: Union[discord.Guild, int],
-    ):
+    def __init__(self, _id: discord.Guild | int):
         super().__init__()
         self.discord_id = _id.id if isinstance(_id, discord.Guild) else _id
 
@@ -48,11 +40,5 @@ class DbGuild(Base):
     goodbye_message: str = Column(UnicodeText, name="GoodbyeMessage", default="")  # type: ignore
     max_warn_count: int = Column(BigInteger, name="MaxWarnCount", default=3)  # type: ignore
     mute_role_id: int = Column(BigInteger, name="MuteRoleId", default=0)  # type: ignore
-    radio_start_time: datetime = Column(
-        DateTime,
-        name="RadioStartTime",
-        default=datetime.min,
-    )  # type: ignore
-    mute_timeout_interval: timedelta = Column(
-        Interval, name="MuteTimeoutInterval", default=timedelta(days=7)
-    )  # type: ignore
+    radio_start_time: datetime = Column(DateTime, name="RadioStartTime", default=datetime.min)  # type: ignore
+    mute_timeout_interval: timedelta = Column(Interval, name="MuteTimeoutInterval", default=timedelta(days=7))  # type: ignore

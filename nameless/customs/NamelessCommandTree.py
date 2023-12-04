@@ -3,7 +3,6 @@ from discord.interactions import Interaction
 
 from nameless.nameless import Nameless
 
-
 __all__ = ["NamelessCommandTree"]
 
 

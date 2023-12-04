@@ -3,16 +3,7 @@ from nameless.commons import Utility
 
 class TestUtility:
     def test_get_db_url_default(self):
-        (
-            url,
-            dialect,
-            driver,
-            username,
-            password,
-            host,
-            port,
-            db_name,
-        ) = Utility.get_db_url()
+        (url, dialect, driver, username, password, host, port, db_name) = Utility.get_db_url()
         assert url == "sqlite:///nameless.db"
         assert dialect == "sqlite"
         assert driver == ""

@@ -1,8 +1,7 @@
-from typing import Optional, Tuple
-from urllib.parse import quote_plus as qp, urlparse
+from urllib.parse import quote_plus as qp
+from urllib.parse import urlparse
 
 from NamelessConfig import NamelessConfig
-
 
 __all__ = ["Utility"]
 
@@ -13,7 +12,7 @@ class Utility:
     """
 
     @staticmethod
-    def get_db_url() -> Tuple[str, str, str, str, str, str, Optional[int], str]:
+    def get_db_url() -> tuple[str, str, str, str, str, str, int | None, str]:
         """
         Get the database connection URL based on the config and its components.
         :return: Database connection URL with components.
@@ -25,7 +24,7 @@ class Utility:
         username: str = db.USERNAME
         password: str = db.PASSWORD
         host: str = db.HOST
-        port: Optional[int] = db.PORT
+        port: int | None = db.PORT
         db_name: str = db.NAME
 
         pdriver: str = qp(f"+{driver}", safe="+") if driver else ""
@@ -35,16 +34,7 @@ class Utility:
 
         finish_url = f"{dialect}{pdriver}://{username}{ppassword}{at}{host}{pport}/{db_name}"
 
-        return (
-            finish_url,
-            dialect,
-            driver,
-            username,
-            password,
-            host,
-            port,
-            db_name,
-        )
+        return (finish_url, dialect, driver, username, password, host, port, db_name)
 
     @staticmethod
     def is_an_url(url: str) -> bool:

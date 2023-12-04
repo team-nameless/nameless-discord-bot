@@ -4,7 +4,6 @@ from discord.app_commands import CheckFailure
 
 from nameless.cogs.checks import BaseCheck
 
-
 __all__ = ["MusicCogCheck"]
 
 

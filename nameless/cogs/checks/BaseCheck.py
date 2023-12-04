@@ -1,8 +1,7 @@
-from typing import Callable, List
+from collections.abc import Callable
 
 import discord
 from discord.ext import commands
-
 
 __all__ = ["BaseCheck"]
 
@@ -26,7 +25,7 @@ class BaseCheck:
         return pred
 
     @staticmethod
-    def require_intents(intents: List):
+    def require_intents(intents: list):
         """
         Require the bot to have specific intent(s).
         Note: this is a decorator for a command.
@@ -35,16 +34,12 @@ class BaseCheck:
         async def pred(ctx: commands.Context, /, **kwargs) -> bool:
             set_intents = ctx.bot.intents
 
-            for intent in intents:
-                if (set_intents.value & intent.flag) != intent.flag:
-                    return False
-
-            return True
+            return all(set_intents.value & intent.flag == intent.flag for intent in intents)
 
         return pred
 
     @staticmethod
-    def require_interaction_intents(intents: List):
+    def require_interaction_intents(intents: list):
         """
         Require the bot to have specific intent(s).
         Note: this is a decorator for an application command.
@@ -53,10 +48,6 @@ class BaseCheck:
         async def pred(interaction: discord.Interaction, /, **kwargs) -> bool:
             set_intents = interaction.client.intents
 
-            for intent in intents:
-                if (set_intents.value & intent.flag) != intent.flag:
-                    return False
-
-            return True
+            return all(set_intents.value & intent.flag == intent.flag for intent in intents)
 
         return pred

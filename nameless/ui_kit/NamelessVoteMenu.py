@@ -1,13 +1,11 @@
 import math
-from typing import List, Union
 
 import discord
 import wavelink
 
-
 __all__ = ["NamelessVoteMenu"]
 
-VoiceClientT_ = Union[discord.VoiceClient, wavelink.Player]
+VoiceClientT_ = discord.VoiceClient | wavelink.Player
 
 
 class NamelessVoteMenuView(discord.ui.View):
@@ -48,21 +46,15 @@ class NamelessVoteMenu:
         "disapprove_member",
     )
 
-    def __init__(
-        self,
-        action: str,
-        content: str,
-        interaction: discord.Interaction,
-        voice_client: VoiceClientT_,
-    ):
+    def __init__(self, action: str, content: str, interaction: discord.Interaction, voice_client: VoiceClientT_):
         self.action = action
         self.content = f"{content[:50]}..."
         self.interaction = interaction
         self.max_vote_user = math.ceil(len(voice_client.channel.members) / 2)  # pyright: ignore
         self.total_vote = 1
 
-        self.approve_member: List[str] = [interaction.user.mention]
-        self.disapprove_member: List[str] = []
+        self.approve_member: list[str] = [interaction.user.mention]
+        self.disapprove_member: list[str] = []
 
     async def start(self):
         if self.max_vote_user <= 1:
@@ -103,11 +95,7 @@ class NamelessVoteMenu:
                 title=f"Vote {self.action} {self.content}",
                 description=f"Total vote: {self.total_vote}/{self.max_vote_user}",
             )
-            .add_field(
-                name="Approve",
-                value="\n".join(self.approve_member),
-                inline=True,
-            )
+            .add_field(name="Approve", value="\n".join(self.approve_member), inline=True)
             .add_field(
                 name="Disapprove",
                 value="\n".join(self.disapprove_member) if self.disapprove_member else "None",

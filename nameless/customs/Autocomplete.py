@@ -3,7 +3,6 @@ from discord import app_commands
 
 from nameless import shared_vars
 
-
 __all__ = ["Autocomplete"]
 
 

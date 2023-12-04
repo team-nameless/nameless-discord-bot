@@ -17,7 +17,6 @@ from discord.utils import escape_markdown
 from nameless import Nameless, shared_vars
 from nameless.customs import Autocomplete
 
-
 __all__ = ["OwnerCog"]
 
 
@@ -103,27 +102,26 @@ class OwnerCog(commands.Cog):
         stdout_result, stderr_result = None, None
 
         try:
-            with contextlib.redirect_stdout(out := io.StringIO()):
-                with contextlib.redirect_stderr(err := io.StringIO()):
-                    exec(
-                        f"async def func():\n{textwrap.indent(code, '    ')}",
-                        (
-                            t := {
-                                "discord": discord,
-                                "commands": commands,
-                                "bot": self.bot,
-                                "ctx": ctx,
-                                "channel": ctx.channel,
-                                "author": ctx.author,
-                                "guild": ctx.guild,
-                                "message": ctx.message,
-                            }
-                        ),
-                    )
+            with contextlib.redirect_stdout(out := io.StringIO()), contextlib.redirect_stderr(err := io.StringIO()):
+                exec(
+                    f"async def func():\n{textwrap.indent(code, '    ')}",
+                    (
+                        t := {
+                            "discord": discord,
+                            "commands": commands,
+                            "bot": self.bot,
+                            "ctx": ctx,
+                            "channel": ctx.channel,
+                            "author": ctx.author,
+                            "guild": ctx.guild,
+                            "message": ctx.message,
+                        }
+                    ),
+                )
 
-                    await t["func"]()
-                    stdout_result = f"{out.getvalue()}"
-                    stderr_result = f"{err.getvalue()}"
+                await t["func"]()
+                stdout_result = f"{out.getvalue()}"
+                stderr_result = f"{err.getvalue()}"
         except RuntimeError as e:
             stderr_result = e
 

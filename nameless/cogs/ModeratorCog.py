@@ -1,6 +1,7 @@
 import logging
+from collections.abc import Awaitable, Callable
 from datetime import timedelta
-from typing import Awaitable, Callable, Literal
+from typing import Literal
 
 import discord
 from discord import HTTPException, app_commands
@@ -10,7 +11,6 @@ from discord.ext import commands
 import nameless
 from nameless.database.crud import CRUD
 from nameless.ui_kit import NamelessYNPrompt
-
 
 __all__ = ["ModeratorCog"]
 
@@ -93,12 +93,7 @@ class ModeratorCog(commands.GroupCog, name="mod"):
         )
 
     @staticmethod
-    async def __generic_mute(
-        interaction: discord.Interaction,
-        member: discord.Member,
-        reason: str,
-        mute: bool = True,
-    ):
+    async def __generic_mute(interaction: discord.Interaction, member: discord.Member, reason: str, mute: bool = True):
         await interaction.response.defer()
 
         if member.id in [interaction.user.id, interaction.client.user.id]:
@@ -147,10 +142,9 @@ class ModeratorCog(commands.GroupCog, name="mod"):
 
                 await m.edit(content="Creation complete!", view=None)  # pyright: ignore
 
-        if not use_native_timeout:
-            if not mute_role:
-                await interaction.followup.send("No mean of muting the member. Exiting....")
-                return
+        if not use_native_timeout and not mute_role:
+            await interaction.followup.send("No mean of muting the member. Exiting....")
+            return
 
         if db_guild.is_timeout_preferred or mute_role is None:
             is_muted = member.is_timed_out()
@@ -278,12 +272,7 @@ class ModeratorCog(commands.GroupCog, name="mod"):
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(moderate_members=True)
     @app_commands.describe(member="Target member", reason="Mute reason")
-    async def mute(
-        self,
-        interaction: discord.Interaction,
-        member: discord.Member,
-        reason: str = "Rule violation",
-    ):
+    async def mute(self, interaction: discord.Interaction, member: discord.Member, reason: str = "Rule violation"):
         """Mute a member"""
         await self.__generic_mute(interaction, member, reason)
 
@@ -291,12 +280,7 @@ class ModeratorCog(commands.GroupCog, name="mod"):
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(moderate_members=True)
     @app_commands.describe(member="Target member", reason="Unmute reason")
-    async def unmute(
-        self,
-        interaction: discord.Interaction,
-        member: discord.Member,
-        reason: str = "Good behavior",
-    ):
+    async def unmute(self, interaction: discord.Interaction, member: discord.Member, reason: str = "Good behavior"):
         """Unmute a member"""
         await self.__generic_mute(interaction, member, reason, False)
 

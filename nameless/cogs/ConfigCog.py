@@ -1,6 +1,5 @@
 import datetime
 import logging
-from typing import Union
 
 import discord
 from discord import app_commands
@@ -10,7 +9,6 @@ import nameless
 from nameless.cogs.checks import BaseCheck
 from nameless.database import CRUD
 from nameless.ui_kit import NamelessModal
-
 
 __all__ = ["ConfigCog"]
 
@@ -36,10 +34,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         dm = db_guild.is_dm_preferred
 
         embed: discord.Embed = (
-            discord.Embed(
-                color=discord.Color.orange(),
-                timestamp=datetime.datetime.now(),
-            )
+            discord.Embed(color=discord.Color.orange(), timestamp=datetime.datetime.now())
             .set_thumbnail(url=interaction.guild.icon.url)
             .set_author(icon_url=interaction.client.user.display_avatar.url, name="Configured properties")
         )
@@ -64,9 +59,7 @@ class ConfigCog(commands.GroupCog, name="config"):
             "**[Content]**\n" + db_guild.goodbye_message
             if db_guild.goodbye_message
             else "Unset",
-        ).add_field(
-            name="Greeting to BOTs", value=db_guild.is_bot_greeting_enabled, inline=False
-        )
+        ).add_field(name="Greeting to BOTs", value=db_guild.is_bot_greeting_enabled, inline=False)
 
         embed.add_field(
             name=":police_officer: Server utilities",
@@ -77,9 +70,7 @@ class ConfigCog(commands.GroupCog, name="config"):
             inline=False,
         ).add_field(name="Use native timeout feature", value=db_guild.is_timeout_preferred, inline=False).add_field(
             name="Max warning count", value=db_guild.max_warn_count
-        ).add_field(
-            name="Mute role", value=mute_role.mention if mute_role else "Unset"
-        )
+        ).add_field(name="Mute role", value=mute_role.mention if mute_role else "Unset")
 
         await interaction.followup.send(embeds=[embed])
 
@@ -129,9 +120,7 @@ class ConfigCog(commands.GroupCog, name="config"):
     @app_commands.describe(dest_channel="Goodbye message delivery channel")
     @app_commands.check(BaseCheck.require_interaction_intents([discord.Intents.members]))
     async def set_goodbye_channel(
-        self,
-        interaction: discord.Interaction,
-        dest_channel: Union[discord.TextChannel, discord.Thread],
+        self, interaction: discord.Interaction, dest_channel: discord.TextChannel | discord.Thread
     ):
         """Change goodbye message delivery channel"""
         await interaction.response.defer()
@@ -146,9 +135,7 @@ class ConfigCog(commands.GroupCog, name="config"):
     @app_commands.describe(dest_channel="Welcome message delivery channel")
     @app_commands.check(BaseCheck.require_interaction_intents([discord.Intents.members]))
     async def set_welcome_channel(
-        self,
-        interaction: discord.Interaction,
-        dest_channel: Union[discord.TextChannel, discord.Thread],
+        self, interaction: discord.Interaction, dest_channel: discord.TextChannel | discord.Thread
     ):
         """Change welcome message delivery channel"""
         await interaction.response.defer()

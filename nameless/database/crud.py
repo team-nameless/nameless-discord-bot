@@ -1,5 +1,4 @@
 import logging
-from typing import Optional, Union
 
 import discord
 import sqlalchemy
@@ -12,7 +11,6 @@ from nameless.commons import Utility
 
 from .models import Base, DbGuild, DbUser
 
-
 __all__ = ["CRUD"]
 
 from ..customs.staticproperty import staticproperty
@@ -23,22 +21,9 @@ class CRUD:
     Basic database CRUD operations.
     """
 
-    (
-        db_url,
-        dialect,
-        driver,
-        host,
-        port,
-        username,
-        password,
-        db_name,
-    ) = Utility.get_db_url()
+    (db_url, dialect, driver, host, port, username, password, db_name) = Utility.get_db_url()
 
-    engine = create_engine(
-        db_url,
-        logging_name=db_name,
-        hide_parameters=not shared_vars.is_debug,
-    )
+    engine = create_engine(db_url, logging_name=db_name, hide_parameters=not shared_vars.is_debug)
 
     _session = sessionmaker(bind=engine)
     session = _session()
@@ -67,7 +52,7 @@ class CRUD:
         return CRUD.session.query(model).filter_by(**kwargs).one_or_none() is None
 
     @staticmethod
-    def get_or_create_user_record(discord_user: Union[discord.Member, discord.User, discord.Object]) -> DbUser:
+    def get_or_create_user_record(discord_user: discord.Member | discord.User | discord.Object) -> DbUser:
         """
         Get an existing discord_user record, create a new record if one doesn't exist
         :param discord_user: User entity of discord.
@@ -81,7 +66,7 @@ class CRUD:
         return u
 
     @staticmethod
-    def get_or_create_guild_record(discord_guild: Optional[Union[discord.Guild, discord.Object]]) -> DbGuild:
+    def get_or_create_guild_record(discord_guild: discord.Guild | discord.Object | None) -> DbGuild:
         """
         Get an existing guild record, create a new record if one doesn't exist
         :param discord_guild: Guild entity of discord
@@ -98,12 +83,12 @@ class CRUD:
         return g
 
     @staticmethod
-    def get_user_record(discord_user: Union[discord.Member, discord.User, discord.Object]) -> Optional[DbUser]:
+    def get_user_record(discord_user: discord.Member | discord.User | discord.Object) -> DbUser | None:
         """Get user record in database"""
         return CRUD.session.query(DbUser).filter_by(discord_id=discord_user.id).one_or_none()
 
     @staticmethod
-    def get_guild_record(discord_guild: Optional[Union[discord.Guild, discord.Object]]) -> Optional[DbGuild]:
+    def get_guild_record(discord_guild: discord.Guild | discord.Object | None) -> DbGuild | None:
         """Get guild record in database"""
         if not discord_guild:
             raise ValueError("You are executing guild database query in a not-a-guild! This is invalid!")
@@ -111,7 +96,7 @@ class CRUD:
         return CRUD.session.query(DbGuild).filter_by(discord_id=discord_guild.id).one_or_none()
 
     @staticmethod
-    def create_user_record(discord_user: Union[discord.Member, discord.User, discord.Object]) -> DbUser:
+    def create_user_record(discord_user: discord.Member | discord.User | discord.Object) -> DbUser:
         """Create a database entry for the Discord user and return one"""
         decoy_user = DbUser(discord_user.id)
 
@@ -123,7 +108,7 @@ class CRUD:
         return CRUD.session.query(DbUser).filter_by(discord_id=discord_user.id).one()
 
     @staticmethod
-    def create_guild_record(discord_guild: Optional[Union[discord.Guild, discord.Object]]) -> DbGuild:
+    def create_guild_record(discord_guild: discord.Guild | discord.Object | None) -> DbGuild:
         """Create a database entry for the Discord guild and return one"""
         if not discord_guild:
             raise ValueError("You are executing guild database query in a not-a-guild! This is invalid!")
@@ -138,7 +123,7 @@ class CRUD:
         return CRUD.session.query(DbGuild).filter_by(discord_id=discord_guild.id).one()
 
     @staticmethod
-    def delete_guild_record(guild_record: Optional[DbGuild]) -> None:
+    def delete_guild_record(guild_record: DbGuild | None) -> None:
         """
         Delete a guild record from the database
         :param guild_record: Guild record to delete
@@ -150,7 +135,7 @@ class CRUD:
         CRUD.session.delete(guild_record)
 
     @staticmethod
-    def delete_user_record(user_record: Optional[DbUser]) -> None:
+    def delete_user_record(user_record: DbUser | None) -> None:
         """
         Delete a discord_user record from the database
         :param user_record: User record to delete

@@ -2,7 +2,7 @@ import asyncio
 import datetime
 import logging
 import random
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any
 from urllib import parse
 
 import discord
@@ -23,11 +23,10 @@ from nameless.database import CRUD
 from nameless.ui_kit import NamelessTrackDropdown, NamelessVoteMenu
 from NamelessConfig import NamelessConfig
 
-
 __all__ = ["MusicCog"]
 
 
-music_default_sources: List[str] = ["youtube", "soundcloud", "ytmusic"]
+music_default_sources: list[str] = ["youtube", "soundcloud", "ytmusic"]
 
 
 class MusicCog(commands.GroupCog, name="music"):
@@ -55,10 +54,8 @@ class MusicCog(commands.GroupCog, name="music"):
         logging.warning("Disconnect from voice channel ID:%s of guild %s", chn.id, chn.guild.id)
 
     @staticmethod
-    def generate_embeds_from_tracks(
-        tracks: List[wavelink.Playable],
-    ) -> List[discord.Embed]:
-        embeds: List[discord.Embed] = []
+    def generate_embeds_from_tracks(tracks: list[wavelink.Playable]) -> list[discord.Embed]:
+        embeds: list[discord.Embed] = []
         txt = ""
 
         for idx, track in enumerate(tracks):
@@ -69,33 +66,23 @@ class MusicCog(commands.GroupCog, name="music"):
             )
 
             if len(txt) + len(upcoming) > 2048:
-                eb = discord.Embed(
-                    title="Tracks currently in list",
-                    color=discord.Color.orange(),
-                    description=txt,
-                )
+                eb = discord.Embed(title="Tracks currently in list", color=discord.Color.orange(), description=txt)
                 embeds.append(eb)
                 txt = upcoming
             else:
                 txt += upcoming
 
-        embeds.append(
-            discord.Embed(
-                title="Tracks currently in list",
-                color=discord.Color.orange(),
-                description=txt,
-            )
-        )
+        embeds.append(discord.Embed(title="Tracks currently in list", color=discord.Color.orange(), description=txt))
 
         return embeds
 
     @staticmethod
-    def generate_embeds_from_queue(q: wavelink.Queue) -> List[discord.Embed]:
+    def generate_embeds_from_queue(q: wavelink.Queue) -> list[discord.Embed]:
         # Just in case the user passes the original queue
         copycat = q.copy()
         idx = 0
         txt = ""
-        embeds: List[discord.Embed] = []
+        embeds: list[discord.Embed] = []
 
         try:
             while track := copycat.get():
@@ -106,11 +93,7 @@ class MusicCog(commands.GroupCog, name="music"):
                 )
 
                 if len(txt) + len(upcoming) > 2048:
-                    eb = discord.Embed(
-                        title="Tracks currently in queue",
-                        color=discord.Color.orange(),
-                        description=txt,
-                    )
+                    eb = discord.Embed(title="Tracks currently in queue", color=discord.Color.orange(), description=txt)
                     embeds.append(eb)
                     txt = upcoming
                 else:
@@ -123,17 +106,13 @@ class MusicCog(commands.GroupCog, name="music"):
         finally:
             # Add the last bit
             embeds.append(
-                discord.Embed(
-                    title="Tracks currently in queue",
-                    color=discord.Color.orange(),
-                    description=txt,
-                )
+                discord.Embed(title="Tracks currently in queue", color=discord.Color.orange(), description=txt)
             )
 
         return embeds
 
     @staticmethod
-    async def show_paginated_tracks(interaction: discord.Interaction, embeds: List[discord.Embed]):
+    async def show_paginated_tracks(interaction: discord.Interaction, embeds: list[discord.Embed]):
         view_menu = ViewMenu(interaction, menu_type=ViewMenu.TypeEmbed)
         view_menu.add_pages(embeds)
 
@@ -144,7 +123,7 @@ class MusicCog(commands.GroupCog, name="music"):
         await view_menu.start()
 
     @staticmethod
-    def resolve_direct_url(search: str) -> Optional[Type[wavelink.Playable]]:
+    def resolve_direct_url(search: str) -> type[wavelink.Playable] | None:
         locations = {
             "soundcloud.com": wavelink.SoundCloudTrack,
             "open.spotify.com": spotify.SpotifyTrack,
@@ -162,11 +141,7 @@ class MusicCog(commands.GroupCog, name="music"):
         await self.bot.wait_until_ready()
 
         nodes = [
-            wavelink.Node(
-                uri=f"{node.host}:{node.port}",
-                secure=node.secure,
-                password=node.password,
-            )
+            wavelink.Node(uri=f"{node.host}:{node.port}", secure=node.secure, password=node.password)
             for node in NamelessConfig.MUSIC.NODES
         ]
 
@@ -199,10 +174,7 @@ class MusicCog(commands.GroupCog, name="music"):
 
     @commands.Cog.listener()
     async def on_voice_state_update(
-        self,
-        member: discord.Member,
-        before: discord.VoiceState,
-        after: discord.VoiceState,
+        self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState
     ):
         # only handle member join/leave voice chat
         changes = await self.list_voice_state_change(before, after)
@@ -242,7 +214,7 @@ class MusicCog(commands.GroupCog, name="music"):
                 node_dict = wavelink.NodePool.nodes.items()
                 guilds_players = [p for (_, node) in node_dict if (p := node.get_player(member.guild.id))]
                 if guilds_players:
-                    bot_player: List[wavelink.Player] = [
+                    bot_player: list[wavelink.Player] = [
                         player for player in guilds_players if player.client.user.id == self.bot.user.id
                     ]
                     if bot_player:
@@ -258,9 +230,9 @@ class MusicCog(commands.GroupCog, name="music"):
         player = payload.player
         track = payload.track
 
-        chn = player.guild.get_channel(getattr(player, "trigger_channel_id"))
+        chn = player.guild.get_channel(player.trigger_channel_id)
 
-        if chn is not None and getattr(player, "play_now_allowed") and getattr(player, "should_send_play_now"):
+        if chn is not None and player.play_now_allowed and player.should_send_play_now:
             """
             if track.is_stream:
                 await chn.send(f"Streaming music from {track.uri}")  # pyright: ignore
@@ -296,7 +268,7 @@ class MusicCog(commands.GroupCog, name="music"):
             if is_radio and not track.is_stream:
                 raise AppCommandError("Radio track must be a direct URL to a stream.")
 
-            setattr(vc, "should_send_play_now", True)
+            vc.should_send_play_now = True
             await interaction.channel.send(f"Streaming music from {url}")  # pyright: ignore
             vc.queue.loop = True
             await vc.play(track)
@@ -317,9 +289,7 @@ class MusicCog(commands.GroupCog, name="music"):
             )
             return
 
-        m: discord.WebhookMessage = await interaction.followup.send(
-            content="Connecting to the radio stream..."
-        )  # pyright: ignore
+        m: discord.WebhookMessage = await interaction.followup.send(content="Connecting to the radio stream...")  # pyright: ignore
 
         await self.__preprocess_radio_then_play(interaction, m, source_url, True)
 
@@ -343,10 +313,10 @@ class MusicCog(commands.GroupCog, name="music"):
 
             vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
 
-            setattr(vc, "should_send_play_now", True)
-            setattr(vc, "play_now_allowed", True)
-            setattr(vc, "trigger_channel_id", interaction.channel.id)
-            setattr(vc, "auto_play_queue", True)
+            vc.should_send_play_now = True
+            vc.play_now_allowed = True
+            vc.trigger_channel_id = interaction.channel.id
+            vc.auto_play_queue = True
             vc.autoplay = True
         except ClientException:
             await interaction.followup.send("Already connected")
@@ -382,7 +352,7 @@ class MusicCog(commands.GroupCog, name="music"):
 
         # When the user switch from radio -> normal queued track
         vc.queue.loop = False
-        setattr(vc, "should_send_play_now", True)
+        vc.should_send_play_now = True
 
         await interaction.followup.send("The queue should be playing now.")
         await vc.play(vc.queue.get(), populate=vc.autoplay)  # pyright: ignore
@@ -397,7 +367,7 @@ class MusicCog(commands.GroupCog, name="music"):
 
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
         vc.queue.loop = not vc.queue.loop
-        setattr(vc, "should_send_play_now", not vc.queue.loop)
+        vc.should_send_play_now = not vc.queue.loop
         await interaction.followup.send(f"Track loop set to {'on' if vc.queue.loop else 'off'}")
 
     @app_commands.command()
@@ -424,7 +394,7 @@ class MusicCog(commands.GroupCog, name="music"):
 
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
 
-        setattr(vc, "auto_play_queue", not getattr(vc, "auto_play_queue", False))
+        vc.auto_play_queue = not getattr(vc, "auto_play_queue", False)
         await interaction.followup.send(
             f"Queue auto play set to {'on' if getattr(vc, 'auto_play_queue', False) else 'off'}"
         )
@@ -482,8 +452,8 @@ class MusicCog(commands.GroupCog, name="music"):
             if vc.queue.loop:
                 if bypass_loop:
                     vc.queue._loaded = None
-                current_play_now_state = getattr(vc, "should_send_play_now")
-                setattr(vc, "should_send_play_now", True)
+                current_play_now_state = vc.should_send_play_now
+                vc.should_send_play_now = True
                 should_set_play_now_again = True
 
             await vc.stop()
@@ -493,7 +463,7 @@ class MusicCog(commands.GroupCog, name="music"):
                 await interaction.followup.send("Next track should be played now")
 
             if should_set_play_now_again:
-                setattr(vc, "should_send_play_now", current_play_now_state)
+                vc.should_send_play_now = current_play_now_state
         else:
             await interaction.followup.send("Not skipping because not enough votes!")
 
@@ -546,9 +516,9 @@ class MusicCog(commands.GroupCog, name="music"):
         await interaction.response.defer()
 
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
-        setattr(vc, "play_now_allowed", not getattr(vc, "play_now_allowed"))
+        vc.play_now_allowed = not vc.play_now_allowed
 
-        await interaction.followup.send(f"'Now playing' is now {'on' if getattr(vc, 'play_now_allowed') else 'off'}")
+        await interaction.followup.send(f"'Now playing' is now {'on' if vc.play_now_allowed else 'off'}")
 
     @app_commands.command()
     @app_commands.guild_only()
@@ -602,19 +572,9 @@ class MusicCog(commands.GroupCog, name="music"):
                 name=f"{add_icon()} Now playing {'stream' if is_stream else 'track'}",
                 icon_url=interaction.user.display_avatar.url,
             )
-            .add_field(
-                name="Title",
-                value=escape_markdown(track.title),
-                inline=False,
-            )
-            .add_field(
-                name="Author",
-                value=escape_markdown(track.author) if track.author else "N/A",
-            )
-            .add_field(
-                name="Source",
-                value=escape_markdown(track.uri) if track.uri else "N/A",
-            )
+            .add_field(name="Title", value=escape_markdown(track.title), inline=False)
+            .add_field(name="Author", value=escape_markdown(track.author) if track.author else "N/A")
+            .add_field(name="Source", value=escape_markdown(track.uri) if track.uri else "N/A")
             .add_field(
                 name="Playtime" if is_stream else "Position",
                 value=str(
@@ -727,7 +687,7 @@ class MusicCog(commands.GroupCog, name="music"):
                 await vc.play(vc.queue.get(), populate=vc.autoplay)  # type: ignore
             return
 
-        sources: Dict[str, Any] = {
+        sources: dict[str, Any] = {
             "youtube": wavelink.YouTubeTrack,
             "ytmusic": wavelink.YouTubeMusicTrack,
             "spotify": spotify.SpotifyTrack,
@@ -749,7 +709,7 @@ class MusicCog(commands.GroupCog, name="music"):
             await m.edit(content="Timed out! Please try again!", view=None)
             return
 
-        drop: Union[discord.ui.Item[discord.ui.View], NamelessTrackDropdown] = view.children[0]
+        drop: discord.ui.Item[discord.ui.View] | NamelessTrackDropdown = view.children[0]
         vals = drop.values  # pyright: ignore
 
         if not vals:
@@ -760,7 +720,7 @@ class MusicCog(commands.GroupCog, name="music"):
             await m.edit(content="All choices cleared", view=None)
             return
 
-        soon_to_add_queue: List[wavelink.Playable] = []
+        soon_to_add_queue: list[wavelink.Playable] = []
 
         for val in vals:
             idx = int(val)
@@ -784,15 +744,14 @@ class MusicCog(commands.GroupCog, name="music"):
         """Add track(s) from playlist to queue"""
         await interaction.response.defer()
 
-        tracks: Optional[
-            Union[
-                List[wavelink.YouTubeTrack],
-                List[wavelink.YouTubeMusicTrack],
-                List[spotify.SpotifyTrack],
-                List[wavelink.SoundCloudTrack],
-                List[Type[wavelink.tracks.Playable]],
-            ]
-        ] = []
+        tracks: (
+            list[wavelink.YouTubeTrack]
+            | list[wavelink.YouTubeMusicTrack]
+            | list[spotify.SpotifyTrack]
+            | list[wavelink.SoundCloudTrack]
+            | list[type[wavelink.tracks.Playable]]
+            | None
+        ) = []
 
         if source == "youtube":
             try:
@@ -876,10 +835,7 @@ class MusicCog(commands.GroupCog, name="music"):
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.queue_has_element)
-    @app_commands.describe(
-        pos1="Position of first track",
-        pos2="Position of second track",
-    )
+    @app_commands.describe(pos1="Position of first track", pos2="Position of second track")
     @app_commands.checks.has_permissions(manage_guild=True)
     async def swap(self, interaction: discord.Interaction, pos1: Range[int, 1], pos2: Range[int, 1]):
         """Swap two tracks."""
@@ -893,10 +849,7 @@ class MusicCog(commands.GroupCog, name="music"):
             await interaction.followup.send(f"Invalid position(s): ({pos1}, {pos2})")
             return
 
-        q[pos1 - 1], q[pos2 - 1] = (
-            q[pos2 - 1],
-            q[pos1 - 1],
-        )
+        q[pos1 - 1], q[pos2 - 1] = (q[pos2 - 1], q[pos1 - 1])
 
         await interaction.followup.send(f"Swapped track #{pos1} and #{pos2}")
 

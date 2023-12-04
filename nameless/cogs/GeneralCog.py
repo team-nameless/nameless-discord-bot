@@ -1,7 +1,6 @@
 import datetime
 import logging
 from platform import python_implementation, python_version
-from typing import List, Optional, Union
 
 import discord
 from discord import NotFound, app_commands
@@ -9,7 +8,6 @@ from discord.ext import commands
 
 from nameless import Nameless, shared_vars
 from NamelessConfig import NamelessConfig
-
 
 __all__ = ["GeneralCog"]
 
@@ -21,11 +19,7 @@ class GeneralCog(commands.Cog):
 
     @app_commands.command()
     @app_commands.describe(member="Target member to view, you as default.")
-    async def view_user(
-        self,
-        interaction: discord.Interaction,
-        member: Optional[Union[discord.Member, discord.User]],
-    ):
+    async def view_user(self, interaction: discord.Interaction, member: discord.Member | discord.User | None):
         """View someone's information"""
         await interaction.response.defer()
 
@@ -36,7 +30,7 @@ class GeneralCog(commands.Cog):
 
         flags = [flag.replace("_", " ").title() for flag, has in member.public_flags if has]
 
-        mutual_guilds: List[str] = [g.name for g in interaction.user.mutual_guilds]
+        mutual_guilds: list[str] = [g.name for g in interaction.user.mutual_guilds]
 
         embed: discord.Embed = (
             discord.Embed(
@@ -57,10 +51,7 @@ class GeneralCog(commands.Cog):
                 value=f"<t:{int(join_date.timestamp())}:R> (<t:{int(join_date.timestamp())}:f>)",  # pyright: ignore
             )
             .add_field(name="Badges", value=", ".join(flags) if flags else "None", inline=False)
-            .add_field(
-                name="Mutual guilds with you",
-                value=", ".join(mutual_guilds) if mutual_guilds else "None",
-            )
+            .add_field(name="Mutual guilds with you", value=", ".join(mutual_guilds) if mutual_guilds else "None")
         )
 
         await interaction.followup.send(embed=embed)
@@ -99,12 +90,10 @@ class GeneralCog(commands.Cog):
                 value=f"<t:{int(guild_create_date.timestamp())}:R> <t:{int(guild_create_date.timestamp())}:f>",
             )
             .add_field(
-                name="Members",
-                value=f"Bot(s): {bots_count}\n" f"Human(s): {humans_count}\n" f"Total: {total_count}",
+                name="Members", value=f"Bot(s): {bots_count}\n" f"Human(s): {humans_count}\n" f"Total: {total_count}"
             )
             .add_field(
-                name="Channels",
-                value=f"{len(guild.channels)} channel(s) - {public_threads_count} public thread(s)",
+                name="Channels", value=f"{len(guild.channels)} channel(s) - {public_threads_count} public thread(s)"
             )
             .add_field(name="Roles", value=str(len(guild.roles)))
             .add_field(name="Events", value=f"{len(events)} pending event(s)")
@@ -156,15 +145,9 @@ class GeneralCog(commands.Cog):
             .add_field(name="Servers count", value=f"{servers_count}")
             .add_field(name="Members count", value=f"{total_members_count}")
             .add_field(name="Last launch/Uptime", value=f"<t:{uptime}:R>")
-            .add_field(
-                name="Bot version",
-                value=NamelessConfig.__version__,
-            )
+            .add_field(name="Bot version", value=NamelessConfig.__version__)
             .add_field(name="Library version", value=f"discord.py v{discord.__version__}")
-            .add_field(
-                name="Python version",
-                value=f"{python_implementation()} {python_version()}",
-            )
+            .add_field(name="Python version", value=f"{python_implementation()} {python_version()}")
             .add_field(name="Commands count", value=f"{len(list(self.bot.walk_commands()))}")
             .add_field(
                 name="Invite link",
@@ -172,10 +155,7 @@ class GeneralCog(commands.Cog):
                 if interaction.client.application.bot_public
                 else "N/A",
             )
-            .add_field(
-                name="Support server",
-                value=f"[Click me!]({support_inv})" if support_inv else "N/A",
-            )
+            .add_field(name="Support server", value=f"[Click me!]({support_inv})" if support_inv else "N/A")
         )
 
         await interaction.followup.send(embed=embed)

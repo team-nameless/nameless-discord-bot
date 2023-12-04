@@ -16,20 +16,13 @@ from nameless import shared_vars
 from nameless.database import CRUD
 from NamelessConfig import NamelessConfig
 
-
 __all__ = ["Nameless"]
 
 
 class Nameless(commands.AutoShardedBot):
     """Customized Discord sharded bot"""
 
-    def __init__(
-        self,
-        command_prefix,
-        is_debug: bool = False,
-        *args,
-        **kwargs,
-    ):
+    def __init__(self, command_prefix, is_debug: bool = False, *args, **kwargs):
         super().__init__(command_prefix, *args, **kwargs)
 
         self.log_level: int = logging.DEBUG if is_debug else logging.INFO
@@ -49,11 +42,7 @@ class Nameless(commands.AutoShardedBot):
         nameless_version = version.parse(NamelessConfig.__version__)
         upstream_version = version.parse(shared_vars.__nameless_upstream_version__)
 
-        logging.info(
-            "Current version: %s - Upstream version: %s",
-            nameless_version,
-            upstream_version,
-        )
+        logging.info("Current version: %s - Upstream version: %s", nameless_version, upstream_version)
 
         if nameless_version < upstream_version:
             logging.warning("You need to update your code!")
@@ -131,9 +120,7 @@ class Nameless(commands.AutoShardedBot):
             await self.change_presence(
                 status=status.STATUS,
                 activity=discord.Activity(
-                    type=status.DISCORD_ACTIVITY.TYPE,
-                    name=status.DISCORD_ACTIVITY.NAME,
-                    url=url or None,
+                    type=status.DISCORD_ACTIVITY.TYPE, name=status.DISCORD_ACTIVITY.NAME, url=url or None
                 ),
             )
         else:
@@ -155,33 +142,31 @@ class Nameless(commands.AutoShardedBot):
     async def on_member_join(self, member: discord.Member):
         db_guild = CRUD.get_or_create_guild_record(member.guild)
 
-        if db_guild.is_welcome_enabled:
-            if db_guild.welcome_message != "":
-                if member.bot and not db_guild.is_bot_greeting_enabled:
-                    return
+        if db_guild.is_welcome_enabled and db_guild.welcome_message != "":
+            if member.bot and not db_guild.is_bot_greeting_enabled:
+                return
 
-                send_target = member.guild.get_channel_or_thread(db_guild.welcome_channel_id)
+            send_target = member.guild.get_channel_or_thread(db_guild.welcome_channel_id)
 
-                if db_guild.is_dm_preferred:
-                    send_target = member
+            if db_guild.is_dm_preferred:
+                send_target = member
 
-                await self.send_greeter(db_guild.goodbye_message, member, send_target)
+            await self.send_greeter(db_guild.goodbye_message, member, send_target)
 
     async def on_member_remove(self, member: discord.Member):
         db_guild = CRUD.get_or_create_guild_record(member.guild)
 
-        if db_guild.is_goodbye_enabled:
-            if db_guild.goodbye_message != "":
-                if member.bot and not db_guild.is_bot_greeting_enabled:
-                    return
+        if db_guild.is_goodbye_enabled and db_guild.goodbye_message != "":
+            if member.bot and not db_guild.is_bot_greeting_enabled:
+                return
 
-                send_target = member.guild.get_channel_or_thread(db_guild.goodbye_channel_id)
+            send_target = member.guild.get_channel_or_thread(db_guild.goodbye_channel_id)
 
-                # Should always be useless now because user is no longer in server
-                # if db_guild.is_dm_preferred:
-                #    send_target = member
+            # Should always be useless now because user is no longer in server
+            # if db_guild.is_dm_preferred:
+            #    send_target = member
 
-                await self.send_greeter(db_guild.goodbye_message, member, send_target)
+            await self.send_greeter(db_guild.goodbye_message, member, send_target)
 
     async def send_greeter(
         self,
@@ -189,11 +174,7 @@ class Nameless(commands.AutoShardedBot):
         member: discord.Member,
         send_target: discord.abc.GuildChannel | discord.Member | discord.Thread | None,
     ):
-        if send_target is not None and (
-            isinstance(send_target, discord.TextChannel)
-            or isinstance(send_target, discord.Thread)
-            or isinstance(send_target, discord.Member)
-        ):
+        if send_target is not None and (isinstance(send_target, discord.TextChannel | discord.Thread | discord.Member)):
             await send_target.send(
                 content=content.replace("{guild}", member.guild.name)
                 .replace("{name}", member.display_name)
@@ -204,11 +185,7 @@ class Nameless(commands.AutoShardedBot):
         if not isinstance(err, errors.CommandNotFound):
             await ctx.send(f"Something went wrong when executing the command:\n```\n{err}\n```")
 
-            logging.exception(
-                "[on_command_error] We have gone under a crisis!!!",
-                stack_info=True,
-                exc_info=err,
-            )
+            logging.exception("[on_command_error] We have gone under a crisis!!!", stack_info=True, exc_info=err)
 
     async def close(self) -> None:
         logging.warning(msg="Shutting down...")
@@ -222,9 +199,8 @@ class Nameless(commands.AutoShardedBot):
         if await super().is_owner(user):
             return True
 
-        if the_app.team:
-            if user in the_app.team.members:
-                return True
+        if the_app.team and user in the_app.team.members:
+            return True
 
         owner_list = NamelessConfig.OWNERS
         if user.id in owner_list:
@@ -264,13 +240,14 @@ class Nameless(commands.AutoShardedBot):
         # shared_vars.crud_database = CRUD()
 
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(NamelessConfig.META.UPSTREAM_VERSION_FILE, timeout=10) as response:
-                    if 200 <= response.status <= 299:
-                        shared_vars.__nameless_upstream_version__ = await response.text()
-                    else:
-                        logging.warning("Upstream version fetching failed, using 0.0.0 as upstream version")
-                        shared_vars.__nameless_upstream_version__ = "0.0.0"
+            async with aiohttp.ClientSession() as session, session.get(
+                NamelessConfig.META.UPSTREAM_VERSION_FILE, timeout=10
+            ) as response:
+                if 200 <= response.status <= 299:
+                    shared_vars.__nameless_upstream_version__ = await response.text()
+                else:
+                    logging.warning("Upstream version fetching failed, using 0.0.0 as upstream version")
+                    shared_vars.__nameless_upstream_version__ = "0.0.0"
 
         except asyncio.exceptions.TimeoutError:
             logging.error("Upstream version fetching error, using 0.0.0 as upstream version")

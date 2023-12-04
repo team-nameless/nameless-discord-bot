@@ -1,6 +1,5 @@
 import asyncio
 import json
-from typing import Optional
 
 import aiohttp
 import wavelink
@@ -11,7 +10,7 @@ from wavelink.exceptions import QueueEmpty
 
 class Player(wavelink.Player):
     @staticmethod
-    async def requests(http_session: aiohttp.ClientSession, url, *args, **kwargs) -> Optional[dict]:
+    async def requests(http_session: aiohttp.ClientSession, url, *args, **kwargs) -> dict | None:
         async with http_session.post(url, *args, **kwargs) as resp:
             if resp.status == 200:
                 try:
@@ -23,7 +22,7 @@ class Player(wavelink.Player):
 
     async def _populate_youtube(
         self, session: aiohttp.ClientSession, track: wavelink.Playable
-    ) -> Optional[list[wavelink.Playable]]:
+    ) -> list[wavelink.Playable] | None:
         data = await self.requests(
             session,
             "https://www.youtube.com/youtubei/v1/next?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8",
@@ -36,16 +35,13 @@ class Player(wavelink.Player):
                         "clientVersion": "2.20220809.02.00",
                         "originalUrl": "https://www.youtube.com",
                         "platform": "DESKTOP",
-                    },
+                    }
                 },
                 "videoId": track.identifier,
                 "racyCheckOk": True,
                 "contentCheckOk": True,
             },
-            headers={
-                "Origin": "https://www.youtube.com",
-                "Referer": "https://www.youtube.com/",
-            },
+            headers={"Origin": "https://www.youtube.com", "Referer": "https://www.youtube.com/"},
         )
 
         if not data:
@@ -69,7 +65,9 @@ class Player(wavelink.Player):
             if not res:
                 continue
 
-            playlist.append(await NodePool.get_tracks(f"https://www.youtube.com/watch?v={res['videoId']}", wavelink.YouTubeTrack)[0])  # type: ignore  # noqa: E501
+            playlist.append(
+                await NodePool.get_tracks(f"https://www.youtube.com/watch?v={res['videoId']}", wavelink.YouTubeTrack)[0]
+            )  # type: ignore  # noqa: E501
         return playlist
 
     async def _populate_local(self, session: aiohttp.ClientSession, track: wavelink.Playable):

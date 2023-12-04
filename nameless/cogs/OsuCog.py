@@ -1,6 +1,5 @@
 import datetime
 import logging
-from typing import Dict, List, Optional
 
 import discord
 from discord import Color, app_commands
@@ -13,7 +12,6 @@ from nameless import Nameless
 from nameless.database import CRUD
 from nameless.ui_kit import NamelessYNPrompt
 from NamelessConfig import NamelessConfig
-
 
 __all__ = ["OsuCog"]
 
@@ -30,7 +28,7 @@ def convert_to_game_mode(mode: str) -> GameMode:
     Returns:
         GameMode: GameMode for ossapi
     """
-    m: Dict[str, GameMode] = {
+    m: dict[str, GameMode] = {
         "osu": GameMode.OSU,
         "taiko": GameMode.TAIKO,
         "fruits": GameMode.CATCH,
@@ -43,14 +41,11 @@ def convert_to_game_mode(mode: str) -> GameMode:
 class OsuCog(commands.GroupCog, name="osu"):
     def __init__(self, bot: Nameless):
         self.bot = bot
-        self.api = Ossapi(
-            NamelessConfig.OSU.CLIENT_ID,
-            NamelessConfig.OSU.CLIENT_SECRET,
-        )
+        self.api = Ossapi(NamelessConfig.OSU.CLIENT_ID, NamelessConfig.OSU.CLIENT_SECRET)
 
     @app_commands.command()
     @app_commands.describe(member="The member to view, or you by default.")
-    async def profile(self, interaction: discord.Interaction, member: Optional[discord.Member]):
+    async def profile(self, interaction: discord.Interaction, member: discord.Member | None):
         """View someone's osu! *linked* profile"""
         await interaction.response.defer()
         db_user = CRUD.get_or_create_user_record(member if member else interaction.user)
@@ -96,11 +91,7 @@ class OsuCog(commands.GroupCog, name="osu"):
     @app_commands.choices(mode=[Choice(name=k, value=k) for k in osu_modes])
     @app_commands.checks.has_permissions(manage_guild=True)
     async def force_update(
-        self,
-        interaction: discord.Interaction,
-        member: discord.Member,
-        username: str,
-        mode: str = "osu",
+        self, interaction: discord.Interaction, member: discord.Member, username: str, mode: str = "osu"
     ):
         """Force database to update a member's auto search. For guild managers."""
         await interaction.response.defer()
@@ -150,21 +141,15 @@ class OsuCog(commands.GroupCog, name="osu"):
                 )
                 .set_thumbnail(url=osu_user.avatar_url)
                 .set_footer(text=f"Requested by {interaction.user}")
+                .add_field(name="Account creation time", value=f"<t:{int(osu_user.join_date.timestamp())}:F>")
                 .add_field(
-                    name="Account creation time",
-                    value=f"<t:{int(osu_user.join_date.timestamp())}:F>",
-                )
-                .add_field(
-                    name="Level",
-                    value=f"{user_stats.level.current} ({user_stats.level.progress}%)",
-                    inline=False,
+                    name="Level", value=f"{user_stats.level.current} ({user_stats.level.progress}%)", inline=False
                 )
                 .add_field(name="Accuracy", value=f"{user_stats.hit_accuracy}%")
                 .add_field(name="PP", value=user_stats.pp)
                 .add_field(name="Max combo", value=user_stats.maximum_combo)
                 .add_field(
-                    name="Play count",
-                    value=f"{user_stats.play_count} plays over {user_stats.play_time} minutes",
+                    name="Play count", value=f"{user_stats.play_count} plays over {user_stats.play_time} minutes"
                 )
                 .add_field(
                     name="Leaderboard ranking",
@@ -181,11 +166,7 @@ class OsuCog(commands.GroupCog, name="osu"):
             )
 
             if osu_user.previous_usernames:
-                eb.insert_field_at(
-                    index=0,
-                    name="Formerly known as",
-                    value=", ".join(osu_user.previous_usernames),
-                )
+                eb.insert_field_at(index=0, name="Formerly known as", value=", ".join(osu_user.previous_usernames))
 
             await m.edit(content="", embeds=[eb])
         else:
@@ -209,7 +190,7 @@ class OsuCog(commands.GroupCog, name="osu"):
                 fail_prompt.stop()
                 include_fails = fail_prompt.is_confirmed
 
-            scores: List[Score] = self.api.user_scores(
+            scores: list[Score] = self.api.user_scores(
                 osu_user.id, request_type, include_fails=include_fails, mode=the_mode, limit=count
             )
 
@@ -263,10 +244,7 @@ class OsuCog(commands.GroupCog, name="osu"):
                         if score.weight is not None
                         else "0",
                     )
-                    .add_field(
-                        name="Submission time",
-                        value=f"<t:{int(score.created_at.timestamp())}:R>",
-                    )
+                    .add_field(name="Submission time", value=f"<t:{int(score.created_at.timestamp())}:R>")
                 )
 
                 embeds.append(embed)
@@ -299,7 +277,7 @@ class OsuCog(commands.GroupCog, name="osu"):
     async def details(
         self,
         interaction: discord.Interaction,
-        member: Optional[discord.Member],
+        member: discord.Member | None,
         request_type: str = "profile",
         game_mode: str = "default",
         include_fail: bool = True,

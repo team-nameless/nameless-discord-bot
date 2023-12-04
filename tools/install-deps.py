@@ -3,11 +3,4 @@ import subprocess
 
 sep = os.sep
 
-subprocess.run(
-    [
-        "pip",
-        "install",
-        "-r", "requirements_core.txt",
-        "-r", "requirements_dev.txt",
-    ]
-)
+subprocess.run(["pip", "install", "-r", "requirements_core.txt", "-r", "requirements_dev.txt"])

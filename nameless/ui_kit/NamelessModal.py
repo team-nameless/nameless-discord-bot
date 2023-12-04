@@ -1,7 +1,6 @@
 import discord
 from discord import ui
 
-
 __all__ = ["NamelessModal"]
 
 

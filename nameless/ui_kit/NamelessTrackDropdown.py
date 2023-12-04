@@ -1,24 +1,18 @@
-from typing import List
-
 import discord
 import wavelink
 
 from nameless.ui_kit import NamelessDropdown
 
-
 __all__ = ["NamelessTrackDropdown"]
 
 
 class NamelessTrackDropdown(NamelessDropdown):
-    def __init__(self, tracks: List[wavelink.Playable]):
+    def __init__(self, tracks: list[wavelink.Playable]):
         super().__init__()
 
         self.options = [
             discord.SelectOption(
-                label="I don't see my results here",
-                description="Nothing here!",
-                value="Nope",
-                emoji="❌",
+                label="I don't see my results here", description="Nothing here!", value="Nope", emoji="❌"
             )
         ] + [
             discord.SelectOption(

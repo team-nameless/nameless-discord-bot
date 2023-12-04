@@ -1,6 +1,5 @@
 import discord
 
-
 __all__ = ["NamelessYNPrompt"]
 
 

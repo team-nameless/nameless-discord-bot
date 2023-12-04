@@ -12,13 +12,11 @@ from discord.app_commands import AppCommandError, Choice, Range
 from discord.ext import commands
 from discord.utils import escape_markdown
 from reactionmenu import ViewButton, ViewMenu
-from wavelink import TrackEventPayload
-from wavelink.ext import spotify
+from typing import cast
 
 from nameless import Nameless
 from nameless.cogs.checks.MusicCogCheck import MusicCogCheck
 from nameless.commons import Utility
-from nameless.customs.voice_backends import BaseVoiceBackend
 from nameless.database import CRUD
 from nameless.ui_kit import NamelessTrackDropdown, NamelessVoteMenu
 from NamelessConfig import NamelessConfig
@@ -141,19 +139,13 @@ class MusicCog(commands.GroupCog, name="music"):
         await self.bot.wait_until_ready()
 
         nodes = [
-            wavelink.Node(uri=f"{node.host}:{node.port}", secure=node.secure, password=node.password)
+            wavelink.Node(uri=f"{node.host}:{node.port}", password=node.password)
             for node in NamelessConfig.MUSIC.NODES
         ]
 
-        await wavelink.NodePool.connect(
+        await wavelink.Pool.connect(
             client=self.bot,
-            nodes=nodes,
-            spotify=spotify.SpotifyClient(
-                client_id=NamelessConfig.MUSIC.SPOTIFY.CLIENT_ID,
-                client_secret=NamelessConfig.MUSIC.SPOTIFY.CLIENT_SECRET,
-            )
-            if self.can_use_spotify
-            else None,
+            nodes=nodes
         )
 
         if not self.is_ready.is_set():
@@ -161,7 +153,7 @@ class MusicCog(commands.GroupCog, name="music"):
 
     @commands.Cog.listener()
     async def on_wavelink_node_ready(self, node: wavelink.Node):
-        logging.info("Node {%s} (%s) is ready!", node.id, node.uri)
+        logging.info("Node {%s} (%s) is ready!", node.identifier, node.uri)
 
     @staticmethod
     async def list_voice_state_change(before: discord.VoiceState, after: discord.VoiceState):
@@ -211,7 +203,7 @@ class MusicCog(commands.GroupCog, name="music"):
             after_not_in_noice = after.channel is None
 
             if before_was_in_voice and after_not_in_noice:
-                node_dict = wavelink.NodePool.nodes.items()
+                node_dict = wavelink.Pool.nodes.items()
                 guilds_players = [p for (_, node) in node_dict if (p := node.get_player(member.guild.id))]
                 if guilds_players:
                     bot_player: list[wavelink.Player] = [
@@ -308,10 +300,10 @@ class MusicCog(commands.GroupCog, name="music"):
             await self.is_ready.wait()
 
         try:
-            await interaction.user.voice.channel.connect(cls=BaseVoiceBackend.Player, self_deaf=True)  # pyright: ignore
+            await interaction.user.voice.channel.connect(cls=wavelink.Player, self_deaf=True)
             await interaction.followup.send("Connected to your voice channel")
 
-            vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
+            vc: wavelink.Player = cast(wavelink.Player, interaction.guild.voice_client)
 
             vc.should_send_play_now = True
             vc.play_now_allowed = True
@@ -328,7 +320,8 @@ class MusicCog(commands.GroupCog, name="music"):
         """Disconnect from my current voice channel"""
         await interaction.response.defer()
 
-        vc = interaction.guild.voice_client  # type: ignore
+        vc: wavelink.Player = cast(wavelink.Player, interaction.guild.voice_client)
+
         if not vc:
             await interaction.followup.send("I am not connected to a voice channel")
             return
@@ -348,56 +341,54 @@ class MusicCog(commands.GroupCog, name="music"):
         """Start playing the queue."""
         await interaction.response.defer()
 
-        vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
+        vc: wavelink.Player = cast(wavelink.Player, interaction.guild.voice_client)
 
         # When the user switch from radio -> normal queued track
         vc.queue.loop = False
         vc.should_send_play_now = True
 
         await interaction.followup.send("The queue should be playing now.")
-        await vc.play(vc.queue.get(), populate=vc.autoplay)  # pyright: ignore
+        await vc.play(vc.queue.get())
 
     @app_commands.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
-    async def toggle_loop_track(self, interaction: discord.Interaction):
-        """Toggle loop of current track."""
+    @app_commands.choices(mode=[Choice(name=k, value=k) for k in ["off", "track", "queue"]])
+    @app_commands.describe(mode="Mode to switch")
+    async def set_loop_mode(self, interaction: discord.Interaction, mode: str):
+        """Set loop mode."""
         await interaction.response.defer()
 
-        vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
-        vc.queue.loop = not vc.queue.loop
-        vc.should_send_play_now = not vc.queue.loop
-        await interaction.followup.send(f"Track loop set to {'on' if vc.queue.loop else 'off'}")
+        vc: wavelink.Player = cast(wavelink.Player, interaction.guild.voice_client)
+
+        if mode == "off":
+            vc.queue.mode = wavelink.QueueMode.normal
+        elif mode == "track":
+            vc.queue.mode = wavelink.QueueMode.loop
+        elif mode == "queue":
+            vc.queue.mode = wavelink.QueueMode.loop_all
+
+        await interaction.followup.send(f"Changed loop mode to {mode}")
 
     @app_commands.command()
     @app_commands.guild_only()
-    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    async def toggle_loop_queue(self, interaction: discord.Interaction):
-        """Toggle loop of current queue."""
+    @app_commands.choices(mode=[Choice(name=k, value=k) for k in ["off", "on", "partial"]])
+    @app_commands.describe(mode="Mode to switch")
+    async def set_autoplay_mode(self, interaction: discord.Interaction, mode: str = "on"):
+        """Set autoplay of mode."""
         await interaction.response.defer()
 
-        vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
+        vc: wavelink.Player = cast(wavelink.Player, interaction.guild.voice_client)
 
-        if vc.queue.loop:
-            await interaction.followup.send("You must have track looping disabled before using this.")
-            return
+        if mode == "off":
+            vc.autoplay = wavelink.AutoPlayMode.disabled
+        elif mode == "on":
+            vc.autoplay = wavelink.AutoPlayMode.enabled
+        elif mode == "partial":
+            vc.autoplay = wavelink.AutoPlayMode.partial
 
-        vc.queue.loop_all = not vc.queue.loop_all
-        await interaction.followup.send(f"Queue loop set to {'on' if vc.queue.loop_all else 'off'}")
-
-    @app_commands.command()
-    @app_commands.guild_only()
-    async def toggle_autoplay_queue(self, interaction: discord.Interaction):
-        """Toggle autoplay of current queue."""
-        await interaction.response.defer()
-
-        vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
-
-        vc.auto_play_queue = not getattr(vc, "auto_play_queue", False)
-        await interaction.followup.send(
-            f"Queue auto play set to {'on' if getattr(vc, 'auto_play_queue', False) else 'off'}"
-        )
+        await interaction.followup.send(f"Changed autoplay mode to {mode}")
 
     @app_commands.command()
     @app_commands.guild_only()

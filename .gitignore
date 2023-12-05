@@ -6,3 +6,4 @@
 **/__pycache__/**
 nameless.db
 NamelessConfig.py
+.vscode/setting.json

@@ -21,7 +21,7 @@ class MusicCogCheck(BaseCheck):
     def queue_has_element(interaction: discord.Interaction):
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
 
-        if vc and vc.queue.is_empty:
+        if vc and bool(vc.queue):
             raise CheckFailure("I need to have something in the queue.")
 
         return True
@@ -52,7 +52,7 @@ class MusicCogCheck(BaseCheck):
     def bot_is_not_playing_something(interaction: discord.Interaction):
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
 
-        if vc and vc.is_playing():
+        if vc and vc.playing:
             raise CheckFailure("I must not be playing something (or paused while doing it).")
 
         return True
@@ -61,7 +61,7 @@ class MusicCogCheck(BaseCheck):
     def bot_is_silent(interaction: discord.Interaction):
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
 
-        if vc and not vc.is_paused():
+        if vc and not vc.paused:
             raise CheckFailure("I must be silenced.")
 
         return True
@@ -70,7 +70,7 @@ class MusicCogCheck(BaseCheck):
     def bot_is_playing_something(interaction: discord.Interaction):
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
 
-        if vc and not vc.is_playing():
+        if vc and not vc.playing:
             raise CheckFailure("I need to play something.")
 
         return True

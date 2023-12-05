@@ -5,8 +5,6 @@ import wavelink
 
 __all__ = ["NamelessVoteMenu"]
 
-VoiceClientT_ = discord.VoiceClient | wavelink.Player
-
 
 class NamelessVoteMenuView(discord.ui.View):
     __slots__ = ("user", "value")
@@ -46,17 +44,23 @@ class NamelessVoteMenu:
         "disapprove_member",
     )
 
-    def __init__(self, action: str, content: str, interaction: discord.Interaction, voice_client: VoiceClientT_):
+    def __init__(
+        self,
+        interaction: discord.Interaction,
+        wavelink_player: wavelink.Player,
+        action: str,
+        content: str,
+    ):
         self.action = action
         self.content = f"{content[:50]}..."
         self.interaction = interaction
-        self.max_vote_user = math.ceil(len(voice_client.channel.members) / 2)  # pyright: ignore
+        self.max_vote_user = math.ceil(len(wavelink_player.channel.members) / 2)
         self.total_vote = 1
 
         self.approve_member: list[str] = [interaction.user.mention]
         self.disapprove_member: list[str] = []
 
-    async def start(self):
+    async def start(self) -> bool:
         if self.max_vote_user <= 1:
             return True
 

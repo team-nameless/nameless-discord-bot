@@ -475,25 +475,31 @@ class MusicCog(commands.GroupCog, name="music"):
 
     @app_commands.command()
     @app_commands.guild_only()
-    @app_commands.describe(value="Change autoplay mode, `disable`, `enable` or `partial`")
+    @app_commands.describe(value="Change autoplay mode, `disable` or `enable`")
+    @app_commands.choices(value=[
+        Choice(name="enable", value=wavelink.AutoPlayMode.enabled),
+        Choice(name="disable", value=wavelink.AutoPlayMode.partial),
+        ])
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.must_not_be_a_stream)
     async def toggle_autoplay(
         self,
         interaction: discord.Interaction,
-        value: Literal["disable", "enable", "partial"] = None,  # type: ignore
+        value: int = None  # type: ignore
     ):
         """Toggle AutoPlay feature."""
         await interaction.response.defer()
 
-        player: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
-        action = wavelink.AutoPlayMode(value)
-        if not action:
+        player: wavelink.Player = interaction.guild.voice_client  # type: ignore
+        if value:
+            action = wavelink.AutoPlayMode(value)
+        else:
             if player.autoplay in (wavelink.AutoPlayMode.disabled, wavelink.AutoPlayMode.partial):
                 action = wavelink.AutoPlayMode.enabled
             else:
                 action = wavelink.AutoPlayMode.partial
 
+        player.autoplay = action
         await interaction.followup.send(f"AutoPlay is now {'on' if player.autoplay else 'off'}")
 
     queue = app_commands.Group(name="queue", description="Commands related to queue management.")

@@ -1,7 +1,7 @@
 import asyncio
-import datetime  # noqa: F401
+import datetime
 import logging
-from typing import Any, Optional, Union, cast  # noqa: F401
+from typing import Any, Literal, Optional, Union, cast  # noqa: F401
 
 import discord
 import wavelink
@@ -281,7 +281,7 @@ class MusicCog(commands.GroupCog, name="music"):
         play_after = not player.playing and not bool(player.queue) and player.auto_play_queue
         show_embed = None
 
-        tracks: wavelink.Search = await wavelink.Playable.search(search)
+        tracks: wavelink.Search = await wavelink.Playable.search(search, source=SOURCE_MAPPING[source])
         if not tracks:
             await interaction.followup.send("No results found")
             return
@@ -358,7 +358,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Check now playing song"""
         await interaction.response.defer()
 
-        player: wavelink.Player = cast(BaseVoiceBackend.Player, interaction.guild.voice_client)  # type: ignore
+        player: BaseVoiceBackend.Player = cast(BaseVoiceBackend.Player, interaction.guild.voice_client)  # type: ignore
         track: wavelink.Playable | None = player.current
         if not track:
             await interaction.response.send_message("Not playing anything")
@@ -367,6 +367,134 @@ class MusicCog(commands.GroupCog, name="music"):
         dbg = CRUD.get_or_create_guild_record(interaction.guild)
         embed = self.generate_embed_np_from_playable(player, track, interaction.user, dbg)
         await interaction.followup.send(embed=embed)
+
+    @app_commands.command()
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
+    @app_commands.describe(bypass_loop="Whether to bypass track looping")
+    async def skip(self, interaction: discord.Interaction, bypass_loop: bool = False):
+        """Skip a song. Even if it is looping."""
+        await interaction.response.defer()
+
+        player: BaseVoiceBackend.Player = cast(BaseVoiceBackend.Player, interaction.guild.voice_client)  # type: ignore
+        track: wavelink.Playable = player.current  # type: ignore
+
+        if await NamelessVoteMenu(interaction, player, "skip", track.title).start():
+            if bool(player.queue):
+                if bypass_loop:
+                    player.queue._loaded = None
+                player.should_send_play_now = True
+
+            await player.stop()
+            if not bool(player.queue):
+                await interaction.followup.send("✅")
+            else:
+                await interaction.followup.send("Next track should be played now")
+
+        else:
+            await interaction.followup.send("Not skipping because not enough votes!")
+
+    async def seek_position(self, player: BaseVoiceBackend.Player, position: int):
+        """Seek to position in milliseconds. Returns the new position in milliseconds"""
+
+        if not 0 <= position <= player.current.length:  # type: ignore
+            raise ValueError("Invalid position to seek")
+        await player.seek(position)
+
+    async def seek_position_sec(self, player: BaseVoiceBackend.Player, position: float):
+        """Seek to position in seconds"""
+        await self.seek_position(player, int(position * 1000))
+
+    async def seek_position_format(self, player: BaseVoiceBackend.Player, position: str):
+        """Seek to position in time format (ex: `position="7:27"` or `position="00:07:27"`)"""
+        time_split = position.split(":")
+        if len(time_split) == 2:
+            real_sec = int(time_split[0]) * 60 + int(time_split[1])
+        elif len(time_split) == 3:
+            real_sec = int(time_split[0]) * 3600 + int(time_split[1]) * 60 + int(time_split[2])
+        else:
+            raise ValueError("Invalid time format")
+
+        await self.seek_position(player, real_sec * 1000)
+
+    async def seek_percent(self, player: BaseVoiceBackend.Player, percent: int):
+        if not 0 <= percent <= 100:
+            raise ValueError("Invalid percent to seek")
+        await player.seek(int(player.current.length * percent / 100))
+
+    @app_commands.command()
+    @app_commands.guild_only()
+    @app_commands.describe(
+        in_milliseconds="Seek to position in milliseconds",
+        in_seconds="Seek to position in seconds",
+        in_percent="Seek to position in percent",
+        position='Seek to position in time format (ex: `position="7:27"` or `position="00:07:27"`)',
+    )
+    # @app_commands.checks.has_permissions(manage_guild=True)
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
+    async def seek(
+        self,
+        interaction: discord.Interaction,
+        in_milliseconds: app_commands.Range[int, 0] = 0,
+        in_seconds: app_commands.Range[int, 0] = 0,
+        in_percent: app_commands.Range[int, 0] = 0,
+        position: str = "0",
+    ):
+        """Seek to position in a track"""
+        await interaction.response.defer()
+
+        player: BaseVoiceBackend.Player = cast(BaseVoiceBackend.Player, interaction.guild.voice_client)
+        track: wavelink.Playable = player.current  # type: ignore
+
+        if await NamelessVoteMenu(interaction, player, "seek", track.title).start():
+            if in_seconds:
+                await self.seek_position_sec(player, in_seconds)
+            elif position != "0":
+                await self.seek_position_format(player, position)
+            elif in_percent:
+                await self.seek_percent(player, in_percent)
+            else:
+                await self.seek_position(player, in_milliseconds)
+
+            dbg = CRUD.get_or_create_guild_record(interaction.guild)
+            embed = self.generate_embed_np_from_playable(player, track, interaction.user, dbg)
+            await interaction.followup.send(content="Seeked", embed=embed)
+
+    @app_commands.command()
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    async def toggle_now_playing(self, interaction: discord.Interaction):
+        """Toggle 'Now playing' message delivery on every non-looping track."""
+        await interaction.response.defer()
+
+        player: BaseVoiceBackend.Player = cast(BaseVoiceBackend.Player, interaction.guild.voice_client)
+        player.play_now_allowed = not player.play_now_allowed
+        await interaction.followup.send(f"'Now playing message' is now {'on' if player.play_now_allowed else 'off'}")
+
+    @app_commands.command()
+    @app_commands.guild_only()
+    @app_commands.describe(value="Change autoplay mode, `disable`, `enable` or `partial`")
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.must_not_be_a_stream)
+    async def toggle_autoplay(
+        self,
+        interaction: discord.Interaction,
+        value: Literal["disable", "enable", "partial"] = None,  # type: ignore
+    ):
+        """Toggle AutoPlay feature."""
+        await interaction.response.defer()
+
+        player: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
+        action = wavelink.AutoPlayMode(value)
+        if not action:
+            if player.autoplay in (wavelink.AutoPlayMode.disabled, wavelink.AutoPlayMode.partial):
+                action = wavelink.AutoPlayMode.enabled
+            else:
+                action = wavelink.AutoPlayMode.partial
+
+        await interaction.followup.send(f"AutoPlay is now {'on' if player.autoplay else 'off'}")
 
     queue = app_commands.Group(name="queue", description="Commands related to queue management.")
 

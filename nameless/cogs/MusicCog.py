@@ -20,6 +20,7 @@ from nameless.ui_kit import NamelessTrackDropdown, NamelessVoteMenu
 from NamelessConfig import NamelessConfig
 
 __all__ = ["MusicCog"]
+
 SOURCE_MAPPING = {
     "youtube": wavelink.TrackSource.YouTube,
     "soundcloud": wavelink.TrackSource.SoundCloud,
@@ -331,7 +332,7 @@ class MusicCog(commands.GroupCog, name="music"):
             return tracks
 
         view = discord.ui.View().add_item(NamelessTrackDropdown([track for track in tracks if not track.is_stream]))
-        m: discord.WebhookMessage = await interaction.followup.send("Tracks found", view=view)  # pyright: ignore
+        m: discord.WebhookMessage = await interaction.followup.send("Tracks found", view=view)  # type: ignore
 
         if await view.wait():
             await m.edit(content="Timed out! Please try again!", view=None)
@@ -469,11 +470,8 @@ class MusicCog(commands.GroupCog, name="music"):
                 player.should_send_play_now = True
 
             await player.stop()
-            if not bool(player.queue):
-                await interaction.followup.send("✅")
-            else:
+            if bool(player.queue):
                 await interaction.followup.send("Next track should be played now")
-
         else:
             await interaction.followup.send("Not skipping because not enough votes!")
 

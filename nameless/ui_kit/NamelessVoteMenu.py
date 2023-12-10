@@ -64,11 +64,11 @@ class NamelessVoteMenu:
         if self.max_vote_user <= 1:
             return True
 
-        await self.interaction.response.edit_message(embed=self.__eb())
+        m: discord.WebhookMessage = await self.interaction.followup.send(self.__eb())  # type: ignore
 
         while len(self.disapprove_member) < self.max_vote_user and len(self.approve_member) < self.max_vote_user:
             menu = NamelessVoteMenuView()
-            await self.interaction.response.edit_message(embed=self.__eb(), view=menu)
+            await m.edit(embed=self.__eb(), view=menu)
             await menu.wait()
 
             if menu.user in self.approve_member or menu.user in self.disapprove_member:
@@ -77,19 +77,15 @@ class NamelessVoteMenu:
             self.total_vote += 1
 
             if menu.value:
-                self.approve_member.append(menu.user)  # pyright: ignore
+                self.approve_member.append(menu.user)  # type: ignore
             else:
-                self.disapprove_member.append(menu.user)  # pyright: ignore
+                self.disapprove_member.append(menu.user)  # type: ignore
 
         pred = len(self.disapprove_member) < len(self.approve_member)
         if pred:
-            await self.interaction.response.edit_message(
-                content=f"{self.action.title()} {self.content}!", embed=None, view=None
-            )
+            await m.edit(content=f"{self.action.title()} {self.content}!", embed=None, view=None)
         else:
-            await self.interaction.response.edit_message(
-                content=f"Not enough votes to {self.action}!", embed=None, view=None
-            )
+            await m.edit(content=f"Not enough votes to {self.action}!", embed=None, view=None)
 
         return pred
 

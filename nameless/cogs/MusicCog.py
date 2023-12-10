@@ -33,8 +33,35 @@ class MusicCog(commands.GroupCog, name="music"):
         self.bot = bot
         self.is_ready = asyncio.Event()
 
+        self.nodes = [
+            wavelink.Node(
+                uri=f"{'https' if node.secure else 'http'}://{node.host}:{node.port}",
+                password=node.password,
+            )
+            for node in NamelessConfig.MUSIC.NODES
+        ]
+
         bot.loop.create_task(self.connect_nodes())
-        self.autoleave_waiter_task = {}
+        self.autoleave_waiter_task: dict[int, asyncio.Task] = {}
+
+    async def autoleave(self, chn: discord.VoiceChannel | discord.StageChannel):
+        logging.warning("Initiating autoleave for voice channel ID:%s of guild %s", chn.id, chn.guild.id)
+        await asyncio.sleep(5)
+
+        guild = self.bot.get_guild(chn.guild.id)
+        player = cast(Player, guild.voice_client)  # type: ignore
+
+        await player.disconnect(force=True)
+        logging.warning("Disconnect from voice channel ID:%s of guild %s", chn.id, chn.guild.id)
+
+    @staticmethod
+    async def list_voice_state_change(before: discord.VoiceState, after: discord.VoiceState):
+        """Method to check what has been updated in voice state."""
+        # diff = []
+        # for k in before.__slots__:
+        #     if getattr(before, k) != getattr(after, k):
+        #         diff.append(k)
+        return [k for k in before.__slots__ if getattr(before, k) != getattr(after, k)]
 
     @staticmethod
     def remove_artist_suffix(name: str) -> str:
@@ -44,16 +71,7 @@ class MusicCog(commands.GroupCog, name="music"):
 
     async def connect_nodes(self):
         await self.bot.wait_until_ready()
-
-        nodes = [
-            wavelink.Node(
-                uri=f"{'https' if node.secure else 'http'}://{node.host}:{node.port}",
-                password=node.password,
-            )
-            for node in NamelessConfig.MUSIC.NODES
-        ]
-
-        await wavelink.Pool.connect(client=self.bot, nodes=nodes, cache_capacity=100)
+        await wavelink.Pool.connect(client=self.bot, nodes=self.nodes, cache_capacity=100)
 
         if not self.is_ready.is_set():
             self.is_ready.set()
@@ -73,6 +91,75 @@ class MusicCog(commands.GroupCog, name="music"):
         if chn is not None and player.play_now_allowed and player.should_send_play_now:
             embed = self.generate_embed_np_from_playable(player, track, self.bot.user, dbg)  # type: ignore
             await chn.send(embed=embed)  # type: ignore
+
+    @commands.Cog.listener()
+    async def on_voice_state_update(
+        self,
+        member: discord.Member,
+        before: discord.VoiceState,
+        after: discord.VoiceState,
+    ):
+        chn = before.channel if before.channel else after.channel
+        if not chn:  # bot not in voice or we dont see this channel
+            return
+
+        guild = chn.guild
+        changes = await self.list_voice_state_change(before, after)
+        if "channel" not in changes:
+            return
+
+        bot_is_in_vc = bool(guild.voice_client)
+        member_count = len(chn.members) - 1 if bot_is_in_vc else len(chn.members)
+
+        if bot_is_in_vc and member_count <= 0:
+            logging.info("No member present in voice channel ID:%s in guild %s, creating autoleave", chn.id, guild.id)
+
+            # random check to prevent multiple autoleave
+            if self.autoleave_waiter_task.get(chn.id):
+                self.autoleave_waiter_task.pop(chn.id).cancel()
+
+            self.autoleave_waiter_task[chn.id] = self.bot.loop.create_task(self.autoleave(chn))
+            logging.debug("%s", self.autoleave_waiter_task)
+            return
+
+        if self.autoleave_waiter_task.get(chn.id):
+            if self.autoleave_waiter_task[chn.id].done():
+                self.autoleave_waiter_task.pop(chn.id)
+                return
+
+            if member_count > 0:
+                logging.info(
+                    "New member present in voice channel ID:%s in guild %s, cancel autoleave", chn.id, guild.id
+                )
+            else:
+                logging.info(
+                    "Bot is also getting disconnected from voice channel ID:%s in guild %s. Cancelling autoleave",
+                    chn.id,
+                    guild.id,
+                )
+
+            self.autoleave_waiter_task[chn.id].cancel()
+            del self.autoleave_waiter_task[chn.id]
+            logging.debug("%s", self.autoleave_waiter_task)
+
+        # deprecated code, comment for review only
+        # if member.id == self.bot.user.id and before.channel and not after.channel:
+        # we already disconnected so we must do this to get the remain player
+        # player = None
+        # for node in self.nodes:
+        #     player = node.get_player(guild.id)
+        #     if player:
+        #         break
+
+        # # already disconnected, just silently return
+        # if not player:
+        #     return
+
+        # logging.debug(
+        #     "Guild player %s still connected even if it is removed from voice, disconnecting",
+        #     guild.id,
+        # )
+        # await player.disconnect(force=True)
 
     @staticmethod
     def generate_embeds_from_playable(

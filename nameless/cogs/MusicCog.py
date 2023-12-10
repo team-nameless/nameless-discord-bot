@@ -74,10 +74,6 @@ class MusicCog(commands.GroupCog, name="music"):
             embed = self.generate_embed_np_from_playable(player, track, self.bot.user, dbg)  # type: ignore
             await chn.send(embed=embed)  # type: ignore
 
-            # build_title = track.title if not track.uri else f"[{track.title}](<{track.uri}>)"
-            # build_artist = self.remove_artist_suffix(track.author)
-            # await chn.send(f"Playing: {build_title} by **{build_artist}**")  # type: ignore
-
     @staticmethod
     def generate_embeds_from_playable(
         tracks: wavelink.Queue | list[wavelink.Playable] | wavelink.Playlist,
@@ -87,11 +83,7 @@ class MusicCog(commands.GroupCog, name="music"):
         embeds: list[discord.Embed] = []
 
         for idx, track in enumerate(tracks, start=1):
-            upcoming = (
-                f"{idx} - "
-                f"[{escape_markdown(track.title)} by {escape_markdown(track.author)}]"
-                f"({track.uri or 'N/A'})\n"
-            )
+            upcoming = f"{idx} - " f"[{track.title} by {track.author}]" f"({track.uri or 'N/A'})\n"
 
             if len(txt) + len(upcoming) > 2048:
                 eb = discord.Embed(
@@ -143,6 +135,10 @@ class MusicCog(commands.GroupCog, name="music"):
                 icon += "🔁"
             return icon
 
+        title = add_icon()
+        title += "Autoplaying" if track.recommended else "Now playing"
+        title += " track" if not is_stream else " stream"
+
         embed = (
             discord.Embed(timestamp=datetime.datetime.now(), color=discord.Color.orange())
             .set_author(
@@ -159,9 +155,7 @@ class MusicCog(commands.GroupCog, name="music"):
             )
             .add_field(
                 name="Source",
-                value=f"[{escape_markdown(str.title(track.source))}]({escape_markdown(track.uri)})"
-                if track.uri
-                else "N/A",
+                value=f"[{str.title(track.source)}]({track.uri})" if track.uri else "N/A",
                 inline=False,
             )
             .add_field(
@@ -279,7 +273,6 @@ class MusicCog(commands.GroupCog, name="music"):
 
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
         play_after = not player.playing and not bool(player.queue) and player.auto_play_queue
-        show_embed = None
 
         tracks: wavelink.Search = await wavelink.Playable.search(search, source=SOURCE_MAPPING[source])
         if not tracks:
@@ -289,7 +282,7 @@ class MusicCog(commands.GroupCog, name="music"):
         if isinstance(tracks, wavelink.Playlist):
             # tracks is a playlist...
             added: int = await player.queue.put_wait(tracks)
-            show_embed = tracks
+            soon_added = tracks
             await interaction.followup.send(f"Added the playlist **`{tracks.name}`** ({added} songs) to the queue.")
         else:
             soon_added = await self.pick_track_from_results(interaction, tracks)
@@ -297,10 +290,9 @@ class MusicCog(commands.GroupCog, name="music"):
                 return
 
             await player.queue.put_wait(soon_added)
-            show_embed = soon_added
 
-        if show_embed:
-            embeds = self.generate_embeds_from_playable(show_embed, title="List of tracks added to the queue")
+        if soon_added:
+            embeds = self.generate_embeds_from_playable(soon_added, title="List of tracks added to the queue")
             self.bot.loop.create_task(self.show_paginated_tracks(interaction, embeds))
 
         if play_after:
@@ -312,7 +304,7 @@ class MusicCog(commands.GroupCog, name="music"):
     @app_commands.choices(source=[Choice(name=k, value=k) for k in SOURCE_MAPPING])
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     async def play(self, interaction: discord.Interaction, search: str, source: str = "youtube"):
-        """Start playing the queue."""
+        """Add or search track(s) to queue. Also allows you to play a playlist"""
         await self._play(interaction, search, source)
 
     @app_commands.command()
@@ -458,7 +450,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Seek to position in a track"""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)
+        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
         track: wavelink.Playable = player.current  # type: ignore
 
         if await NamelessVoteMenu(interaction, player, "seek", track.title).start():
@@ -625,6 +617,23 @@ class MusicCog(commands.GroupCog, name="music"):
             return
 
         embeds = self.generate_embeds_from_playable(player.queue)
+        self.bot.loop.create_task(self.show_paginated_tracks(interaction, embeds))
+
+    @queue.command()
+    @app_commands.guild_only()
+    async def view_autoplay(self, interaction: discord.Interaction):
+        """View current autoplay queue. Can be none if autoplay is disabled."""
+        await interaction.response.defer()
+
+        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+
+        if player.autoplay != wavelink.AutoPlayMode.enabled and not player.auto_queue:
+            await interaction.followup.send(
+                "Seems like autoplay is disabled or autoplay queue is has not been populated yet."
+            )
+            return
+
+        embeds = self.generate_embeds_from_playable(player.auto_queue, title="Autoplay queue")
         self.bot.loop.create_task(self.show_paginated_tracks(interaction, embeds))
 
     @queue.command()

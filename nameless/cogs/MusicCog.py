@@ -86,8 +86,12 @@ class MusicCog(commands.GroupCog, name="music"):
         player: Player = cast(Player, payload.player)
         track = payload.track
 
+        if not player.guild:
+            logging.warning("Player is not connected. Or we have been banned from the guild!")
+            return
+
         chn = player.guild.get_channel(player.trigger_channel_id)
-        dbg = CRUD.get_or_create_guild_record(chn.guild)
+        dbg = CRUD.get_or_create_guild_record(player.guild)
         if chn is not None and player.play_now_allowed and player.should_send_play_now:
             embed = self.generate_embed_np_from_playable(player, track, self.bot.user, dbg)  # type: ignore
             await chn.send(embed=embed)  # type: ignore
@@ -197,7 +201,7 @@ class MusicCog(commands.GroupCog, name="music"):
     def generate_embed_np_from_playable(
         player: Player,
         track: wavelink.Playable,
-        user: discord.User | discord.Member,
+        user: discord.User | discord.Member | discord.ClientUser,
         dbg,
     ) -> discord.Embed:
         def convert_time(milli):
@@ -622,10 +626,7 @@ class MusicCog(commands.GroupCog, name="music"):
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
 
         if not value:
-            if player.queue.mode in (QueueMode.loop, QueueMode.loop_all):
-                action = QueueMode.normal
-            else:
-                action = QueueMode.loop
+            action = QueueMode.normal if player.queue.mode in (QueueMode.loop, QueueMode.loop_all) else QueueMode.loop
         else:
             action = QueueMode(value)
 

@@ -295,6 +295,10 @@ class MusicCog(commands.GroupCog, name="music"):
             embeds = self.generate_embeds_from_playable(soon_added, title="List of tracks added to the queue")
             self.bot.loop.create_task(self.show_paginated_tracks(interaction, embeds))
 
+        if player.current and player.current.is_stream:
+            play_after = True
+            await player.stop(force=True)
+
         if play_after:
             await player.play(player.queue.get())
 

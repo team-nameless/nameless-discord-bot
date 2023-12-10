@@ -1,22 +1,21 @@
 import asyncio
 import datetime
 import logging
-from typing import Any, Literal, Optional, Union, cast  # noqa: F401
+from typing import cast
 
 import discord
 import wavelink
 from discord import ClientException, app_commands
-from discord.app_commands import AppCommandError, Choice, Range  # noqa: F401
+from discord.app_commands import Choice, Range
 from discord.ext import commands
 from discord.utils import escape_markdown
 from reactionmenu import ViewButton, ViewMenu
-from wavelink import Queue, QueueMode, TrackStartEventPayload  # noqa: F401
+from wavelink import QueueMode, TrackStartEventPayload
 
 from nameless import Nameless
 from nameless.cogs.checks.MusicCogCheck import MusicCogCheck
-from nameless.commons import Utility  # noqa: F401
 from nameless.customs.voice_backends.BaseVoiceBackend import Player
-from nameless.database import CRUD  # noqa: F401
+from nameless.database import CRUD
 from nameless.ui_kit import NamelessTrackDropdown, NamelessVoteMenu
 from NamelessConfig import NamelessConfig
 
@@ -216,9 +215,9 @@ class MusicCog(commands.GroupCog, name="music"):
 
         def add_icon():
             icon = "⏸️" if player.paused else "▶️"
-            if player.queue.mode == wavelink.QueueMode.loop:
+            if player.queue.mode == QueueMode.loop:
                 icon += "🔂"
-            elif player.queue.mode == wavelink.QueueMode.loop_all:
+            elif player.queue.mode == QueueMode.loop_all:
                 icon += "🔁"
             return icon
 
@@ -258,7 +257,7 @@ class MusicCog(commands.GroupCog, name="music"):
             .set_thumbnail(url=thumbnail_url)
         )
 
-        if player.queue.mode != wavelink.QueueMode.loop and not track.is_stream and bool(player.queue):
+        if player.queue.mode != QueueMode.loop and not track.is_stream and bool(player.queue):
             next_tr = player.queue._queue[0]
             embed.add_field(
                 name="Next track",
@@ -625,17 +624,15 @@ class MusicCog(commands.GroupCog, name="music"):
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
 
         if not value:
-            if player.queue.mode in (wavelink.QueueMode.loop, wavelink.QueueMode.loop_all):
-                action = wavelink.QueueMode.normal
+            if player.queue.mode in (QueueMode.loop, QueueMode.loop_all):
+                action = QueueMode.normal
             else:
-                action = wavelink.QueueMode.loop
+                action = QueueMode.loop
         else:
-            action = wavelink.QueueMode(value)
+            action = QueueMode(value)
 
         player.queue.mode = action
-        await interaction.followup.send(
-            f"Loop track is now {'on' if player.queue.mode is wavelink.QueueMode.loop else 'off'}"
-        )
+        await interaction.followup.send(f"Loop track is now {'on' if player.queue.mode is QueueMode.loop else 'off'}")
 
     @toggle.command(name="loop_queue")
     @app_commands.guild_only()
@@ -658,16 +655,16 @@ class MusicCog(commands.GroupCog, name="music"):
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
 
         if not value:
-            if player.queue.mode in (wavelink.QueueMode.loop, wavelink.QueueMode.loop_all):
-                action = wavelink.QueueMode.normal
+            if player.queue.mode in (QueueMode.loop, QueueMode.loop_all):
+                action = QueueMode.normal
             else:
-                action = wavelink.QueueMode.loop_all
+                action = QueueMode.loop_all
         else:
-            action = wavelink.QueueMode(value)
+            action = QueueMode(value)
 
         player.queue.mode = action
         await interaction.followup.send(
-            f"Loop queue is now {'on' if player.queue.mode is wavelink.QueueMode.loop_all else 'off'}"
+            f"Loop queue is now {'on' if player.queue.mode is QueueMode.loop_all else 'off'}"
         )
 
     queue = app_commands.Group(name="queue", description="Commands related to queue management.")

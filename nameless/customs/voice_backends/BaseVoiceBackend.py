@@ -1,9 +1,7 @@
-
 import wavelink
 
 
 class Player(wavelink.Player):
-    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -18,7 +16,7 @@ class Player(wavelink.Player):
     @property
     def auto_play_queue(self) -> bool:
         return self._auto_play_queue
-    
+
     @auto_play_queue.setter
     def auto_play_queue(self, value: bool):
         self._auto_play_queue = value
@@ -26,7 +24,7 @@ class Player(wavelink.Player):
     @property
     def should_send_play_now(self) -> bool:
         return self._should_send_play_now
-    
+
     @should_send_play_now.setter
     def should_send_play_now(self, value: bool):
         self._should_send_play_now = value
@@ -34,7 +32,7 @@ class Player(wavelink.Player):
     @property
     def play_now_allowed(self) -> bool:
         return self._play_now_allowed
-    
+
     @play_now_allowed.setter
     def play_now_allowed(self, value: bool):
         self._play_now_allowed = value
@@ -42,7 +40,7 @@ class Player(wavelink.Player):
     @property
     def trigger_channel_id(self) -> int:
         return self._trigger_channel_id
-    
+
     @trigger_channel_id.setter
     def trigger_channel_id(self, value: int):
         self._trigger_channel_id = value

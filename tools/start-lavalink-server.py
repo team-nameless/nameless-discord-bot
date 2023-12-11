@@ -4,16 +4,16 @@ import subprocess
 
 from packaging import version
 
-pattern = r'\"(\d+\.\d+).*\"'
+pattern = r"\"(\d+\.\d+).*\""
 sep = os.sep
-lavalink_run_cmd = ['java', '-jar', f".{sep}ext{sep}lavalink_server{sep}Lavalink.jar"]
+lavalink_run_cmd = ["java", "-jar", f".{sep}ext{sep}lavalink_server{sep}Lavalink.jar"]
 
 java_version = ""
 
 try:
-    java_version = subprocess.check_output(['java', '-version'], stderr=subprocess.STDOUT).decode()
+    java_version = subprocess.check_output(["java", "-version"], stderr=subprocess.STDOUT).decode()
 except FileNotFoundError:
-    raise FileNotFoundError("Java is not installed")
+    raise FileNotFoundError("Java is not installed") from None
 
 java_version = re.search(pattern, java_version).groups()[0]
 java_version = version.parse(java_version)
@@ -24,7 +24,7 @@ if java_version.major < 17:
 try:
     lavalink_version = subprocess.check_output([*lavalink_run_cmd, "--version"], stderr=subprocess.STDOUT).decode()
 except FileNotFoundError:
-    raise FileNotFoundError("Lavalink is not installed")
+    raise FileNotFoundError("Lavalink is not installed") from None
 
 # We only need the first line
 lavalink_version = lavalink_version.split("\n")[1].replace("Version:        ", "")

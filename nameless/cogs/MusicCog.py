@@ -364,8 +364,12 @@ class MusicCog(commands.GroupCog, name="music"):
 
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
         play_after = not player.playing and not bool(player.queue) and player.auto_play_queue
+        try:
+            tracks: wavelink.Search = await wavelink.Playable.search(search, source=SOURCE_MAPPING[source])
+        except wavelink.LavalinkLoadException:
+            await interaction.followup.send("Lavalink error occurred. Please contact the bot owner.")
+            return
 
-        tracks: wavelink.Search = await wavelink.Playable.search(search, source=SOURCE_MAPPING[source])
         if not tracks:
             await interaction.followup.send("No results found")
             return

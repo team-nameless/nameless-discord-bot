@@ -87,6 +87,8 @@ class NamelessMusic:
 
     SOUNDCLOUD: NamelessMusicSoundcloudClient = NamelessMusicSoundcloudClient()
 
+    AUTOLEAVE_TIME: int = 300  # In seconds
+
 
 class NamelessIntent:
     # Choose when to receive texts
@@ -122,7 +124,8 @@ class NamelessBlacklist:
 class NamelessConfig:
     # Current version of nameless.
     # I ill-advise you to NOT change this line
-    __version__ = open("version.txt").read().strip()
+    with open("version.txt") as f:
+        __version__ = f.read().strip()
 
     # Bot description string
     # Placeholders:
@@ -160,7 +163,7 @@ class NamelessConfig:
     #                       MusicV2 (MusicV1 must not be loaded)
     #                       Osu (requires `OSU` to be properly provided),
     #                       Owner
-    COGS: list[LiteralString] = ["MusicLavalink", "Owner", "General", "Config", "Moderator", "Osu"]
+    COGS: list[LiteralString] = ["Music", "Owner", "General", "Config", "Moderator", "Osu"]
 
     # Guild prefixes for text commands
     PREFIXES: list[LiteralString] = ["nameless."]

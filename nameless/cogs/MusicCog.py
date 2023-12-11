@@ -46,7 +46,7 @@ class MusicCog(commands.GroupCog, name="music"):
 
     async def autoleave(self, chn: discord.VoiceChannel | discord.StageChannel):
         logging.warning("Initiating autoleave for voice channel ID:%s of guild %s", chn.id, chn.guild.id)
-        await asyncio.sleep(5)
+        await asyncio.sleep(NamelessConfig.MUSIC.AUTOLEAVE_TIME)
 
         guild = self.bot.get_guild(chn.guild.id)
         player = cast(Player, guild.voice_client)  # type: ignore

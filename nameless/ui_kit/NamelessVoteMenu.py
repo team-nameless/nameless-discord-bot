@@ -1,3 +1,4 @@
+import logging
 import math
 
 import discord
@@ -9,10 +10,10 @@ __all__ = ["NamelessVoteMenu"]
 class NamelessVoteMenuView(discord.ui.View):
     __slots__ = ("user", "value")
 
-    def __init__(self):
-        super().__init__(timeout=15)
-        self.user = None
-        self.value = None
+    def __init__(self, timeout: int = 15):
+        super().__init__(timeout=timeout)
+        self.user: str | None = None
+        self.value: bool | None = None
 
     @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green, emoji="✅")
     async def approve(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -65,22 +66,30 @@ class NamelessVoteMenu:
             await self.interaction.followup.send(content=f"{self.action.title()} {self.content}!")
             return True
 
-        m: discord.WebhookMessage = await self.interaction.followup.send(self.__eb())  # type: ignore
+        m: discord.WebhookMessage = await self.interaction.followup.send(embed=self.__eb())  # type: ignore
 
         while len(self.disapprove_member) < self.max_vote_user and len(self.approve_member) < self.max_vote_user:
             menu = NamelessVoteMenuView()
             await m.edit(embed=self.__eb(), view=menu)
-            await menu.wait()
+
+            if await menu.wait():
+                await m.edit(content="Timed out! Please try again!", embed=None, view=None)
+                return False
 
             if menu.user in self.approve_member or menu.user in self.disapprove_member:
                 continue
 
             self.total_vote += 1
 
-            if menu.value:
-                self.approve_member.append(menu.user)  # type: ignore
-            else:
-                self.disapprove_member.append(menu.user)  # type: ignore
+            if menu.value is not None:
+                if not menu.user:
+                    logging.error("User not found. We can't count this vote.")
+                    continue
+
+                if menu.value:
+                    self.approve_member.append(menu.user)
+                else:
+                    self.disapprove_member.append(menu.user)
 
         pred = len(self.disapprove_member) < len(self.approve_member)
         if pred:
@@ -102,5 +111,5 @@ class NamelessVoteMenu:
                 value="\n".join(self.disapprove_member) if self.disapprove_member else "None",
                 inline=True,
             )
-            .set_footer(text=f"Requested by {self.interaction.user.name}#{self.interaction.user.discriminator}")
+            .set_footer(text=f"Requested by {self.interaction.user.name}")
         )

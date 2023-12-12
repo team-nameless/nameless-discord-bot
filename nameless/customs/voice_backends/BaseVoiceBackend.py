@@ -44,3 +44,7 @@ class Player(wavelink.Player):
     @trigger_channel_id.setter
     def trigger_channel_id(self, value: int):
         self._trigger_channel_id = value
+
+    async def repopulate_auto_queue(self):
+        async with self._auto_lock:
+            await self._do_recommendation()

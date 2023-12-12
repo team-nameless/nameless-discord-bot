@@ -448,7 +448,7 @@ class MusicCog(commands.GroupCog, name="music"):
     @app_commands.describe(show_next_track="Whether the next track should be shown (useless in looping)")
     @app_commands.check(MusicCogCheck.bot_in_voice)
     @app_commands.check(MusicCogCheck.bot_is_playing_something)
-    async def now_playing(self, interaction: discord.Interaction, show_next_track: bool = True):
+    async def now_playing(self, interaction: discord.Interaction):
         """Check now playing song"""
         await interaction.response.defer()
 
@@ -475,9 +475,8 @@ class MusicCog(commands.GroupCog, name="music"):
         track: wavelink.Playable = player.current  # type: ignore
 
         if await NamelessVoteMenu(interaction, player, "skip", track.title).start():
-            if bool(player.queue):
-                if bypass_loop:
-                    player.queue._loaded = None
+            if bool(player.queue) and bypass_loop:
+                player.queue._loaded = None
                 player.should_send_play_now = True
 
             await player.stop()
@@ -485,6 +484,22 @@ class MusicCog(commands.GroupCog, name="music"):
                 await interaction.followup.send("Next track should be played now")
         else:
             await interaction.followup.send("Not skipping because not enough votes!")
+
+    @app_commands.command()
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
+    @app_commands.describe(bypass_loop="Whether to bypass track looping")
+    async def force_skip(self, interaction: discord.Interaction):
+        """Skip a song. Even if it is looping."""
+        await interaction.response.defer()
+
+        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        if interaction.user.guild_permissions.manage_guild or interaction.user.guild_permissions.manage_channels:  # type: ignore
+            await player.stop()
+            await interaction.followup.send("Force skip success! Next track should be played now")
+        else:
+            await interaction.followup.send("Not skipping because not enough permissions!")
 
     async def seek_position(self, player: Player, position: int):
         """Seek to position in milliseconds. Returns the new position in milliseconds"""
@@ -546,7 +561,7 @@ class MusicCog(commands.GroupCog, name="music"):
         in_percent: app_commands.Range[int, 0] = 0,
         position: str = "0",
     ):
-        """Seek to position in a track"""
+        """Seek to position in a track. Leave empty to seek to track beginning."""
         await interaction.response.defer()
 
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
@@ -906,6 +921,18 @@ class MusicCog(commands.GroupCog, name="music"):
 
         player.trigger_channel_id = channel.id
         await interaction.followup.send(f"Changed the trigger channel to {channel.mention}")
+
+    @settings.command()
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.describe(volume="Change player volume")
+    async def volume(self, interaction: discord.Interaction, volume: Range[int, 0, 500]):
+        """Change the volume."""
+        await interaction.response.defer()
+
+        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        await player.set_volume(volume)
+        await interaction.followup.send(f"Changed the volume to {volume}%")
 
 
 async def setup(bot: Nameless):

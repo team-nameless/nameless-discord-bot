@@ -10,7 +10,7 @@ from discord.app_commands import Choice, Range
 from discord.ext import commands
 from discord.utils import escape_markdown
 from reactionmenu import ViewButton, ViewMenu
-from wavelink import QueueMode, TrackStartEventPayload
+from wavelink import AutoPlayMode, QueueMode, TrackStartEventPayload
 
 from nameless import Nameless
 from nameless.cogs.checks.MusicCogCheck import MusicCogCheck
@@ -737,13 +737,14 @@ class MusicCog(commands.GroupCog, name="music"):
 
     @queue.command()
     @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     async def view_autoplay(self, interaction: discord.Interaction):
         """View current autoplay queue. Can be none if autoplay is disabled."""
         await interaction.response.defer()
 
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
 
-        if player.autoplay != wavelink.AutoPlayMode.enabled and not player.auto_queue:
+        if player.autoplay != wavelink.AutoPlayMode.enabled and not bool(player.auto_queue):
             await interaction.followup.send(
                 "Seems like autoplay is disabled or autoplay queue is has not been populated yet."
             )
@@ -751,6 +752,25 @@ class MusicCog(commands.GroupCog, name="music"):
 
         embeds = self.generate_embeds_from_playable(player.auto_queue, title="Autoplay queue")
         self.bot.loop.create_task(self.show_paginated_tracks(interaction, embeds))
+
+    @queue.command()
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    async def repopulate_auto_queue(self, interaction: discord.Interaction):
+        """Repopulate autoplay queue"""
+        await interaction.response.defer()
+
+        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        if player.autoplay != wavelink.AutoPlayMode.enabled:
+            await interaction.followup.send("Seems like autoplay is disabled")
+            return
+
+        if player.autoplay is AutoPlayMode.enabled:
+            await player.repopulate_auto_queue()
+            await interaction.followup.send("Repopulated autoplay queue!")
+            return
+
+        await interaction.followup.send("Seems like autoplay is disabled")
 
     @queue.command()
     @app_commands.guild_only()

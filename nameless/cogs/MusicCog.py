@@ -767,7 +767,7 @@ class MusicCog(commands.GroupCog, name="music"):
     @queue.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    async def repopulate_auto_queue(self, interaction: discord.Interaction):
+    async def repopulate_autoqueue(self, interaction: discord.Interaction):
         """Repopulate autoplay queue"""
         await interaction.response.defer()
 

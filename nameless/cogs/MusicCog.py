@@ -92,6 +92,16 @@ class MusicCog(commands.GroupCog, name="music"):
             return
 
         chn = player.guild.get_channel(player.trigger_channel_id)
+        can_send = (
+            chn is not None
+            and player.play_now_allowed
+            and player.should_send_play_now
+            and player.queue.mode is QueueMode.loop
+        )
+
+        if not can_send:
+            return
+
         dbg = CRUD.get_or_create_guild_record(player.guild)
         if chn is not None and player.play_now_allowed and player.should_send_play_now:
             embed = self.generate_embed_np_from_playable(player, track, self.bot.user, dbg)  # type: ignore
@@ -626,6 +636,7 @@ class MusicCog(commands.GroupCog, name="music"):
         else:
             if player.autoplay in (wavelink.AutoPlayMode.disabled, wavelink.AutoPlayMode.partial):
                 action = wavelink.AutoPlayMode.enabled
+                await player.repopulate_auto_queue()
             else:
                 action = wavelink.AutoPlayMode.partial
 

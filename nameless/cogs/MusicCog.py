@@ -67,6 +67,7 @@ class MusicCog(commands.GroupCog, name="music"):
     def remove_artist_suffix(name: str) -> str:
         if not name:
             return "N/A"
+        name = escape_markdown(name)
         return name.removesuffix(" - Topic")
 
     async def connect_nodes(self):
@@ -165,8 +166,8 @@ class MusicCog(commands.GroupCog, name="music"):
         # )
         # await player.disconnect(force=True)
 
-    @staticmethod
     def generate_embeds_from_playable(
+        self,
         tracks: wavelink.Queue | list[wavelink.Playable] | wavelink.Playlist,
         title: str = "Tracks currently in queue",
     ) -> list[discord.Embed]:
@@ -174,7 +175,9 @@ class MusicCog(commands.GroupCog, name="music"):
         embeds: list[discord.Embed] = []
 
         for idx, track in enumerate(tracks, start=1):
-            upcoming = f"{idx} - " f"[{track.title} by {track.author}]" f"({track.uri or 'N/A'})\n"
+            upcoming = (
+                f"{idx} - " f"[{track.title} by {self.remove_artist_suffix(track.author)}]" f"({track.uri or 'N/A'})\n"
+            )
 
             if len(txt) + len(upcoming) > 2048:
                 eb = discord.Embed(
@@ -197,8 +200,8 @@ class MusicCog(commands.GroupCog, name="music"):
 
         return embeds
 
-    @staticmethod
     def generate_embed_np_from_playable(
+        self,
         player: Player,
         track: wavelink.Playable,
         user: discord.User | discord.Member | discord.ClientUser,
@@ -242,7 +245,7 @@ class MusicCog(commands.GroupCog, name="music"):
             )
             .add_field(
                 name="Author",
-                value=escape_markdown(track.author) if track.author else "N/A",
+                value=self.remove_artist_suffix(track.author) if track.author else "N/A",
             )
             .add_field(
                 name="Source",
@@ -267,7 +270,7 @@ class MusicCog(commands.GroupCog, name="music"):
             embed.add_field(
                 name="Next track",
                 value=f"[{escape_markdown(next_tr.title) if next_tr.title else 'Unknown title'} "
-                f"by {escape_markdown(next_tr.author)}]"
+                f"by {self.remove_artist_suffix(next_tr.author)}]"
                 f"({next_tr.uri or 'N/A'})",
             )
 
@@ -881,6 +884,24 @@ class MusicCog(commands.GroupCog, name="music"):
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
         player.queue.clear()
         await interaction.followup.send("Cleared the queue")
+
+    settings = app_commands.Group(name="settings", description="Settings for the music cog")
+
+    @settings.command()
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.describe(channel="The channel that you want the now-playing messages to be sent to")
+    async def channel(self, interaction: discord.Interaction, channel: discord.TextChannel):
+        """Change where the now-playing messages are sent."""
+        await interaction.response.defer()
+
+        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        if not channel.permissions_for(player.guild.me).send_messages:  # type: ignore
+            await interaction.followup.send("I don't have permission to send messages in that channel")
+            return
+
+        player.trigger_channel_id = channel.id
+        await interaction.followup.send(f"Changed the trigger channel to {channel.mention}")
 
 
 async def setup(bot: Nameless):

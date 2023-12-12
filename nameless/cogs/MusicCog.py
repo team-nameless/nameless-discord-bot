@@ -445,7 +445,6 @@ class MusicCog(commands.GroupCog, name="music"):
 
     @app_commands.command()
     @app_commands.guild_only()
-    @app_commands.describe(show_next_track="Whether the next track should be shown (useless in looping)")
     @app_commands.check(MusicCogCheck.bot_in_voice)
     @app_commands.check(MusicCogCheck.bot_is_playing_something)
     async def now_playing(self, interaction: discord.Interaction):
@@ -479,7 +478,7 @@ class MusicCog(commands.GroupCog, name="music"):
                 player.queue._loaded = None
                 player.should_send_play_now = True
 
-            await player.stop()
+            await player.skip()
             if bool(player.queue):
                 await interaction.followup.send("Next track should be played now")
         else:
@@ -496,7 +495,7 @@ class MusicCog(commands.GroupCog, name="music"):
 
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
         if interaction.user.guild_permissions.manage_guild or interaction.user.guild_permissions.manage_channels:  # type: ignore
-            await player.stop()
+            await player.skip()
             await interaction.followup.send("Force skip success! Next track should be played now")
         else:
             await interaction.followup.send("Not skipping because not enough permissions!")

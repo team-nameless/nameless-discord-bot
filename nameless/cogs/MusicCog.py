@@ -489,12 +489,16 @@ class MusicCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
     @app_commands.describe(bypass_loop="Whether to bypass track looping")
-    async def force_skip(self, interaction: discord.Interaction):
+    async def force_skip(self, interaction: discord.Interaction, bypass_loop: bool = False):
         """Force skip a song, if you have enough permissions. Even if it is looping."""
         await interaction.response.defer()
 
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
         if interaction.user.guild_permissions.manage_guild or interaction.user.guild_permissions.manage_channels:  # type: ignore
+            if bool(player.queue) and bypass_loop:
+                player.queue._loaded = None
+                player.should_send_play_now = True
+
             await player.skip()
             await interaction.followup.send("Force skip success! Next track should be played now")
         else:

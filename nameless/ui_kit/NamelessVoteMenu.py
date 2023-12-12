@@ -62,6 +62,7 @@ class NamelessVoteMenu:
 
     async def start(self) -> bool:
         if self.max_vote_user <= 1:
+            await self.interaction.followup.send(content=f"{self.action.title()} {self.content}!")
             return True
 
         m: discord.WebhookMessage = await self.interaction.followup.send(self.__eb())  # type: ignore

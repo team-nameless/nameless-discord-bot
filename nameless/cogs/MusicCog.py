@@ -552,6 +552,10 @@ class MusicCog(commands.GroupCog, name="music"):
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
         track: wavelink.Playable = player.current  # type: ignore
 
+        if not track.is_seekable:
+            await interaction.followup.send("This track is not seekable!")
+            return
+
         if await NamelessVoteMenu(interaction, player, "seek", track.title).start():
             if in_seconds:
                 await self.seek_position_sec(player, in_seconds)

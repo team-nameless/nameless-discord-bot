@@ -105,7 +105,7 @@ class MusicCog(commands.GroupCog, name="music"):
         dbg = CRUD.get_or_create_guild_record(player.guild)
         if chn is not None and player.play_now_allowed and player.should_send_play_now:
             embed = self.generate_embed_np_from_playable(player, track, self.bot.user, dbg)  # type: ignore
-            await chn.send(embed=embed)  # type: ignore
+            await chn.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_voice_state_update(
@@ -481,7 +481,7 @@ class MusicCog(commands.GroupCog, name="music"):
         await interaction.response.defer()
 
         player: Player = cast(Player, interaction.guild.voice_client)
-        track: wavelink.Playable = player.current  # type: ignore
+        track: wavelink.Playable = player.current
 
         if await NamelessVoteMenu(interaction, player, "skip", track.title).start():
             if bool(player.queue) and bypass_loop:
@@ -504,7 +504,7 @@ class MusicCog(commands.GroupCog, name="music"):
         await interaction.response.defer()
 
         player: Player = cast(Player, interaction.guild.voice_client)
-        if interaction.user.guild_permissions.manage_guild or interaction.user.guild_permissions.manage_channels:  # type: ignore
+        if interaction.user.guild_permissions.manage_guild or interaction.user.guild_permissions.manage_channels:
             if bool(player.queue) and bypass_loop:
                 player.queue._loaded = None
                 player.should_send_play_now = True
@@ -517,7 +517,7 @@ class MusicCog(commands.GroupCog, name="music"):
     async def seek_position(self, player: Player, position: int):
         """Seek to position in milliseconds. Returns the new position in milliseconds"""
 
-        if not 0 <= position <= player.current.length:  # type: ignore
+        if not 0 <= position <= player.current.length:
             raise ValueError("Invalid position to seek")
         await player.seek(position)
 
@@ -578,7 +578,7 @@ class MusicCog(commands.GroupCog, name="music"):
         await interaction.response.defer()
 
         player: Player = cast(Player, interaction.guild.voice_client)
-        track: wavelink.Playable = player.current  # type: ignore
+        track: wavelink.Playable = player.current
 
         if not track.is_seekable:
             await interaction.followup.send("This track is not seekable!")
@@ -949,7 +949,7 @@ class MusicCog(commands.GroupCog, name="music"):
         await interaction.response.defer()
 
         player: Player = cast(Player, interaction.guild.voice_client)
-        if not channel.permissions_for(player.guild.me).send_messages:  # type: ignore
+        if not channel.permissions_for(player.guild.me).send_messages:
             await interaction.followup.send("I don't have permission to send messages in that channel")
             return
 

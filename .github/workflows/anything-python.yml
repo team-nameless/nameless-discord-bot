@@ -42,6 +42,7 @@ jobs:
 
       - name: Code linting
         run: |
+          ruff check . --diff
           ruff lint . --diff
 
       - name: Run tests and return coverages (pytest & friends)

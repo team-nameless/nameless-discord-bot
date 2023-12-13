@@ -785,12 +785,12 @@ class MusicCog(commands.GroupCog, name="music"):
 
     @queue.command()
     @app_commands.guild_only()
-    @app_commands.describe(pos="Current position", value="Position value", m="Move mode")
+    @app_commands.describe(pos="Current position", value="Position value", mode="Move mode")
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.choices(mode=[Choice(name=k, value=k) for k in ["difference", "position"]])
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.queue_has_element)
-    async def move(self, interaction: discord.Interaction, pos: Range[int, 1], value: int, m: str = "pos"):
+    async def move(self, interaction: discord.Interaction, pos: Range[int, 1], value: int, mode: str = "pos"):
         """Move track to new position using relative difference"""
         await interaction.response.defer()
 
@@ -802,9 +802,9 @@ class MusicCog(commands.GroupCog, name="music"):
         before = pos
         after = -1
 
-        if m == "diff":
+        if mode == "diff":
             after = pos + value
-        elif m == "pos":
+        elif mode == "pos":
             after = value
 
         if not (1 <= before <= queue_length and 1 <= after <= queue_length):

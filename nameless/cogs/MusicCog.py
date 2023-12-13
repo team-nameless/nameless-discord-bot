@@ -486,7 +486,7 @@ class MusicCog(commands.GroupCog, name="music"):
         embed = self.generate_embed_np_from_playable(player, track, interaction.user, dbg)
         await interaction.followup.send(embed=embed)
 
-    @app_commands.command()
+    @app_commands.command(name="loop_queue")
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.describe(mode="All mode available for looping")
@@ -956,7 +956,7 @@ class MusicCog(commands.GroupCog, name="music"):
 
         await interaction.followup.send(f"Now playing message is now {'on' if player.play_now_allowed else 'off'}")
 
-    @app_commands.command()
+    @app_commands.command(name="loop_queue")
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.describe(mode="All mode available for looping")

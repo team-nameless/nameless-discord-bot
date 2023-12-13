@@ -49,7 +49,7 @@ class MusicCog(commands.GroupCog, name="music"):
         await asyncio.sleep(NamelessConfig.MUSIC.AUTOLEAVE_TIME)
 
         guild = self.bot.get_guild(chn.guild.id)
-        player = cast(Player, guild.voice_client)  # type: ignore
+        player = cast(Player, guild.voice_client)
 
         await player.disconnect(force=True)
         logging.warning("Disconnect from voice channel ID:%s of guild %s", chn.id, chn.guild.id)
@@ -315,8 +315,8 @@ class MusicCog(commands.GroupCog, name="music"):
             await interaction.user.voice.channel.connect(cls=Player, self_deaf=True)  # type: ignore
             await interaction.followup.send("Connected to your voice channel")
 
-            player = cast(Player, interaction.guild.voice_client)  # type: ignore
-            player.trigger_channel_id = interaction.channel.id  # type: ignore
+            player = cast(Player, interaction.guild.voice_client)
+            player.trigger_channel_id = interaction.channel.id
 
         except ClientException:
             await interaction.followup.send("Already connected")
@@ -328,7 +328,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Disconnect from my current voice channel"""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
         if not player:
             await interaction.followup.send("I am not connected to a voice channel")
             return
@@ -349,7 +349,7 @@ class MusicCog(commands.GroupCog, name="music"):
             return tracks
 
         view = discord.ui.View().add_item(NamelessTrackDropdown([track for track in tracks if not track.is_stream]))
-        m: discord.WebhookMessage = await interaction.followup.send("Tracks found", view=view)  # type: ignore
+        m: discord.WebhookMessage = await interaction.followup.send("Tracks found", view=view)
 
         if await view.wait():
             await m.edit(content="Timed out! Please try again!", view=None)
@@ -375,7 +375,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Start playing the queue."""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
         play_after = not player.playing and not bool(player.queue) and player.auto_play_queue
         try:
             tracks: wavelink.Search = await wavelink.Playable.search(search, source=SOURCE_MAPPING[source])
@@ -427,7 +427,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Pause current track"""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
 
         if player.paused:
             await interaction.followup.send("Already paused")
@@ -444,7 +444,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Resume current playback, if paused"""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
 
         if not player.paused:
             await interaction.followup.send("Already resuming")
@@ -461,7 +461,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Check now playing song"""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
         track: wavelink.Playable | None = player.current
         if not track:
             await interaction.response.send_message("Not playing anything")
@@ -480,7 +480,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Skip a song. Even if it is looping."""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
         track: wavelink.Playable = player.current  # type: ignore
 
         if await NamelessVoteMenu(interaction, player, "skip", track.title).start():
@@ -503,7 +503,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Force skip a song, if you have enough permissions. Even if it is looping."""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
         if interaction.user.guild_permissions.manage_guild or interaction.user.guild_permissions.manage_channels:  # type: ignore
             if bool(player.queue) and bypass_loop:
                 player.queue._loaded = None
@@ -577,7 +577,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Seek to position in a track. Leave empty to seek to track beginning."""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
         track: wavelink.Playable = player.current  # type: ignore
 
         if not track.is_seekable:
@@ -607,7 +607,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Toggle 'Now playing' message delivery on every non-looping track."""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
         player.play_now_allowed = not player.play_now_allowed
         await interaction.followup.send(f"'Now playing message' is now {'on' if player.play_now_allowed else 'off'}")
 
@@ -630,7 +630,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Toggle AutoPlay feature."""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
         if value:
             action = wavelink.AutoPlayMode(value)
         else:
@@ -663,7 +663,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Toggle 'Loop track' feature."""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
 
         if not value:
             action = QueueMode.normal if player.queue.mode in (QueueMode.loop, QueueMode.loop_all) else QueueMode.loop
@@ -691,7 +691,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Toggle 'Loop queue' feature."""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
 
         if not value:
             if player.queue.mode in (QueueMode.loop, QueueMode.loop_all):
@@ -715,7 +715,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Start playing the queue"""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
         if not bool(player.queue):
             await interaction.followup.send("Nothing in the queue")
             return
@@ -737,7 +737,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """View current queue"""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
 
         if not player.queue:
             await interaction.followup.send("Wow, such empty queue. Mind adding some cool tracks?")
@@ -753,7 +753,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """View current autoplay queue. Can be none if autoplay is disabled."""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
 
         if player.autoplay != wavelink.AutoPlayMode.enabled and not bool(player.auto_queue):
             await interaction.followup.send(
@@ -771,7 +771,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Repopulate autoplay queue"""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
         if player.autoplay != wavelink.AutoPlayMode.enabled:
             await interaction.followup.send("Seems like autoplay is disabled")
             return
@@ -793,7 +793,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Remove track from queue"""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
 
         q = player.queue._queue
         index = index - 1
@@ -822,7 +822,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Move track to new position"""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
 
         int_queue = player.queue._queue
         queue_length = len(int_queue)
@@ -848,7 +848,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Move track to new position using relative difference"""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
 
         int_queue = player.queue._queue
         queue_length = len(int_queue)
@@ -877,7 +877,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Swap two tracks."""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
 
         q = player.queue._queue
         q_length = len(q)
@@ -899,7 +899,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Shuffle the queue"""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
         player.queue.shuffle()
         await interaction.followup.send("Shuffled the queue")
 
@@ -911,7 +911,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Clear the queue, using vote system."""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
 
         async def clear_action():
             player.queue.clear()
@@ -934,7 +934,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Force clear the queue, guild managers only."""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
         player.queue.clear()
         await interaction.followup.send("Cleared the queue")
 
@@ -948,7 +948,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Change where the now-playing messages are sent."""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
         if not channel.permissions_for(player.guild.me).send_messages:  # type: ignore
             await interaction.followup.send("I don't have permission to send messages in that channel")
             return
@@ -964,7 +964,7 @@ class MusicCog(commands.GroupCog, name="music"):
         """Change the volume."""
         await interaction.response.defer()
 
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player: Player = cast(Player, interaction.guild.voice_client)
         await player.set_volume(volume)
         await interaction.followup.send(f"Changed the volume to {volume}%")
 

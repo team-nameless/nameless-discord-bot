@@ -52,6 +52,7 @@ class MusicCog(commands.GroupCog, name="music"):
         player = cast(Player, guild.voice_client)  # type: ignore
 
         await player.disconnect(force=True)
+        player.cleanup()
         logging.warning("Disconnect from voice channel ID:%s of guild %s", chn.id, chn.guild.id)
 
     @staticmethod
@@ -107,38 +108,51 @@ class MusicCog(commands.GroupCog, name="music"):
             embed = self.generate_embed_np_from_playable(player, track, self.bot.user, dbg)  # type: ignore
             await chn.send(embed=embed)  # type: ignore
 
-    @commands.Cog.listener()
-    async def on_voice_state_update(
-        self,
-        member: discord.Member,
-        before: discord.VoiceState,
-        after: discord.VoiceState,
-    ):
-        chn = before.channel if before.channel else after.channel
-        if not chn:  # bot not in voice or we dont see this channel
-            return
-
-        guild = chn.guild
-        changes = await self.list_voice_state_change(before, after)
-        if "channel" not in changes:
-            return
-
-        bot_is_in_vc = bool(guild.voice_client)
+    def __make_data_from_state(
+        self, state: discord.VoiceState, member: discord.Member
+    ) -> tuple[discord.VoiceChannel | discord.StageChannel, bool, Player, int]:
+        chn: discord.VoiceChannel | discord.StageChannel = state.channel  # type: ignore
+        voice_client = cast(Player, chn.guild.voice_client)
+        bot_is_in_vc = voice_client is not None and voice_client.channel.id == chn.id
         member_count = len(chn.members) - 1 if bot_is_in_vc else len(chn.members)
 
-        if bot_is_in_vc and member_count <= 0:
-            logging.info("No member present in voice channel ID:%s in guild %s, creating autoleave", chn.id, guild.id)
+        return chn, bot_is_in_vc, voice_client, member_count
 
+    async def handle_leave_event(self, member: discord.Member, state: discord.VoiceState):
+        # if member.id != self.bot.user.id:
+        #     # We can implement something like logging feature here
+        #     return
+
+        chn, bot_is_in_vc, vc, member_count = self.__make_data_from_state(state, member)
+        if bot_is_in_vc and member_count <= 0:
             # random check to prevent multiple autoleave
             if self.autoleave_waiter_task.get(chn.id):
                 self.autoleave_waiter_task.pop(chn.id).cancel()
 
-            self.autoleave_waiter_task[chn.id] = self.bot.loop.create_task(self.autoleave(chn))
-            logging.debug("%s", self.autoleave_waiter_task)
+            logging.info(
+                "No member present in voice channel ID:%s in guild %s, creating autoleave", chn.id, member.guild.id
+            )
+            self.autoleave_waiter_task[vc.channel.id] = asyncio.create_task(self.autoleave(chn))
             return
 
-        if self.autoleave_waiter_task.get(chn.id):
-            if self.autoleave_waiter_task[chn.id].done():
+        # we got disconnected and we has autoleave task for this voice channel
+        if not bot_is_in_vc and self.autoleave_waiter_task.get(chn.id):
+            logging.debug(f"Looks like we got disconnected from voice channel ID:{chn.id} in guild {member.guild.id}")
+            logging.info("Cancel autoleave task for voice channel ID:%s in guild %s", chn.id, member.guild.id)
+            self.autoleave_waiter_task.pop(chn.id).cancel()
+
+    async def handle_join_event(self, member: discord.Member, state: discord.VoiceState):
+        # if member.id != self.bot.user.id:
+        #     # We can implement something like logging feature here
+        #     return
+
+        chn, bot_is_in_vc, _, member_count = self.__make_data_from_state(state, member)
+        guild = chn.guild
+
+        if bot_is_in_vc and self.autoleave_waiter_task.get(chn.id):
+            # check if autoleave is already in progress, and if it is done, remove it and return
+            waiter_task = self.autoleave_waiter_task[chn.id]
+            if waiter_task.done():
                 self.autoleave_waiter_task.pop(chn.id)
                 return
 
@@ -146,35 +160,66 @@ class MusicCog(commands.GroupCog, name="music"):
                 logging.info(
                     "New member present in voice channel ID:%s in guild %s, cancel autoleave", chn.id, guild.id
                 )
-            else:
+
+                waiter_task.cancel()
+                self.autoleave_waiter_task.pop(chn.id)
+
+    async def handle_move_channel_event(
+        self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState
+    ):
+        before_chn, bot_in_before, _, before_member_count = self.__make_data_from_state(before, member)
+        after_chn, bot_in_after, _, after_member_count = self.__make_data_from_state(after, member)
+
+        if bot_in_before:
+            if self.autoleave_waiter_task.get(before_chn.id):
                 logging.info(
-                    "Bot is also getting disconnected from voice channel ID:%s in guild %s. Cancelling autoleave",
-                    chn.id,
-                    guild.id,
+                    "Move to new voice channel ID:%s in guild %s, cancel autoleave from %s",
+                    after_chn.id,
+                    before_chn.guild.id,
+                    before_chn.id,
                 )
+                self.autoleave_waiter_task.pop(before_chn.id).cancel()
 
-            self.autoleave_waiter_task[chn.id].cancel()
-            del self.autoleave_waiter_task[chn.id]
-            logging.debug("%s", self.autoleave_waiter_task)
+            if before_member_count <= 0:
+                logging.info(
+                    "No member present in voice channel ID:%s in guild %s, creating autoleave",
+                    before_chn.id,
+                    before_chn.guild.id,
+                )
+                self.autoleave_waiter_task[before_chn.id] = asyncio.create_task(self.autoleave(before_chn))
 
-        # deprecated code, comment for review only
-        # if member.id == self.bot.user.id and before.channel and not after.channel:
-        # we already disconnected so we must do this to get the remain player
-        # player = None
-        # for node in self.nodes:
-        #     player = node.get_player(guild.id)
-        #     if player:
-        #         break
+        if bot_in_after:
+            if after_member_count > 0 and self.autoleave_waiter_task.get(after_chn.id):
+                logging.info(
+                    "New member present in voice channel ID:%s in guild %s, cancel autoleave",
+                    after_chn.id,
+                    after_chn.guild.id,
+                )
+                self.autoleave_waiter_task.pop(after_chn.id).cancel()
 
-        # # already disconnected, just silently return
-        # if not player:
-        #     return
+            elif after_member_count <= 0:
+                logging.info(
+                    "No member present in voice channel ID:%s in guild %s, creating autoleave",
+                    after_chn.id,
+                    after_chn.guild.id,
+                )
+                self.autoleave_waiter_task[after_chn.id] = asyncio.create_task(self.autoleave(after_chn))
 
-        # logging.debug(
-        #     "Guild player %s still connected even if it is removed from voice, disconnecting",
-        #     guild.id,
-        # )
-        # await player.disconnect(force=True)
+    @commands.Cog.listener()
+    async def on_voice_state_update(
+        self,
+        member: discord.Member,
+        before: discord.VoiceState,
+        after: discord.VoiceState,
+    ):
+        if before.channel and after.channel:
+            return await self.handle_move_channel_event(member, before, after)
+
+        if before.channel:
+            return await self.handle_leave_event(member, before)
+
+        if after.channel:
+            return await self.handle_join_event(member, after)
 
     def generate_embeds_from_playable(
         self,

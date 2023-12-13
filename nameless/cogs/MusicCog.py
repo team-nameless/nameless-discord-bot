@@ -96,7 +96,7 @@ class MusicCog(commands.GroupCog, name="music"):
             chn is not None
             and player.play_now_allowed
             and player.should_send_play_now
-            and player.queue.mode is QueueMode.loop
+            and player.queue.mode is not QueueMode.loop
         )
 
         if not can_send:
@@ -497,7 +497,7 @@ class MusicCog(commands.GroupCog, name="music"):
             Choice(name="Playlist", value=2),
         ]
     )
-    async def loop(self, interaction: discord.Interaction, mode: int = 0):
+    async def loop(self, interaction: discord.Interaction, mode: int):
         """Alias for music.setting.loop"""
         await self.set_loop_mode(interaction, mode)
 
@@ -956,7 +956,7 @@ class MusicCog(commands.GroupCog, name="music"):
 
         await interaction.followup.send(f"Now playing message is now {'on' if player.play_now_allowed else 'off'}")
 
-    @app_commands.command(name="loop_queue")
+    @settings.command(name="loop_queue")
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.describe(mode="All mode available for looping")
@@ -967,7 +967,7 @@ class MusicCog(commands.GroupCog, name="music"):
             Choice(name="Playlist", value=2),
         ]
     )
-    async def settings_loop(self, interaction: discord.Interaction, mode: int = 0):
+    async def settings_loop(self, interaction: discord.Interaction, mode: int):
         """Change loop mode"""
         await self.set_loop_mode(interaction, mode)
 

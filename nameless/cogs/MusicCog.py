@@ -53,7 +53,11 @@ class MusicCog(commands.GroupCog, name="music"):
 
         await player.disconnect(force=True)
         player.cleanup()
-        logging.warning("Disconnect from voice channel ID:%s of guild %s", chn.id, chn.guild.id)
+
+        if chn.id in self.autoleave_waiter_task:
+            del self.autoleave_waiter_task[chn.id]
+
+        logging.warning("Autoleave timeout! Disconnect from voice channel ID:%s of guild %s", chn.id, chn.guild.id)
 
     @staticmethod
     async def list_voice_state_change(before: discord.VoiceState, after: discord.VoiceState):
@@ -181,6 +185,9 @@ class MusicCog(commands.GroupCog, name="music"):
                 self.autoleave_waiter_task.pop(before_chn.id).cancel()
 
             if before_member_count <= 0:
+                if self.autoleave_waiter_task.get(before_chn.id):
+                    self.autoleave_waiter_task.pop(before_chn.id).cancel()
+
                 logging.info(
                     "No member present in voice channel ID:%s in guild %s, creating autoleave",
                     before_chn.id,
@@ -198,6 +205,9 @@ class MusicCog(commands.GroupCog, name="music"):
                 self.autoleave_waiter_task.pop(after_chn.id).cancel()
 
             elif after_member_count <= 0:
+                if self.autoleave_waiter_task.get(after_chn.id):
+                    self.autoleave_waiter_task.pop(after_chn.id).cancel()
+
                 logging.info(
                     "No member present in voice channel ID:%s in guild %s, creating autoleave",
                     after_chn.id,

@@ -196,13 +196,18 @@ class MusicCog(commands.GroupCog, name="music"):
                 self.autoleave_waiter_task[before_chn.id] = asyncio.create_task(self.autoleave(before_chn))
 
         if bot_in_after:
-            if after_member_count > 0 and self.autoleave_waiter_task.get(after_chn.id):
-                logging.info(
-                    "New member present in voice channel ID:%s in guild %s, cancel autoleave",
-                    after_chn.id,
-                    after_chn.guild.id,
-                )
-                self.autoleave_waiter_task.pop(after_chn.id).cancel()
+            if after_member_count > 0:
+                if self.autoleave_waiter_task.get(after_chn.id):
+                    logging.info(
+                        "New member present in voice channel ID:%s in guild %s, cancel autoleave",
+                        after_chn.id,
+                        after_chn.guild.id,
+                    )
+                    self.autoleave_waiter_task.pop(after_chn.id).cancel()
+
+                if self.autoleave_waiter_task.get(before_chn.id):
+                    logging.info("Cancel autoleave from %s", before_chn.id)
+                    self.autoleave_waiter_task.pop(before_chn.id).cancel()
 
             elif after_member_count <= 0:
                 if self.autoleave_waiter_task.get(after_chn.id):

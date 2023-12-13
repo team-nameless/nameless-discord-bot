@@ -31,6 +31,9 @@ class Player(wavelink.Player):
 
     @property
     def play_now_allowed(self) -> bool:
+        """
+        Check if 'Now playing' message should be sent.
+        """
         return self._play_now_allowed
 
     @play_now_allowed.setter
@@ -39,6 +42,9 @@ class Player(wavelink.Player):
 
     @property
     def trigger_channel_id(self) -> int:
+        """
+        Store channel Id that triggered this player.
+        """
         return self._trigger_channel_id
 
     @trigger_channel_id.setter
@@ -46,5 +52,24 @@ class Player(wavelink.Player):
         self._trigger_channel_id = value
 
     async def repopulate_auto_queue(self):
+        """
+        Repopulate autoplay queue. This snippet is copy from wavelink `_auto_play_event`.
+        """
         async with self._auto_lock:
             await self._do_recommendation()
+
+    async def toggle_autoplay(self) -> bool:
+        """
+        Toggle autoplay like the one on Youtube, also repopulates autoplay queue base on new value.
+
+        Returns
+        -------
+        :class:`bool`
+            True if autoplay is enabled, False if disabled.
+        """
+        if self.autoplay is wavelink.AutoPlayMode.enabled:
+            self.autoplay = wavelink.AutoPlayMode.partial
+            return False
+
+        self.autoplay = wavelink.AutoPlayMode.enabled
+        return True

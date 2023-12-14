@@ -1,4 +1,5 @@
 import wavelink
+from wavelink import AutoPlayMode
 
 
 class Player(wavelink.Player):
@@ -55,8 +56,10 @@ class Player(wavelink.Player):
         """
         Repopulate autoplay queue. This snippet is copy from wavelink `_auto_play_event`.
         """
-        async with self._auto_lock:
-            await self._do_recommendation()
+        if self.autoplay is AutoPlayMode.enabled:
+            async with self._auto_lock:
+                self.auto_queue.clear()
+                await self._do_recommendation()
 
     async def toggle_autoplay(self) -> bool:
         """
@@ -67,9 +70,9 @@ class Player(wavelink.Player):
         :class:`bool`
             True if autoplay is enabled, False if disabled.
         """
-        if self.autoplay is wavelink.AutoPlayMode.enabled:
-            self.autoplay = wavelink.AutoPlayMode.partial
+        if self.autoplay is AutoPlayMode.enabled:
+            self.autoplay = AutoPlayMode.partial
             return False
 
-        self.autoplay = wavelink.AutoPlayMode.enabled
+        self.autoplay = AutoPlayMode.enabled
         return True

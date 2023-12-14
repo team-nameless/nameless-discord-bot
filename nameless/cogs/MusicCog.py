@@ -338,7 +338,7 @@ class MusicCog(commands.GroupCog, name="music"):
         )
 
         if player.queue.mode != QueueMode.loop and not track.is_stream and bool(player.queue):
-            next_tr = player.queue._queue[0]
+            next_tr = player.queue[0]
             embed.add_field(
                 name="Next track",
                 value=f"[{escape_markdown(next_tr.title) if next_tr.title else 'Unknown title'} "
@@ -434,12 +434,34 @@ class MusicCog(commands.GroupCog, name="music"):
         pick_list: list[wavelink.Playable] = [tracks[int(val)] for val in vals]
         return pick_list
 
-    async def _play(self, interaction: discord.Interaction, search: str, source: str = "youtube"):
-        """Start playing the queue."""
+    async def _play(self, interaction: discord.Interaction, search: str, source: str = "youtube", action: str = "add"):
+        """
+        Use for searching, adding playlist, adding songs, and playing
+
+        Parameters
+        ----------
+        interaction: :class:`discord.Interaction`
+            The discord interaction we are responding to
+        search: str
+            The search query, if it is a link, parse directly, otherwise search
+        source: str
+            The source of the search. Available are: 'youtube', 'soundcloud', 'ytmusic'
+        action: str
+            The action to take. Avaliable are: 'add', 'insert'
+        """
         await interaction.response.defer()
 
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
         play_after = not player.playing and not bool(player.queue) and player.auto_play_queue
+
+        async def to_queue(tracks) -> int:
+            if action == "add":
+                return await player.queue.put_wait(tracks)
+            elif action == "insert":
+                return await player.queue.insert_wait(tracks)
+
+            return 0
+
         try:
             tracks: wavelink.Search = await wavelink.Playable.search(search, source=SOURCE_MAPPING[source])
         except wavelink.LavalinkLoadException:
@@ -452,7 +474,7 @@ class MusicCog(commands.GroupCog, name="music"):
 
         if isinstance(tracks, wavelink.Playlist):
             # tracks is a playlist...
-            added: int = await player.queue.put_wait(tracks)
+            added: int = await to_queue(tracks)
             soon_added = tracks
             await interaction.followup.send(f"Added the playlist **`{tracks.name}`** ({added} songs) to the queue.")
         else:
@@ -460,7 +482,7 @@ class MusicCog(commands.GroupCog, name="music"):
             if not soon_added:
                 return
 
-            await player.queue.put_wait(soon_added)
+            await to_queue(soon_added)
 
         if soon_added:
             embeds = self.generate_embeds_from_playable(soon_added, title="List of tracks added to the queue")
@@ -744,6 +766,15 @@ class MusicCog(commands.GroupCog, name="music"):
     async def add(self, interaction: discord.Interaction, search: str, source: str = "youtube"):
         """Alias for `play` command."""
         await self._play(interaction, search, source)
+
+    @queue.command()
+    @app_commands.guild_only()
+    @app_commands.describe(search="Search query", source="Source to search")
+    @app_commands.choices(source=[Choice(name=k, value=k) for k in SOURCE_MAPPING])
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    async def insert(self, interaction: discord.Interaction, search: str, source: str = "youtube"):
+        """Insert track(s) to the front queue"""
+        await self._play(interaction, search, source, action="insert")
 
     @queue.command()
     @app_commands.guild_only()

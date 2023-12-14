@@ -2,13 +2,13 @@ import asyncio
 from collections.abc import Iterator
 
 import wavelink
-from wavelink import AutoPlayMode, Playable, Playlist
+from wavelink import AutoPlayMode, Playable, Playlist, Queue
 
 
-class PriorityQueue(wavelink.Queue):
-    def __init__(self, *args, **kwargs):
+class PriorityQueue(Queue):
+    def __init__(self, history=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._priority_queue = wavelink.Queue(history=False)
+        self._priority_queue = Queue(history=history)
 
     def insert(self, item: Playable | Playlist, /, *, atomic: bool = True) -> int:
         added: int = 0
@@ -72,6 +72,7 @@ class Player(wavelink.Player):
 
         self.autoplay = wavelink.AutoPlayMode.partial
         self.queue: PriorityQueue = PriorityQueue()
+        self.auto_queue: Queue = Queue(history=False)
 
         self._cog = None  # maybe useful for later
         self._should_send_play_now = True

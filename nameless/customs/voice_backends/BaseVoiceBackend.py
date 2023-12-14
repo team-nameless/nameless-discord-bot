@@ -1,14 +1,16 @@
 import asyncio
-from collections.abc import Iterator
 
 import wavelink
-from wavelink import AutoPlayMode, Playable, Playlist, Queue
+from wavelink import AutoPlayMode, Playable, Playlist
 
 
-class PriorityQueue(Queue):
-    def __init__(self, history=False, *args, **kwargs):
+class Queue(wavelink.Queue):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._priority_queue = Queue(history=history)
+
+    def _insert(self, item: Playable) -> None:
+        self._check_compatability(item)
+        self._queue.insert(0, item)
 
     def insert(self, item: Playable | Playlist, /, *, atomic: bool = True) -> int:
         added: int = 0
@@ -19,13 +21,13 @@ class PriorityQueue(Queue):
 
             for track in item:
                 try:
-                    self._priority_queue._put(track)
+                    self._insert(track)
                     added += 1
                 except TypeError:
                     pass
 
         else:
-            self._priority_queue._put(item)
+            self._insert(item)
             added += 1
 
         return added
@@ -40,7 +42,7 @@ class PriorityQueue(Queue):
 
                 for track in item:
                     try:
-                        self._priority_queue._put(track)
+                        self._insert(track)
                         added += 1
                     except TypeError:
                         pass
@@ -48,22 +50,12 @@ class PriorityQueue(Queue):
                     await asyncio.sleep(0)
 
             else:
-                self._priority_queue._put(item)
+                self._insert(item)
                 added += 1
                 await asyncio.sleep(0)
 
         self._wakeup_next()
         return added
-
-    def get(self) -> Playable:
-        if self._priority_queue:
-            return self._priority_queue._get()
-        return self._get()
-
-    def __iter__(self) -> Iterator[Playable]:
-        if self._priority_queue:
-            yield from self._priority_queue
-        yield from self._queue.__iter__()
 
 
 class Player(wavelink.Player):
@@ -71,7 +63,7 @@ class Player(wavelink.Player):
         super().__init__(*args, **kwargs)
 
         self.autoplay = wavelink.AutoPlayMode.partial
-        self.queue: PriorityQueue = PriorityQueue()
+        self.queue: Queue = Queue()
 
         self._cog = None  # maybe useful for later
         self._should_send_play_now = True

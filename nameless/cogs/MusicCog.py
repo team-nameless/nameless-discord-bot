@@ -717,7 +717,7 @@ class MusicCog(commands.GroupCog, name="music"):
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
         current_mode = await player.toggle_autoplay()
 
-        await interaction.followup.send(f"AutoPlay is now {'on' if current_mode is AutoPlayMode.enabled else 'off'}")
+        await interaction.followup.send(f"AutoPlay is now {'on' if current_mode else 'off'}")
 
     queue = app_commands.Group(name="queue", description="Commands related to queue management.")
 

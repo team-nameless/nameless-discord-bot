@@ -90,6 +90,7 @@ class MusicCog(commands.GroupCog, name="music"):
     @commands.Cog.listener()
     async def on_wavelink_track_start(self, payload: TrackStartEventPayload):
         player: Player = cast(Player, payload.player)
+        original: wavelink.Playable | None = payload.original
         track = payload.track
 
         if not player.guild:
@@ -109,7 +110,13 @@ class MusicCog(commands.GroupCog, name="music"):
 
         dbg = CRUD.get_or_create_guild_record(player.guild)
         if chn is not None and player.play_now_allowed and player.should_send_play_now:
-            embed = self.generate_embed_np_from_playable(player, track, self.bot.user, dbg)  # type: ignore
+            embed = self.generate_embed_np_from_playable(
+                player,
+                track,
+                self.bot.user,
+                dbg,
+                original is not None and original.recommended,
+            )
             await chn.send(embed=embed)  # type: ignore
 
     def __make_data_from_state(
@@ -123,10 +130,6 @@ class MusicCog(commands.GroupCog, name="music"):
         return chn, bot_is_in_vc, voice_client, member_count
 
     async def handle_leave_event(self, member: discord.Member, state: discord.VoiceState):
-        # if member.id != self.bot.user.id:
-        #     # We can implement something like logging feature here
-        #     return
-
         chn, bot_is_in_vc, vc, member_count = self.__make_data_from_state(state, member)
         if bot_is_in_vc and member_count <= 0:
             # random check to prevent multiple autoleave
@@ -146,10 +149,6 @@ class MusicCog(commands.GroupCog, name="music"):
             self.autoleave_waiter_task.pop(chn.id).cancel()
 
     async def handle_join_event(self, member: discord.Member, state: discord.VoiceState):
-        # if member.id != self.bot.user.id:
-        #     # We can implement something like logging feature here
-        #     return
-
         chn, bot_is_in_vc, _, member_count = self.__make_data_from_state(state, member)
         guild = chn.guild
 
@@ -274,9 +273,12 @@ class MusicCog(commands.GroupCog, name="music"):
         self,
         player: Player,
         track: wavelink.Playable,
-        user: discord.User | discord.Member | discord.ClientUser,
+        user: discord.User | discord.Member | discord.ClientUser | None,
         dbg,
+        is_recommended=False,
     ) -> discord.Embed:
+        assert user
+
         def convert_time(milli):
             td = str(datetime.timedelta(milliseconds=milli)).split(".")[0].split(":")
             after_td = []
@@ -300,7 +302,7 @@ class MusicCog(commands.GroupCog, name="music"):
             return icon
 
         title = add_icon()
-        title += "Autoplaying" if track.recommended else "Now playing"
+        title += "Autoplaying" if is_recommended else "Now playing"
         title += " track" if not is_stream else " stream"
 
         embed = (
@@ -469,7 +471,7 @@ class MusicCog(commands.GroupCog, name="music"):
             await player.stop(force=True)
 
         if play_after:
-            await player.play(player.queue.get())
+            await player.play(player.queue.get(), add_history=False)
 
     async def set_loop_mode(self, interaction: discord.Interaction, mode: int):
         """Set loop mode"""

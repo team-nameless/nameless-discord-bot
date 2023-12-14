@@ -277,7 +277,7 @@ class MusicCog(commands.GroupCog, name="music"):
         dbg,
         is_recommended=False,
     ) -> discord.Embed:
-        assert user
+        assert user is not None
 
         def convert_time(milli):
             td = str(datetime.timedelta(milliseconds=milli)).split(".")[0].split(":")

@@ -72,7 +72,7 @@ class Player(wavelink.Player):
 
         self.autoplay = wavelink.AutoPlayMode.partial
         self.queue: PriorityQueue = PriorityQueue()
-        self.auto_queue: Queue = Queue(history=False)
+        self.auto_queue: Queue = Queue()
 
         self._cog = None  # maybe useful for later
         self._should_send_play_now = True

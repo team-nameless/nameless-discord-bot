@@ -18,21 +18,8 @@ class MusicCogCheck(BaseCheck):
         return True
 
     @staticmethod
-    def queue_has_element(interaction: discord.Interaction):
-        vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
-
-        if vc and not bool(vc.queue):
-            raise CheckFailure("I need to have something in the queue.")
-
-        return True
-
-    @staticmethod
     def bot_must_play_track_not_stream(interaction: discord.Interaction):
         return MusicCogCheck.bot_is_playing_something(interaction) and MusicCogCheck.must_not_be_a_stream(interaction)
-
-    @staticmethod
-    def user_and_bot_in_voice(interaction: discord.Interaction):
-        return MusicCogCheck.bot_in_voice(interaction) and MusicCogCheck.user_in_voice(interaction)
 
     @staticmethod
     def bot_in_voice(interaction: discord.Interaction):
@@ -45,6 +32,19 @@ class MusicCogCheck(BaseCheck):
     def user_in_voice(interaction: discord.Interaction):
         if isinstance(interaction.user, discord.Member) and interaction.user.voice is None:
             raise CheckFailure("You must be in a voice channel.")
+
+        return True
+
+    @staticmethod
+    def user_and_bot_in_voice(interaction: discord.Interaction):
+        return MusicCogCheck.bot_in_voice(interaction) and MusicCogCheck.user_in_voice(interaction)
+
+    @staticmethod
+    def queue_has_element(interaction: discord.Interaction):
+        vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
+
+        if MusicCogCheck.user_and_bot_in_voice(interaction) and not bool(vc.queue):
+            raise CheckFailure("I need to have something in the queue.")
 
         return True
 

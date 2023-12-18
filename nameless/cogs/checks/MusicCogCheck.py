@@ -21,7 +21,7 @@ class MusicCogCheck(BaseCheck):
     def queue_has_element(interaction: discord.Interaction):
         vc: wavelink.Player = interaction.guild.voice_client  # pyright: ignore
 
-        if vc and bool(vc.queue):
+        if vc and not bool(vc.queue):
             raise CheckFailure("I need to have something in the queue.")
 
         return True

@@ -2,6 +2,7 @@ from functools import lru_cache, wraps
 from time import monotonic_ns
 
 
+# https://gist.github.com/Morreski/c1d08a3afa4040815eafd3891e16b945?permalink_comment_id=3521580#gistcomment-3521580
 def timed_lru_cache(_func=None, *, seconds: int = 600, maxsize: int = 128, typed: bool = False):
     """Extension of functools lru_cache with a timeout
 

@@ -454,7 +454,7 @@ class MusicCog(commands.GroupCog, name="music"):
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
         play_after = not player.playing and not bool(player.queue) and player.auto_play_queue
 
-        async def to_queue(tracks) -> int:
+        async def to_queue(tracks: list[wavelink.Playable] | wavelink.Playlist) -> int:
             if action == "add":
                 return await player.queue.put_wait(tracks)
             elif action == "insert":
@@ -1049,7 +1049,7 @@ class MusicCog(commands.GroupCog, name="music"):
 
         await interaction.followup.send(f"Now playing message is now {'on' if player.play_now_allowed else 'off'}")
 
-    @settings.command(name="loop_queue")
+    @settings.command(name="loop")
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.describe(mode="All mode available for looping")

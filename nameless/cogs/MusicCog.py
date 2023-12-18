@@ -14,6 +14,7 @@ from wavelink import AutoPlayMode, QueueMode, TrackStartEventPayload
 
 from nameless import Nameless
 from nameless.cogs.checks.MusicCogCheck import MusicCogCheck
+from nameless.commons.Cache import lru_cache
 from nameless.customs.voice_backends.BaseVoiceBackend import Player
 from nameless.database import CRUD
 from nameless.ui_kit import NamelessTrackDropdown, NamelessVoteMenu
@@ -69,6 +70,7 @@ class MusicCog(commands.GroupCog, name="music"):
         return [k for k in before.__slots__ if getattr(before, k) != getattr(after, k)]
 
     @staticmethod
+    @lru_cache(maxsize=128)
     def remove_artist_suffix(name: str) -> str:
         if not name:
             return "N/A"
@@ -570,7 +572,67 @@ class MusicCog(commands.GroupCog, name="music"):
         embed = self.generate_embed_np_from_playable(player, track, interaction.user, dbg)
         await interaction.followup.send(embed=embed)
 
-    @app_commands.command(name="loop_queue")
+    @app_commands.command()
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.describe(volume="Change player volume")
+    async def volume(self, interaction: discord.Interaction, volume: Range[int, 0, 500]):
+        """Change the volume."""
+        await interaction.response.defer()
+
+        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        await player.set_volume(volume)
+        await interaction.followup.send(f"Changed the volume to {volume}%")
+
+    @app_commands.command(name="autoplay")
+    @app_commands.guild_only()
+    @app_commands.describe(value="Intended autoplay mode if enabled: 'enable' or 'disable'")
+    @app_commands.choices(
+        value=[
+            Choice(name="enable", value=0),  # wavelink.AutoPlayMode.enabled
+            Choice(name="disable", value=1),  # wavelink.AutoPlayMode.partial
+        ]
+    )
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.must_not_be_a_stream)
+    async def autoplay_mode(
+        self,
+        interaction: discord.Interaction,
+        value: int,
+    ):
+        """
+        Change AutoPlay mode.
+        Priority normal queue over autoqueue so you can add songs to the normal queue and autoqueue won't be triggered.
+        """
+        await interaction.response.defer()
+
+        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player.autoplay = AutoPlayMode(value)
+
+        await interaction.followup.send(
+            f"AutoPlay mode is now {'enabled' if player.autoplay is AutoPlayMode.enabled else 'disabled'}"
+        )
+
+    @app_commands.command()
+    @app_commands.guild_only()
+    @app_commands.describe(value="Intended track loop mode value: 'enable' or 'disable'")
+    @app_commands.choices(
+        value=[
+            Choice(name="enable", value=1),  # wavelink.QueueMode.loop
+            Choice(name="disable", value=0),  # wavelink.QueueMode.normal
+        ]
+    )
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    async def loop_track(self, interaction: discord.Interaction, value: int):
+        """Change 'Loop track' mode."""
+        await interaction.response.defer()
+
+        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        player.queue.mode = QueueMode(value)
+
+        await interaction.followup.send(f"Loop track is now {'on' if player.queue.mode is QueueMode.loop else 'off'}")
+
+    @app_commands.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.describe(mode="All mode available for looping")
@@ -578,19 +640,18 @@ class MusicCog(commands.GroupCog, name="music"):
         mode=[
             Choice(name="Disable", value=0),
             Choice(name="Track", value=1),
-            Choice(name="Playlist", value=2),
+            Choice(name="All", value=2),
         ]
     )
     async def loop(self, interaction: discord.Interaction, mode: int):
-        """Alias for music.setting.loop"""
+        """Change 'Loop' mode."""
         await self.set_loop_mode(interaction, mode)
 
     @app_commands.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
-    @app_commands.describe(bypass_loop="Whether to bypass track looping")
-    async def skip(self, interaction: discord.Interaction, bypass_loop: bool = False):
+    async def skip(self, interaction: discord.Interaction):
         """Skip a song. Even if it is looping."""
         await interaction.response.defer()
 
@@ -598,10 +659,6 @@ class MusicCog(commands.GroupCog, name="music"):
         track: wavelink.Playable = player.current  # type: ignore
 
         if await NamelessVoteMenu(interaction, player, "skip", track.title).start():
-            if bool(player.queue) and bypass_loop:
-                player.queue._loaded = None
-                player.should_send_play_now = True
-
             await player.skip()
             if bool(player.queue):
                 await interaction.followup.send("Next track should be played now")
@@ -612,17 +669,12 @@ class MusicCog(commands.GroupCog, name="music"):
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
-    @app_commands.describe(bypass_loop="Whether to bypass track looping")
-    async def force_skip(self, interaction: discord.Interaction, bypass_loop: bool = False):
-        """Force skip a song, if you have enough permissions. Even if it is looping."""
+    async def force_skip(self, interaction: discord.Interaction):
+        """Force skip a song, if you have enough permissions"""
         await interaction.response.defer()
 
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
         if interaction.user.guild_permissions.manage_guild or interaction.user.guild_permissions.manage_channels:  # type: ignore
-            if bool(player.queue) and bypass_loop:
-                player.queue._loaded = None
-                player.should_send_play_now = True
-
             await player.skip()
             await interaction.followup.send("Force skip success! Next track should be played now")
         else:
@@ -973,63 +1025,6 @@ class MusicCog(commands.GroupCog, name="music"):
         player.trigger_channel_id = channel.id
         await interaction.followup.send(f"Changed the trigger channel to {channel.mention}")
 
-    @settings.command()
-    @app_commands.guild_only()
-    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @app_commands.describe(volume="Change player volume")
-    async def volume(self, interaction: discord.Interaction, volume: Range[int, 0, 500]):
-        """Change the volume."""
-        await interaction.response.defer()
-
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
-        await player.set_volume(volume)
-        await interaction.followup.send(f"Changed the volume to {volume}%")
-
-    @settings.command(name="autoplay")
-    @app_commands.guild_only()
-    @app_commands.describe(value="Intended autoplay mode if enabled: 'enable' or 'disable'")
-    @app_commands.choices(
-        value=[
-            Choice(name="enable", value=0),  # wavelink.AutoPlayMode.enabled
-            Choice(name="disable", value=1),  # wavelink.AutoPlayMode.partial
-        ]
-    )
-    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(MusicCogCheck.must_not_be_a_stream)
-    async def settings_autoplay(
-        self,
-        interaction: discord.Interaction,
-        value: int,
-    ):
-        """Change AutoPlay mode."""
-        await interaction.response.defer()
-
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
-        player.autoplay = AutoPlayMode(value)
-
-        await interaction.followup.send(
-            f"AutoPlay mode is now {'enabled' if player.autoplay is AutoPlayMode.enabled else 'disabled'}"
-        )
-
-    @settings.command(name="loop_track")
-    @app_commands.guild_only()
-    @app_commands.describe(value="Intended track loop mode value: 'enable' or 'disable'")
-    @app_commands.choices(
-        value=[
-            Choice(name="enable", value=1),  # wavelink.QueueMode.loop
-            Choice(name="disable", value=0),  # wavelink.QueueMode.normal
-        ]
-    )
-    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    async def settings_loop_track(self, interaction: discord.Interaction, value: int):
-        """Change 'Loop track' mode."""
-        await interaction.response.defer()
-
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
-        player.queue.mode = QueueMode(value)
-
-        await interaction.followup.send(f"Loop track is now {'on' if player.queue.mode is QueueMode.loop else 'off'}")
-
     @settings.command(name="nowplaying_message")
     @app_commands.guild_only()
     @app_commands.describe(value="Intended 'Now playing' message mode value: 'enable' or 'disable'")
@@ -1048,21 +1043,6 @@ class MusicCog(commands.GroupCog, name="music"):
         player.play_now_allowed = bool(value)
 
         await interaction.followup.send(f"Now playing message is now {'on' if player.play_now_allowed else 'off'}")
-
-    @settings.command(name="loop")
-    @app_commands.guild_only()
-    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @app_commands.describe(mode="All mode available for looping")
-    @app_commands.choices(
-        mode=[
-            Choice(name="Disable", value=0),
-            Choice(name="Track", value=1),
-            Choice(name="Playlist", value=2),
-        ]
-    )
-    async def settings_loop(self, interaction: discord.Interaction, mode: int):
-        """Change loop mode"""
-        await self.set_loop_mode(interaction, mode)
 
 
 async def setup(bot: Nameless):

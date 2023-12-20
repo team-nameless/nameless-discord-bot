@@ -143,7 +143,7 @@ class Player(wavelink.Player):
             True if autoplay is enabled, False if disabled.
         """
         if self.autoplay is AutoPlayMode.enabled:
-            self.autoplay = AutoPlayMode.disabled
+            self.autoplay = AutoPlayMode.partial
             return False
 
         self.autoplay = AutoPlayMode.enabled

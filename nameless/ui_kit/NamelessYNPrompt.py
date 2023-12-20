@@ -4,8 +4,8 @@ __all__ = ["NamelessYNPrompt"]
 
 
 class NamelessYNPrompt(discord.ui.View):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, timeout: int = 15):
+        super().__init__(timeout=timeout)
         self.is_confirmed = False
 
     @discord.ui.button(label="Yep!", style=discord.ButtonStyle.green)  # pyright: ignore

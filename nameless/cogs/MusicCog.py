@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import logging
+import random
 from typing import cast
 
 import discord
@@ -556,6 +557,24 @@ class MusicCog(commands.GroupCog, name="music"):
 
     @app_commands.command()
     @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    async def stop(self, interaction: discord.Interaction):
+        """Stop playback. To start playing again, use 'music.queue.start'"""
+        await interaction.response.defer()
+
+        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+
+        if not player.playing:
+            await interaction.followup.send("Not playing anything")
+            return
+
+        player.autoplay = AutoPlayMode.disabled
+        await player.stop()
+
+        await interaction.followup.send("Stopped")
+
+    @app_commands.command()
+    @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.bot_in_voice)
     @app_commands.check(MusicCogCheck.bot_is_playing_something)
     async def now_playing(self, interaction: discord.Interaction):
@@ -808,7 +827,10 @@ class MusicCog(commands.GroupCog, name="music"):
             await interaction.followup.send("Nothing in the queue")
             return
 
+        player.autoplay = AutoPlayMode.partial
         await player.play(player.queue.get())
+
+        await interaction.followup.send("Started playing the queue")
 
     @queue.command()
     @app_commands.guild_only()
@@ -818,6 +840,42 @@ class MusicCog(commands.GroupCog, name="music"):
     async def add(self, interaction: discord.Interaction, search: str, source: str = "youtube"):
         """Alias for `play` command."""
         await self._play(interaction, search, source)
+
+    @queue.command()
+    @app_commands.guild_only()
+    @app_commands.describe(
+        search="Playlist URL", reverse="Add playlist in reverse order", shuffle="Add playlist in shuffled order"
+    )
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    async def add_playlist(
+        self, interaction: discord.Interaction, search: str, reverse: bool = False, shuffle: bool = False
+    ):
+        """Add playlist to the queue"""
+        await interaction.response.defer()
+
+        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        try:
+            playlist: wavelink.Search = await wavelink.Playable.search(search)
+        except wavelink.LavalinkLoadException:
+            await interaction.followup.send("Lavalink error occurred. Please contact the bot owner.")
+            return
+
+        if not isinstance(playlist, wavelink.Playlist):
+            return await interaction.followup.send("This is not a playlist")
+
+        playlist_name = playlist.name
+
+        if shuffle:
+            random.shuffle(playlist.tracks)
+
+        if reverse:
+            playlist = list(reversed(playlist))
+
+        added = await player.queue.put_wait(playlist)
+        await interaction.followup.send(f"Added the playlist **`{playlist_name}`** ({added} songs) to the queue.")
+
+        embeds = self.generate_embeds_from_playable(playlist, title="List of tracks added to the queue")
+        self.bot.loop.create_task(self.show_paginated_tracks(interaction, embeds))
 
     @queue.command()
     @app_commands.guild_only()

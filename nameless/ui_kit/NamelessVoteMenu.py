@@ -7,7 +7,7 @@ import wavelink
 __all__ = ["NamelessVoteMenu"]
 
 
-class NamelessVoteMenuView(discord.ui.View):
+class NamelessVoteView(discord.ui.View):
     __slots__ = ("user", "value")
 
     def __init__(self, timeout: int = 15):
@@ -22,7 +22,7 @@ class NamelessVoteMenuView(discord.ui.View):
 
         self.stop()
 
-    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.grey, emoji="❌")
+    @discord.ui.button(label="Nuh uh", style=discord.ButtonStyle.grey, emoji="❌")
     async def disapprove(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.value = False
         self.user = interaction.user.mention
@@ -69,7 +69,7 @@ class NamelessVoteMenu:
         m: discord.WebhookMessage = await self.interaction.followup.send(embed=self.__eb())  # type: ignore
 
         while len(self.disapprove_member) < self.max_vote_user and len(self.approve_member) < self.max_vote_user:
-            menu = NamelessVoteMenuView()
+            menu = NamelessVoteView()
             await m.edit(embed=self.__eb(), view=menu)
 
             if await menu.wait():

@@ -607,7 +607,7 @@ class MusicCog(commands.GroupCog, name="music"):
         await interaction.response.defer()
 
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
-        player.autoplay = AutoPlayMode(value)
+        await player.set_autoplay_mode(value)
 
         await interaction.followup.send(
             f"AutoPlay mode is now {'enabled' if player.autoplay is AutoPlayMode.enabled else 'disabled'}"

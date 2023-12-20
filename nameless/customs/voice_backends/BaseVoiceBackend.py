@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 import wavelink
 from wavelink import AutoPlayMode, Playable, Playlist
@@ -118,6 +119,20 @@ class Player(wavelink.Player):
                 self.auto_queue.clear()
                 await self._do_recommendation()
 
+    async def set_autoplay_mode(self, value: AutoPlayMode | int):
+        if isinstance(value, int):
+            try:
+                value = AutoPlayMode(value)
+            except ValueError:
+                logging.error(
+                    "set_autoplay_mode received an invalid value. Want 'wavelink.AutoPlayMode' but received %s",
+                    value.__class__.__name__,
+                )
+                return
+
+        self.autoplay = value
+        await self.repopulate_auto_queue()
+
     async def toggle_autoplay(self) -> bool:
         """
         Toggle autoplay like the one on Youtube, also repopulates autoplay queue base on new value.
@@ -128,8 +143,9 @@ class Player(wavelink.Player):
             True if autoplay is enabled, False if disabled.
         """
         if self.autoplay is AutoPlayMode.enabled:
-            self.autoplay = AutoPlayMode.partial
+            self.autoplay = AutoPlayMode.disabled
             return False
 
         self.autoplay = AutoPlayMode.enabled
+        await self.repopulate_auto_queue()
         return True

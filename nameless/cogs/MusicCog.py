@@ -854,6 +854,8 @@ class MusicCog(commands.GroupCog, name="music"):
         await interaction.response.defer()
 
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
+        play_after = not player.playing and not bool(player.queue) and player.auto_play_queue
+
         try:
             playlist: wavelink.Search = await wavelink.Playable.search(search)
         except wavelink.LavalinkLoadException:
@@ -876,6 +878,9 @@ class MusicCog(commands.GroupCog, name="music"):
 
         embeds = self.generate_embeds_from_playable(playlist, title="List of tracks added to the queue")
         self.bot.loop.create_task(self.show_paginated_tracks(interaction, embeds))
+
+        if play_after:
+            await player.play(player.queue.get())
 
     @queue.command()
     @app_commands.guild_only()

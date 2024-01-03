@@ -3,7 +3,6 @@ import datetime
 import io
 import logging
 import re
-import subprocess
 import sys
 import textwrap
 import time
@@ -76,8 +75,14 @@ class OwnerCog(commands.Cog):
         """Restart the bot"""
         await ctx.defer()
         await ctx.send("See you soon!")
-        logging.warning("Restarting using `%s %s`", sys.executable, " ".join(sys.argv))
-        subprocess.run([sys.executable, *sys.argv], check=False)
+
+        import os  # noqa: I001
+
+        os.execl(sys.executable, sys.executable, *sys.argv)
+
+        # logging.warning("Restarting using `%s %s`", sys.executable, " ".join(sys.argv))
+        # subprocess.Popen([sys.executable, *sys.argv], start_new_session=True)
+        # exit(0)
 
     @commands.is_owner()
     @commands.hybrid_command()

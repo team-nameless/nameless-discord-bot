@@ -859,6 +859,18 @@ class MusicCog(commands.GroupCog, name="music"):
 
     @queue.command()
     @app_commands.guild_only()
+    @app_commands.describe(
+        search="Playlist URL", reverse="Insert playlist in reverse order", shuffle="Insert playlist in shuffled order"
+    )
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    async def insert_playlist(
+        self, interaction: discord.Interaction, search: str, reverse: bool = False, shuffle: bool = False
+    ):
+        """Insert playlist to the queue"""
+        await self._play(interaction, search, action="insert", reverse=reverse, shuffle=shuffle)
+
+    @queue.command()
+    @app_commands.guild_only()
     @app_commands.describe(search="Search query", source="Source to search")
     @app_commands.choices(source=[Choice(name=k, value=k) for k in SOURCE_MAPPING])
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)

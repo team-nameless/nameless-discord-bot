@@ -437,7 +437,15 @@ class MusicCog(commands.GroupCog, name="music"):
         pick_list: list[wavelink.Playable] = [tracks[int(val)] for val in vals]
         return pick_list
 
-    async def _play(self, interaction: discord.Interaction, search: str, source: str = "youtube", action: str = "add"):
+    async def _play(
+        self,
+        interaction: discord.Interaction,
+        search: str,
+        source: str = "youtube",
+        action: str = "add",
+        reverse: bool = False,
+        shuffle: bool = False,
+    ):
         await interaction.response.defer()
 
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
@@ -445,6 +453,15 @@ class MusicCog(commands.GroupCog, name="music"):
         msg: str = ""
 
         async def add_to_queue(tracks: list[wavelink.Playable] | wavelink.Playlist) -> int:
+            if reverse:
+                if isinstance(tracks, wavelink.Playlist):
+                    tracks = list(reversed(tracks))
+                else:
+                    tracks.reverse()
+
+            if shuffle:
+                random.shuffle(tracks if isinstance(tracks, list) else tracks.tracks)
+
             if action == "add":
                 return await player.queue.put_wait(tracks)
             elif action == "insert":
@@ -838,36 +855,7 @@ class MusicCog(commands.GroupCog, name="music"):
         self, interaction: discord.Interaction, search: str, reverse: bool = False, shuffle: bool = False
     ):
         """Add playlist to the queue"""
-        await interaction.response.defer()
-
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
-        play_after = not player.playing and not bool(player.queue) and player.auto_play_queue
-
-        try:
-            playlist: wavelink.Search = await wavelink.Playable.search(search)
-        except wavelink.LavalinkLoadException:
-            await interaction.followup.send("Lavalink error occurred. Please contact the bot owner.")
-            return
-
-        if not isinstance(playlist, wavelink.Playlist):
-            return await interaction.followup.send("This is not a playlist")
-
-        playlist_name = playlist.name
-
-        if shuffle:
-            random.shuffle(playlist.tracks)
-
-        if reverse:
-            playlist = list(reversed(playlist))
-
-        added = await player.queue.put_wait(playlist)
-        await interaction.followup.send(f"Added the playlist **`{playlist_name}`** ({added} songs) to the queue.")
-
-        embeds = self.generate_embeds_from_playable(playlist, title="List of tracks added to the queue")
-        self.bot.loop.create_task(self.show_paginated_tracks(interaction, embeds))
-
-        if play_after:
-            await player.play(player.queue.get())
+        await self._play(interaction, search, reverse=reverse, shuffle=shuffle)
 
     @queue.command()
     @app_commands.guild_only()

@@ -75,7 +75,7 @@ class MusicCog(commands.GroupCog, name="music"):
     def remove_artist_suffix(name: str) -> str:
         if not name:
             return "N/A"
-        name = escape_markdown(name)
+        name = escape_markdown(name, as_needed=True)
         return name.removesuffix(" - Topic")
 
     async def connect_nodes(self):
@@ -432,42 +432,29 @@ class MusicCog(commands.GroupCog, name="music"):
             await m.edit(content="All choices cleared", view=None)
             return []
 
-        await m.edit(content=f"Added {len(vals)} tracks into the queue", view=None)
+        await m.delete()
 
         pick_list: list[wavelink.Playable] = [tracks[int(val)] for val in vals]
         return pick_list
 
     async def _play(self, interaction: discord.Interaction, search: str, source: str = "youtube", action: str = "add"):
-        """
-        Use for searching, adding playlist, adding songs, and playing
-
-        Parameters
-        ----------
-        interaction: :class:`discord.Interaction`
-            The discord interaction we are responding to
-        search: str
-            The search query, if it is a link, parse directly, otherwise search
-        source: str
-            The source of the search. Available are: 'youtube', 'soundcloud', 'ytmusic'
-        action: str
-            The action to take. Avaliable are: 'add', 'insert'
-        """
         await interaction.response.defer()
 
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
-        play_after = not player.playing and not bool(player.queue) and player.auto_play_queue
+        should_play = not player.playing and not bool(player.queue) and player.auto_play_queue
+        msg: str = ""
 
-        async def to_queue(tracks: list[wavelink.Playable] | wavelink.Playlist) -> int:
+        async def add_to_queue(tracks: list[wavelink.Playable] | wavelink.Playlist) -> int:
             if action == "add":
                 return await player.queue.put_wait(tracks)
             elif action == "insert":
                 return await player.queue.insert_wait(tracks)
-
             return 0
 
         try:
             tracks: wavelink.Search = await wavelink.Playable.search(search, source=SOURCE_MAPPING[source])
-        except wavelink.LavalinkLoadException:
+        except wavelink.LavalinkLoadException as err:
+            logging.error(err)
             await interaction.followup.send("Lavalink error occurred. Please contact the bot owner.")
             return
 
@@ -476,26 +463,26 @@ class MusicCog(commands.GroupCog, name="music"):
             return
 
         if isinstance(tracks, wavelink.Playlist):
-            # tracks is a playlist...
-            added: int = await to_queue(tracks)
+            added = await add_to_queue(tracks)
             soon_added = tracks
-            await interaction.followup.send(f"Added the playlist **`{tracks.name}`** ({added} songs) to the queue.")
+            msg = f"Added the playlist **`{tracks.name}`** ({added} songs) to the queue."
         else:
             soon_added = await self.pick_track_from_results(interaction, tracks)
             if not soon_added:
                 return
 
-            await to_queue(soon_added)
+            added = await add_to_queue(soon_added)
+            msg = f"{action.title()}ed {added} {'songs' if added > 1 else 'song'} to the queue"
 
         if soon_added:
-            embeds = self.generate_embeds_from_playable(soon_added, title="List of tracks added to the queue")
+            embeds = self.generate_embeds_from_playable(soon_added, title=msg)
             self.bot.loop.create_task(self.show_paginated_tracks(interaction, embeds))
 
         if player.current and player.current.is_stream:
-            play_after = True
+            should_play = True
             await player.stop(force=True)
 
-        if play_after:
+        if should_play:
             await player.play(player.queue.get(), add_history=False)
 
     async def set_loop_mode(self, interaction: discord.Interaction, mode: int):
@@ -928,7 +915,7 @@ class MusicCog(commands.GroupCog, name="music"):
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     async def repopulate_autoqueue(self, interaction: discord.Interaction):
-        """Repopulate autoplay queue"""
+        """Repopulate autoplay queue based on current song"""
         await interaction.response.defer()
 
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore

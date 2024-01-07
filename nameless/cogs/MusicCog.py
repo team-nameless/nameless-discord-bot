@@ -440,12 +440,29 @@ class MusicCog(commands.GroupCog, name="music"):
     async def _play(
         self,
         interaction: discord.Interaction,
-        search: str,
+        query: str,
         source: str = "youtube",
         action: str = "add",
         reverse: bool = False,
         shuffle: bool = False,
     ):
+        """
+        Add or insert a track or playlist in the player queue.
+
+        Parameters:
+        ----------
+            interaction (discord.Interaction): The interaction object representing the user's interaction with the bot.
+            query (str): The search query for the track or playlist.
+            source (str, optional): The source of the track or playlist (default: "youtube").
+            action (str, optional): The action to perform on the track or playlist (default: "add").
+            reverse (bool, optional): Whether to reverse the order of the tracks (default: False).
+            shuffle (bool, optional): Whether to shuffle the order of the tracks (default: False).
+
+        Raises:
+        ----------
+            wavelink.LavalinkLoadException: If there is an error loading the track or playlist.
+
+        """
         await interaction.response.defer()
 
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
@@ -469,7 +486,7 @@ class MusicCog(commands.GroupCog, name="music"):
             return 0
 
         try:
-            tracks: wavelink.Search = await wavelink.Playable.search(search, source=SOURCE_MAPPING[source])
+            tracks: wavelink.Search = await wavelink.Playable.search(query, source=SOURCE_MAPPING[source])
         except wavelink.LavalinkLoadException as err:
             logging.error(err)
             await interaction.followup.send("Lavalink error occurred. Please contact the bot owner.")
@@ -518,12 +535,12 @@ class MusicCog(commands.GroupCog, name="music"):
 
     @app_commands.command()
     @app_commands.guild_only()
-    @app_commands.describe(search="Search query", source="Source to search")
+    @app_commands.describe(query="Search query", source="Source to search")
     @app_commands.choices(source=[Choice(name=k, value=k) for k in SOURCE_MAPPING])
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    async def play(self, interaction: discord.Interaction, search: str, source: str = "youtube"):
+    async def play(self, interaction: discord.Interaction, query: str, source: str = "youtube"):
         """Add or search track(s) to queue. Also allows you to play a playlist"""
-        await self._play(interaction, search, source)
+        await self._play(interaction, query, source)
 
     @app_commands.command()
     @app_commands.guild_only()
@@ -553,7 +570,7 @@ class MusicCog(commands.GroupCog, name="music"):
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
 
         if not player.paused:
-            await interaction.followup.send("Already resuming")
+            await interaction.followup.send("Already playing")
             return
 
         await player.pause(False)
@@ -838,45 +855,45 @@ class MusicCog(commands.GroupCog, name="music"):
 
     @queue.command()
     @app_commands.guild_only()
-    @app_commands.describe(search="Search query", source="Source to search")
+    @app_commands.describe(query="Search query", source="Source to search")
     @app_commands.choices(source=[Choice(name=k, value=k) for k in SOURCE_MAPPING])
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    async def add(self, interaction: discord.Interaction, search: str, source: str = "youtube"):
+    async def add(self, interaction: discord.Interaction, query: str, source: str = "youtube"):
         """Alias for `play` command."""
-        await self._play(interaction, search, source)
+        await self._play(interaction, query, source)
 
     @queue.command()
     @app_commands.guild_only()
     @app_commands.describe(
-        search="Playlist URL", reverse="Add playlist in reverse order", shuffle="Add playlist in shuffled order"
+        url="Playlist URL", reverse="Add playlist in reverse order", shuffle="Add playlist in shuffled order"
     )
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     async def add_playlist(
-        self, interaction: discord.Interaction, search: str, reverse: bool = False, shuffle: bool = False
+        self, interaction: discord.Interaction, url: str, reverse: bool = False, shuffle: bool = False
     ):
         """Add playlist to the queue"""
-        await self._play(interaction, search, reverse=reverse, shuffle=shuffle)
+        await self._play(interaction, url, reverse=reverse, shuffle=shuffle)
 
     @queue.command()
     @app_commands.guild_only()
     @app_commands.describe(
-        search="Playlist URL", reverse="Insert playlist in reverse order", shuffle="Insert playlist in shuffled order"
+        url="Playlist URL", reverse="Insert playlist in reverse order", shuffle="Insert playlist in shuffled order"
     )
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     async def insert_playlist(
-        self, interaction: discord.Interaction, search: str, reverse: bool = False, shuffle: bool = False
+        self, interaction: discord.Interaction, url: str, reverse: bool = False, shuffle: bool = False
     ):
         """Insert playlist to the queue"""
-        await self._play(interaction, search, action="insert", reverse=reverse, shuffle=shuffle)
+        await self._play(interaction, url, action="insert", reverse=reverse, shuffle=shuffle)
 
     @queue.command()
     @app_commands.guild_only()
-    @app_commands.describe(search="Search query", source="Source to search")
+    @app_commands.describe(query="Search query", source="Source to search")
     @app_commands.choices(source=[Choice(name=k, value=k) for k in SOURCE_MAPPING])
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    async def insert(self, interaction: discord.Interaction, search: str, source: str = "youtube"):
+    async def insert(self, interaction: discord.Interaction, query: str, source: str = "youtube"):
         """Insert track(s) to the front queue"""
-        await self._play(interaction, search, source, action="insert")
+        await self._play(interaction, query, source, action="insert")
 
     @queue.command()
     @app_commands.guild_only()

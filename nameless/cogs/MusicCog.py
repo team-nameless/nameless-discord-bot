@@ -16,7 +16,7 @@ from wavelink import AutoPlayMode, QueueMode, TrackStartEventPayload
 from nameless import Nameless
 from nameless.cogs.checks.MusicCogCheck import MusicCogCheck
 from nameless.commons.Cache import lru_cache
-from nameless.customs.voice_backends.BaseVoiceBackend import Player
+from nameless.customs.voice_backends.BaseVoiceBackend import Player, QueueAction
 from nameless.database import CRUD
 from nameless.ui_kit import NamelessTrackDropdown, NamelessVoteMenu
 from NamelessConfig import NamelessConfig
@@ -442,7 +442,7 @@ class MusicCog(commands.GroupCog, name="music"):
         interaction: discord.Interaction,
         query: str,
         source: str = "youtube",
-        action: str = "add",
+        action: QueueAction = QueueAction.ADD,
         reverse: bool = False,
         shuffle: bool = False,
     ):
@@ -479,9 +479,9 @@ class MusicCog(commands.GroupCog, name="music"):
             if shuffle:
                 random.shuffle(tracks if isinstance(tracks, list) else tracks.tracks)
 
-            if action == "add":
+            if action == QueueAction.ADD:
                 return await player.queue.put_wait(tracks)
-            elif action == "insert":
+            elif action == QueueAction.INSERT:
                 return await player.queue.insert_wait(tracks)
             return 0
 
@@ -506,7 +506,7 @@ class MusicCog(commands.GroupCog, name="music"):
                 return
 
             added = await add_to_queue(soon_added)
-            msg = f"{action.title()}ed {added} {'songs' if added > 1 else 'song'} to the queue"
+            msg = f"{action.name.title()}ed {added} {'songs' if added > 1 else 'song'} to the queue"
 
         if soon_added:
             embeds = self.generate_embeds_from_playable(soon_added, title=msg)
@@ -884,7 +884,7 @@ class MusicCog(commands.GroupCog, name="music"):
         self, interaction: discord.Interaction, url: str, reverse: bool = False, shuffle: bool = False
     ):
         """Insert playlist to the queue"""
-        await self._play(interaction, url, action="insert", reverse=reverse, shuffle=shuffle)
+        await self._play(interaction, url, action=QueueAction.INSERT, reverse=reverse, shuffle=shuffle)
 
     @queue.command()
     @app_commands.guild_only()
@@ -893,7 +893,7 @@ class MusicCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     async def insert(self, interaction: discord.Interaction, query: str, source: str = "youtube"):
         """Insert track(s) to the front queue"""
-        await self._play(interaction, query, source, action="insert")
+        await self._play(interaction, query, source, action=QueueAction.INSERT)
 
     @queue.command()
     @app_commands.guild_only()

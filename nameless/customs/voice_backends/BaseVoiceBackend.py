@@ -1,8 +1,14 @@
 import asyncio
 import logging
+from enum import Enum
 
 import wavelink
 from wavelink import AutoPlayMode, Playable, Playlist
+
+
+class QueueAction(Enum):
+    ADD = 0
+    INSERT = 1
 
 
 class Queue(wavelink.Queue):

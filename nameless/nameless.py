@@ -139,48 +139,6 @@ class Nameless(commands.AutoShardedBot):
             extra={**kwargs},
         )
 
-    async def on_member_join(self, member: discord.Member):
-        db_guild = CRUD.get_or_create_guild_record(member.guild)
-
-        if db_guild.is_welcome_enabled and db_guild.welcome_message != "":
-            if member.bot and not db_guild.is_bot_greeting_enabled:
-                return
-
-            send_target = member.guild.get_channel_or_thread(db_guild.welcome_channel_id)
-
-            if db_guild.is_dm_preferred:
-                send_target = member
-
-            await self.send_greeter(db_guild.goodbye_message, member, send_target)
-
-    async def on_member_remove(self, member: discord.Member):
-        db_guild = CRUD.get_or_create_guild_record(member.guild)
-
-        if db_guild.is_goodbye_enabled and db_guild.goodbye_message != "":
-            if member.bot and not db_guild.is_bot_greeting_enabled:
-                return
-
-            send_target = member.guild.get_channel_or_thread(db_guild.goodbye_channel_id)
-
-            # Should always be useless now because user is no longer in server
-            # if db_guild.is_dm_preferred:
-            #    send_target = member
-
-            await self.send_greeter(db_guild.goodbye_message, member, send_target)
-
-    async def send_greeter(
-        self,
-        content: str,
-        member: discord.Member,
-        send_target: discord.abc.GuildChannel | discord.Member | discord.Thread | None,
-    ):
-        if send_target is not None and (isinstance(send_target, discord.TextChannel | discord.Thread | discord.Member)):
-            await send_target.send(
-                content=content.replace("{guild}", member.guild.name)
-                .replace("{name}", member.display_name)
-                .replace("{tag}", member.discriminator)
-            )
-
     async def on_command_error(self, ctx: commands.Context, err: errors.CommandError, /) -> None:
         if not isinstance(err, errors.CommandNotFound):
             await ctx.send(f"Something went wrong when executing the command:\n```\n{err}\n```")

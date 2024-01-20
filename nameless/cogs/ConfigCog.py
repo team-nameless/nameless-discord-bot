@@ -18,6 +18,46 @@ class ConfigCog(commands.GroupCog, name="config"):
         super().__init__()
         self.bot = bot
 
+    async def _send_greeter(
+        self,
+        content: str,
+        member: discord.Member,
+        send_target: discord.abc.GuildChannel | discord.Member | discord.Thread | None,
+    ):
+        if send_target is not None and (isinstance(send_target, discord.TextChannel | discord.Thread | discord.Member)):
+            await send_target.send(
+                content=content.replace("{guild}", member.guild.name)
+                .replace("{name}", member.display_name)
+                .replace("{tag}", member.discriminator)
+            )
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        db_guild = CRUD.get_or_create_guild_record(member.guild)
+
+        if db_guild.is_goodbye_enabled and db_guild.goodbye_message != "":
+            if member.bot and not db_guild.is_bot_greeting_enabled:
+                return
+
+            send_target = member.guild.get_channel_or_thread(db_guild.goodbye_channel_id)
+
+            await self._send_greeter(db_guild.goodbye_message, member, send_target)
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member):
+        db_guild = CRUD.get_or_create_guild_record(member.guild)
+
+        if db_guild.is_welcome_enabled and db_guild.welcome_message != "":
+            if member.bot and not db_guild.is_bot_greeting_enabled:
+                return
+
+            send_target = member.guild.get_channel_or_thread(db_guild.welcome_channel_id)
+
+            if db_guild.is_dm_preferred:
+                send_target = member
+
+            await self._send_greeter(db_guild.goodbye_message, member, send_target)
+
     @app_commands.command()
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)

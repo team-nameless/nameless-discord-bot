@@ -2,6 +2,7 @@ import contextlib
 import datetime
 import io
 import logging
+import os
 import re
 import sys
 import textwrap
@@ -13,6 +14,7 @@ from discord import app_commands
 from discord.ext import commands
 from discord.utils import escape_markdown
 
+from cogs.checks import BaseCheck
 from nameless import Nameless, shared_vars
 from nameless.customs import Autocomplete
 
@@ -23,72 +25,74 @@ class OwnerCog(commands.Cog):
     def __init__(self, bot: Nameless):
         self.bot = bot
 
-    @commands.is_owner()
-    @commands.hybrid_command()
-    async def shutdown(self, ctx: commands.Context):
+    @app_commands.command()
+    @app_commands.guild_only()
+    @BaseCheck.owns_the_bot()
+    async def shutdown(self, interaction: discord.Interaction):
         """Shutdown the bot"""
-        await ctx.send("Bye owo!")
+        await interaction.response.defer()
+
+        await interaction.followup.send("Bye owo!")
         await self.bot.close()
 
-    @commands.is_owner()
-    @commands.hybrid_command()
+    @app_commands.command()
+    @app_commands.guild_only()
+    @BaseCheck.owns_the_bot()
     @app_commands.autocomplete(module_name=Autocomplete.module_complete)
     @app_commands.describe(module_name="The Python-qualified module name")
-    async def reload(self, ctx: commands.Context, module_name: str):
+    async def reload(self, interaction: discord.Interaction, module_name: str):
         """Reload a module"""
-        await ctx.defer()
+        await interaction.response.defer()
 
         await self.bot.reload_extension(module_name)
-        await ctx.send(f"Done reloading {module_name}")
+        await interaction.followup.send(f"Done reloading {module_name}")
 
-    @commands.is_owner()
-    @commands.hybrid_command()
+    @app_commands.command()
+    @app_commands.guild_only()
+    @BaseCheck.owns_the_bot()
     @app_commands.autocomplete(module_name=Autocomplete.load_module_complete)
     @app_commands.describe(module_name="The Python-qualified module name")
-    async def load(self, ctx: commands.Context, module_name: str):
+    async def load(self, interaction: discord.Interaction, module_name: str):
         """Load a module"""
-        await ctx.defer()
+        await interaction.response.defer()
 
         await self.bot.load_extension(module_name)
         shared_vars.loaded_cogs_list.append(module_name)
         shared_vars.unloaded_cogs_list.remove(module_name)
 
-        await ctx.send(f"Done loading {module_name}")
+        await interaction.followup.send(f"Done loading {module_name}")
 
-    @commands.is_owner()
-    @commands.hybrid_command()
+    @app_commands.command()
+    @app_commands.guild_only()
+    @BaseCheck.owns_the_bot()
     @app_commands.autocomplete(module_name=Autocomplete.module_complete)
     @app_commands.describe(module_name="The Python-qualified module name")
-    async def unload(self, ctx: commands.Context, module_name: str):
+    async def unload(self, interaction: discord.Interaction, module_name: str):
         """Unload a module"""
-        await ctx.defer()
+        await interaction.response.defer()
 
         await self.bot.unload_extension(module_name)
         shared_vars.loaded_cogs_list.remove(module_name)
         shared_vars.unloaded_cogs_list.append(module_name)
 
-        await ctx.send(f"Done unloading {module_name}")
+        await interaction.followup.send(f"Done unloading {module_name}")
 
-    @commands.is_owner()
-    @commands.hybrid_command()
-    async def restart(self, ctx: commands.Context):
+    @app_commands.command()
+    @app_commands.guild_only()
+    @BaseCheck.owns_the_bot()
+    async def restart(self, interaction: discord.Interaction):
         """Restart the bot"""
-        await ctx.defer()
-        await ctx.send("See you soon!")
-
-        import os  # noqa: I001
+        await interaction.response.defer()
+        await interaction.followup.send("See you soon!")
 
         os.execl(sys.executable, sys.executable, *sys.argv)
 
-        # logging.warning("Restarting using `%s %s`", sys.executable, " ".join(sys.argv))
-        # subprocess.Popen([sys.executable, *sys.argv], start_new_session=True)
-        # exit(0)
-
-    @commands.is_owner()
-    @commands.hybrid_command()
-    async def run_python_code(self, ctx: commands.Context, *, code: str):
+    @app_commands.command()
+    @app_commands.guild_only()
+    @BaseCheck.owns_the_bot()
+    async def run_python_code(self, interaction: discord.Interaction, *, code: str):
         """Evaluate some pieces of Python code"""
-        await ctx.defer()
+        await interaction.response.defer()
 
         groups = re.search(r"```(?:python|py)?\n([\w\W\r\n]*)\n?```", code)
 
@@ -98,10 +102,10 @@ class OwnerCog(commands.Cog):
         code = groups.group(1) if groups else ""
 
         if not code:
-            await ctx.send("No code to run")
+            await interaction.followup.send("No code to run")
             return
 
-        pending_message = await ctx.send("Running...")
+        pending_message = await interaction.followup.send("Running...")
 
         start_time = time.time()
         stdout_result, stderr_result = None, None
@@ -115,11 +119,11 @@ class OwnerCog(commands.Cog):
                             "discord": discord,
                             "commands": commands,
                             "bot": self.bot,
-                            "ctx": ctx,
-                            "channel": ctx.channel,
-                            "author": ctx.author,
-                            "guild": ctx.guild,
-                            "message": ctx.message,
+                            "interaction": interaction,
+                            "channel": interaction.channel,
+                            "user": interaction.user,
+                            "guild": interaction.guild,
+                            "message": interaction.message,
                         }
                     ),
                 )
@@ -149,18 +153,19 @@ class OwnerCog(commands.Cog):
 
         await pending_message.edit(content=None, embed=embed)
 
-    @commands.is_owner()
-    @commands.hybrid_command()
-    async def refresh_command_list(self, ctx: commands.Context):
+    @app_commands.command()
+    @app_commands.guild_only()
+    @BaseCheck.owns_the_bot()
+    async def refresh_command_list(self, interaction: discord.Interaction):
         """Refresh command list, mostly for deduplication"""
-        await ctx.send("You should restart the bot after running this!")
+        await interaction.response.defer()
 
-        for guild in ctx.bot.guilds:
-            ctx.bot.tree.clear_commands(guild=guild)
+        for guild in interaction.client.guilds:
+            self.bot.tree.clear_commands(guild=guild)
 
-        ctx.bot.tree.clear_commands(guild=None)
+        self.bot.tree.clear_commands(guild=None)
 
-        await ctx.send("Command cleaning done, you should restart me to update the new commands")
+        await interaction.followup.send("Command cleaning done, you should restart me to update the new commands")
 
 
 async def setup(bot: Nameless):

@@ -1,26 +1,28 @@
-# pyright: reportGeneralTypeIssues=false, reportWildcardImportFromLibrary=false
 from datetime import datetime, timedelta
 
 import discord
 from sqlalchemy import Column
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.sql.sqltypes import *
 
 __all__ = ["Base", "DbUser", "DbGuild"]
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    ...
 
 
 # https://stackoverflow.com/questions/9606551/sqlalchemy-avoiding-multiple-inheritance-and-having-abstract-base-class
-class DiscordObject(Base):
+class DiscordObject:
     __abstract__ = True
-    discord_id: int = Column(BigInteger, name="Id", primary_key=True)
+    discord_id: int = Column(BigInteger, name="Id", primary_key=True, index=True, unique=True)
 
     def __init__(self, _id: discord.User | int):
         self.discord_id = _id.id if isinstance(_id, discord.User) else _id
 
 
 class DbUser(DiscordObject):
+    __allow_unmapped__ = True
     __tablename__ = "Users"
 
     warn_count: int = Column(SmallInteger, name="WarnCount", default=0)
@@ -29,6 +31,7 @@ class DbUser(DiscordObject):
 
 
 class DbGuild(DiscordObject):
+    __allow_unmapped__ = True
     __tablename__ = "Guilds"
 
     is_welcome_enabled: bool = Column(Boolean, name="IsWelcomeEnabled", default=False)

@@ -11,25 +11,26 @@ __all__ = ["Base", "DbUser", "DbGuild"]
 Base = declarative_base()
 
 
-class DbUser(Base):
+# https://stackoverflow.com/questions/9606551/sqlalchemy-avoiding-multiple-inheritance-and-having-abstract-base-class
+class DiscordObject(Base):
+    __abstract__ = True
+    discord_id: int = Column(BigInteger, name="Id", primary_key=True)
+
     def __init__(self, _id: discord.User | int):
-        super().__init__()
         self.discord_id = _id.id if isinstance(_id, discord.User) else _id
 
+
+class DbUser(DiscordObject):
     __tablename__ = "Users"
-    discord_id: int = Column(BigInteger, name="Id", primary_key=True)
+
     warn_count: int = Column(SmallInteger, name="WarnCount", default=0)
     osu_username: str = Column(Text, name="OsuUsername", default="")
     osu_mode: str = Column(Text, name="OsuMode", default="")
 
 
-class DbGuild(Base):
-    def __init__(self, _id: discord.Guild | int):
-        super().__init__()
-        self.discord_id = _id.id if isinstance(_id, discord.Guild) else _id
-
+class DbGuild(DiscordObject):
     __tablename__ = "Guilds"
-    discord_id: int = Column(BigInteger, name="Id", primary_key=True)
+
     is_welcome_enabled: bool = Column(Boolean, name="IsWelcomeEnabled", default=False)
     is_goodbye_enabled: bool = Column(Boolean, name="IsGoodbyeEnabled", default=False)
     is_bot_greeting_enabled: bool = Column(Boolean, name="IsBotGreetingEnabled", default=True)

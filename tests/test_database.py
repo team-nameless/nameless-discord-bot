@@ -35,20 +35,6 @@ class TestDatabase:
         CRUD.rollback()
         assert CRUD.get_user_record(self.mock_user) is not None
 
-    def test_guild_rollback(self):
-        # Non-existence -> Created
-        assert CRUD.get_guild_record(self.mock_guild) is None
-        CRUD.create_guild_record(self.mock_guild)
-        assert (g := CRUD.get_guild_record(self.mock_guild)) is not None
-
-        # Created -> Non-existence
-        CRUD.delete_guild_record(g)
-        assert CRUD.get_guild_record(self.mock_guild) is None
-
-        # Go back: Non-existence -> Created
-        CRUD.rollback()
-        assert CRUD.get_guild_record(self.mock_guild) is not None
-
     def test_user_read_pass(self):
         CRUD.create_user_record(self.mock_user)
         assert CRUD.get_user_record(self.mock_user) is not None

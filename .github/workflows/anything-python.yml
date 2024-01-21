@@ -16,7 +16,7 @@ on:
 
 jobs:
   python:
-    if: ${{ github.repository == 'nameless-on-discord/nameless' }}
+    if: ${{ github.repository == 'team-nameless/nameless-on-discord' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

@@ -526,12 +526,15 @@ class MusicCog(commands.GroupCog, name="music"):
         player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
         enum_mode = QueueMode(mode)
 
+        def normalize_enum_name(e: QueueMode) -> str:
+            return e.name.lower().replace(" ", "_")
+
         if player.queue.mode is enum_mode:
             await interaction.followup.send("Already in this mode")
             return
 
         player.queue.mode = enum_mode
-        await interaction.followup.send(f"Loop mode set to {player.queue.mode.name}")
+        await interaction.followup.send(f"Loop mode set to {normalize_enum_name(enum_mode)}")
 
     @app_commands.command()
     @app_commands.guild_only()
@@ -665,12 +668,7 @@ class MusicCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     async def loop_track(self, interaction: discord.Interaction, value: int):
         """Change 'Loop track' mode."""
-        await interaction.response.defer()
-
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
-        player.queue.mode = QueueMode(value)
-
-        await interaction.followup.send(f"Loop track is now {'on' if player.queue.mode is QueueMode.loop else 'off'}")
+        await self.set_loop_mode(interaction, value)
 
     @app_commands.command()
     @app_commands.guild_only()

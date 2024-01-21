@@ -77,7 +77,7 @@ class ModeratorCog(commands.GroupCog, name="mod"):
             return
 
         db_user.warn_count += val
-        CRUD.save_changes()
+        
 
         if db_user.warn_count == 0:
             await zero_fn(interaction, member, reason)
@@ -138,7 +138,7 @@ class ModeratorCog(commands.GroupCog, name="mod"):
 
                 mute_role = role
                 db_guild.mute_role_id = role.id
-                CRUD.save_changes()
+                
 
                 await m.edit(content="Creation complete!", view=None)  # pyright: ignore
 
@@ -294,7 +294,7 @@ class ModeratorCog(commands.GroupCog, name="mod"):
 
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.max_warn_count = count
-        CRUD.save_changes()
+        
 
         await interaction.followup.send(content=f"Set max warning count to `{count}` warn(s).")
 
@@ -308,7 +308,7 @@ class ModeratorCog(commands.GroupCog, name="mod"):
 
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.mute_role_id = role.id
-        CRUD.save_changes()
+        
 
         await interaction.followup.send(content=f"Set mute role to `{role.name}` with ID `{role.id}`.")
 
@@ -321,7 +321,7 @@ class ModeratorCog(commands.GroupCog, name="mod"):
 
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.mute_role_id = 0
-        CRUD.save_changes()
+        
 
         await interaction.followup.send(content="Cleared mute role selection.")
 
@@ -333,7 +333,7 @@ class ModeratorCog(commands.GroupCog, name="mod"):
         await interaction.response.defer()
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.is_timeout_preferred = not db_guild.is_timeout_preferred
-        CRUD.save_changes()
+        
 
         await interaction.followup.send(
             f"Use native `Timeout` feature: {'on' if db_guild.is_timeout_preferred else 'off'}"
@@ -365,7 +365,7 @@ class ModeratorCog(commands.GroupCog, name="mod"):
                 delta = timedelta(weeks=1)
 
         db_guild.mute_timeout_interval = delta
-        CRUD.save_changes()
+        
 
         await interaction.followup.send(f"Set mute timeout duration to {delta}")
 

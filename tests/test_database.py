@@ -17,11 +17,11 @@ class TestDatabase:
         # Post-testing cleanup
         if u := CRUD.get_user_record(self.mock_user):
             CRUD.delete_user_record(u)
-            CRUD.save_changes()
+            
 
         if g := CRUD.get_guild_record(self.mock_guild):
             CRUD.delete_guild_record(g)
-            CRUD.save_changes()
+            
 
     def test_user_rollback(self):
         # Non-existence -> Created

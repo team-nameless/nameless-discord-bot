@@ -23,7 +23,7 @@ class CRUD:
 
     (db_url, dialect, driver, host, port, username, password, db_name) = Utility.get_db_url()
 
-    engine = create_engine(db_url, logging_name=db_name, hide_parameters=not shared_vars.is_debug)
+    engine = create_engine(db_url, logging_name=db_name, hide_parameters=not shared_vars.is_debug, isolation_level="AUTOCOMMIT")
 
     _session = sessionmaker(bind=engine)
     session = _session()
@@ -102,7 +102,7 @@ class CRUD:
 
         if not CRUD.session.query(DbUser).filter_by(discord_id=discord_user.id).one_or_none():  # noqa
             CRUD.session.add(decoy_user)
-            CRUD.save_changes()
+
             return decoy_user
 
         return CRUD.session.query(DbUser).filter_by(discord_id=discord_user.id).one()
@@ -117,7 +117,7 @@ class CRUD:
 
         if not CRUD.session.query(DbGuild).filter_by(discord_id=discord_guild.id).one_or_none():  # noqa
             CRUD.session.add(decoy_guild)
-            CRUD.save_changes()
+
             return decoy_guild
 
         return CRUD.session.query(DbGuild).filter_by(discord_id=discord_guild.id).one()

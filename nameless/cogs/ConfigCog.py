@@ -17,6 +17,8 @@ class ConfigCog(commands.GroupCog, name="config"):
     def __init__(self, bot: nameless.Nameless):
         super().__init__()
         self.bot = bot
+        # user_id -> voice_channel_id
+        self.channel_track: dict[int, int] = {}
 
     async def _send_greeter(
         self,
@@ -44,15 +46,21 @@ class ConfigCog(commands.GroupCog, name="config"):
             return
 
         is_a_join = before.channel is None and after.channel is not None
-        joined_the_master = after.channel.id == db_guild.voice_room_channel_id
+        is_a_leave = before.channel is not None and after.channel is None
 
-        if is_a_join and joined_the_master:
+        if is_a_join and after.channel.id == db_guild.voice_room_channel_id:
             current_category = after.channel.category
             current_position = after.channel.position
             vc = await after.channel.guild.create_voice_channel(
                 f"@{member.name}'s Voice", category=current_category, position=current_position + 1
             )
+            self.channel_track[member.id] = vc.id
             await member.move_to(vc)
+
+        if is_a_leave and before.channel.id == self.channel_track[member.id]:
+            vc = before.channel.guild.get_channel(before.channel.id)
+            await vc.delete()
+            del self.channel_track[member.id]
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):

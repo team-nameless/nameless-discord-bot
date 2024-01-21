@@ -2,37 +2,47 @@ from datetime import datetime, timedelta
 
 import discord
 from sqlalchemy import Column
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import declarative_base, Mapped
 from sqlalchemy.sql.sqltypes import *
 
 __all__ = ["Base", "DbUser", "DbGuild"]
 
 
-class Base(DeclarativeBase):
-    ...
+Base = declarative_base()
 
 
-# https://stackoverflow.com/questions/9606551/sqlalchemy-avoiding-multiple-inheritance-and-having-abstract-base-class
+# https://docs.sqlalchemy.org/en/20/orm/inheritance.html#concrete-table-inheritance
 class DiscordObject:
-    __abstract__ = True
-    discord_id: int = Column(BigInteger, name="Id", primary_key=True, index=True, unique=True)
+    __tablename__ = "Discord"
+    __mapper_args__ = {
+        "polymorphic_on": type,
+        "polymorphic_identity": "Discord"
+    }
 
-    def __init__(self, _id: discord.User | int):
-        self.discord_id = _id.id if isinstance(_id, discord.User) else _id
+    discord_id: Mapped[int] = Column(BigInteger, name="Id", primary_key=True)
+
+    def __init__(self, entry: int | discord.User):
+        self.discord_id = entry.id if isinstance(entry, discord.User) else entry
 
 
-class DbUser(DiscordObject):
-    __allow_unmapped__ = True
+class DbUser(DiscordObject, Base):
     __tablename__ = "Users"
+    __mapper_args__ = {
+        "polymorphic_identity": "Users",
+        "concrete": True,
+    }
 
     warn_count: int = Column(SmallInteger, name="WarnCount", default=0)
     osu_username: str = Column(Text, name="OsuUsername", default="")
     osu_mode: str = Column(Text, name="OsuMode", default="")
 
 
-class DbGuild(DiscordObject):
-    __allow_unmapped__ = True
+class DbGuild(DiscordObject, Base):
     __tablename__ = "Guilds"
+    __mapper_args__ = {
+        "polymorphic_identity": "Guilds",
+        "concrete": True,
+    }
 
     is_welcome_enabled: bool = Column(Boolean, name="IsWelcomeEnabled", default=False)
     is_goodbye_enabled: bool = Column(Boolean, name="IsGoodbyeEnabled", default=False)

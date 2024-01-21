@@ -10,11 +10,11 @@ import time
 
 import discord
 import discord.ui
+from cogs.checks import BaseCheck
 from discord import app_commands
 from discord.ext import commands
 from discord.utils import escape_markdown
 
-from cogs.checks import BaseCheck
 from nameless import Nameless, shared_vars
 from nameless.customs import Autocomplete
 
@@ -141,7 +141,7 @@ class OwnerCog(commands.Cog):
 
         embed = (
             discord.Embed(
-                title=f"Python code evaluation result for {ctx.author}",
+                title=f"Python code evaluation result for {interaction.user}",
                 description=f"**Source code**\n```python\n{code}\n```",
                 timestamp=datetime.datetime.now(),
                 color=discord.Color.orange(),

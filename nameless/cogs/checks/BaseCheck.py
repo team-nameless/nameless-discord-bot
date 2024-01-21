@@ -1,5 +1,4 @@
 from collections.abc import Callable
-from typing import cast, Any, Coroutine
 
 import discord
 from discord import app_commands

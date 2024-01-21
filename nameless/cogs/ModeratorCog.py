@@ -77,7 +77,6 @@ class ModeratorCog(commands.GroupCog, name="mod"):
             return
 
         db_user.warn_count += val
-        
 
         if db_user.warn_count == 0:
             await zero_fn(interaction, member, reason)
@@ -138,7 +137,6 @@ class ModeratorCog(commands.GroupCog, name="mod"):
 
                 mute_role = role
                 db_guild.mute_role_id = role.id
-                
 
                 await m.edit(content="Creation complete!", view=None)  # pyright: ignore
 
@@ -294,7 +292,6 @@ class ModeratorCog(commands.GroupCog, name="mod"):
 
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.max_warn_count = count
-        
 
         await interaction.followup.send(content=f"Set max warning count to `{count}` warn(s).")
 
@@ -308,7 +305,6 @@ class ModeratorCog(commands.GroupCog, name="mod"):
 
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.mute_role_id = role.id
-        
 
         await interaction.followup.send(content=f"Set mute role to `{role.name}` with ID `{role.id}`.")
 
@@ -321,7 +317,6 @@ class ModeratorCog(commands.GroupCog, name="mod"):
 
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.mute_role_id = 0
-        
 
         await interaction.followup.send(content="Cleared mute role selection.")
 
@@ -333,7 +328,6 @@ class ModeratorCog(commands.GroupCog, name="mod"):
         await interaction.response.defer()
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.is_timeout_preferred = not db_guild.is_timeout_preferred
-        
 
         await interaction.followup.send(
             f"Use native `Timeout` feature: {'on' if db_guild.is_timeout_preferred else 'off'}"
@@ -365,7 +359,6 @@ class ModeratorCog(commands.GroupCog, name="mod"):
                 delta = timedelta(weeks=1)
 
         db_guild.mute_timeout_interval = delta
-        
 
         await interaction.followup.send(f"Set mute timeout duration to {delta}")
 

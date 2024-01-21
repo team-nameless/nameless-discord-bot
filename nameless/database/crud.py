@@ -23,7 +23,9 @@ class CRUD:
 
     (db_url, dialect, driver, host, port, username, password, db_name) = Utility.get_db_url()
 
-    engine = create_engine(db_url, logging_name=db_name, hide_parameters=not shared_vars.is_debug, isolation_level="AUTOCOMMIT")
+    engine = create_engine(
+        db_url, logging_name=db_name, hide_parameters=not shared_vars.is_debug, isolation_level="AUTOCOMMIT"
+    )
 
     _session = sessionmaker(bind=engine)
     session = _session()

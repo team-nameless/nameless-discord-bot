@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 import discord
 from sqlalchemy import Column
-from sqlalchemy.orm import declarative_base, Mapped
+from sqlalchemy.orm import Mapped, declarative_base
 from sqlalchemy.sql.sqltypes import *
 
 __all__ = ["Base", "DbUser", "DbGuild"]
@@ -14,10 +14,7 @@ Base = declarative_base()
 # https://docs.sqlalchemy.org/en/20/orm/inheritance.html#concrete-table-inheritance
 class DiscordObject:
     __tablename__ = "Discord"
-    __mapper_args__ = {
-        "polymorphic_on": type,
-        "polymorphic_identity": "Discord"
-    }
+    __mapper_args__ = {"polymorphic_on": type, "polymorphic_identity": "Discord"}
 
     discord_id: Mapped[int] = Column(BigInteger, name="Id", primary_key=True)
 
@@ -58,3 +55,4 @@ class DbGuild(DiscordObject, Base):
     audio_role_id: int = Column(BigInteger, name="AudioRoleId", default=0)
     radio_start_time: datetime = Column(DateTime, name="RadioStartTime", default=datetime.min)
     mute_timeout_interval: timedelta = Column(Interval, name="MuteTimeoutInterval", default=timedelta(days=7))
+    voice_room_channel_id: int = Column(BigInteger, name="VoiceRoomChannelId", default=0)

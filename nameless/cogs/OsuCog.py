@@ -83,7 +83,7 @@ class OsuCog(commands.GroupCog, name="osu"):
         await interaction.response.defer()
         db_user = CRUD.get_or_create_user_record(interaction.user)
         db_user.osu_username, db_user.osu_mode = username, mode.title()
-        
+
         await interaction.followup.send("Successfully updated your profile details with me! Yay!")
 
     @app_commands.command()
@@ -97,8 +97,6 @@ class OsuCog(commands.GroupCog, name="osu"):
         await interaction.response.defer()
         db_user = CRUD.get_or_create_user_record(member)
         db_user.osu_username, db_user.osu_mode = username, mode.title()
-
-        
 
         await interaction.followup.send(
             f"Successfully updated the profile details of " f"**{member.display_name}#{member.discriminator}**!"

@@ -3,6 +3,7 @@ import logging
 import discord
 import sqlalchemy
 from sqlalchemy import create_engine
+from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.util import IdentitySet
 
@@ -134,7 +135,11 @@ class CRUD:
             raise ValueError("You are deleting a null guild! Did you ensure that this is not a DM?")
 
         logging.info("Removing guild entry with ID %s from the database", guild_record.discord_id)
-        CRUD.session.delete(guild_record)
+
+        try:
+            CRUD.session.delete(guild_record)
+        except InvalidRequestError:
+            CRUD.session.expunge(guild_record)
 
     @staticmethod
     def delete_user_record(user_record: DbUser | None) -> None:
@@ -146,7 +151,11 @@ class CRUD:
             raise ValueError("You are deleting a null user!")
 
         logging.info("Removing user entry with ID %s from the database", user_record.discord_id)
-        CRUD.session.delete(user_record)
+
+        try:
+            CRUD.session.delete(user_record)
+        except InvalidRequestError:
+            CRUD.session.expunge(user_record)
 
     @staticmethod
     def rollback() -> None:

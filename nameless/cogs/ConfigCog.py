@@ -130,7 +130,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         await modal.wait()
 
         db_guild.welcome_message = modal.text.value
-        CRUD.save_changes()
+        
 
         await interaction.followup.send(content=f"Your new welcome text:\n\n{db_guild.welcome_message}")
 
@@ -150,7 +150,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         await modal.wait()
 
         db_guild.goodbye_message = modal.text.value
-        CRUD.save_changes()
+        
 
         await interaction.followup.send(f"Your new goodbye text:\n\n{db_guild.goodbye_message}")
 
@@ -166,7 +166,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         await interaction.response.defer()
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.goodbye_channel_id = dest_channel.id
-        CRUD.save_changes()
+        
         await interaction.followup.send(f"Done updating goodbye channel to {dest_channel.mention}")
 
     @app_commands.command()
@@ -181,7 +181,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         await interaction.response.defer()
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.welcome_channel_id = dest_channel.id
-        CRUD.save_changes()
+        
         await interaction.followup.send(f"Done updating welcome channel to {dest_channel.mention}")
 
     @app_commands.command()
@@ -193,7 +193,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         await interaction.response.defer()
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.is_welcome_enabled = not db_guild.is_welcome_enabled
-        CRUD.save_changes()
+        
         await interaction.followup.send(f"Welcome message delivery: {'on' if db_guild.is_welcome_enabled else 'off'}")
 
     @app_commands.command()
@@ -205,7 +205,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         await interaction.response.defer()
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.is_goodbye_enabled = not db_guild.is_goodbye_enabled
-        CRUD.save_changes()
+        
         await interaction.followup.send(f"Goodbye message delivery: {'on' if db_guild.is_goodbye_enabled else 'off'}")
 
     @app_commands.command()
@@ -217,7 +217,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         await interaction.response.defer()
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.is_bot_greeting_enabled = not db_guild.is_bot_greeting_enabled
-        CRUD.save_changes()
+        
         await interaction.followup.send(f"BOTs greeter delivery: {'on' if db_guild.is_bot_greeting_enabled else 'off'}")
 
     @app_commands.command()

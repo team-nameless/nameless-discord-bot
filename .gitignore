@@ -1,9 +1,16 @@
+# Local project files
 .idea/workspace.xml
 .idea/vcs.xml
 .idea/inspectionProfiles/**
 .idea/misc.xml
-.idea/.gitignore
+.idea/dataSources.xml
+
+# :eyes:
 **/__pycache__/**
+
+# Files should not not be exposed to the public
 nameless.db
 NamelessConfig.py
+
+# Why?
 .vscode/setting.json

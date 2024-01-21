@@ -32,6 +32,29 @@ class ConfigCog(commands.GroupCog, name="config"):
             )
 
     @commands.Cog.listener()
+    async def on_voice_state_update(
+        self,
+        member: discord.Member,
+        before: discord.VoiceState,
+        after: discord.VoiceState,
+    ):
+        db_guild = CRUD.get_or_create_guild_record(member.guild)
+
+        if db_guild.voice_room_channel_id == 0:
+            return
+
+        is_a_join = before.channel is None and after.channel is not None
+        joined_the_master = after.channel.id == db_guild.voice_room_channel_id
+
+        if is_a_join and joined_the_master:
+            current_category = after.channel.category
+            current_position = after.channel.position
+            vc = await after.channel.guild.create_voice_channel(
+                f"@{member.name}'s Voice", category=current_category, position=current_position + 1
+            )
+            await member.move_to(vc)
+
+    @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
         db_guild = CRUD.get_or_create_guild_record(member.guild)
 
@@ -67,16 +90,20 @@ class ConfigCog(commands.GroupCog, name="config"):
 
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
 
-        wc_chn = interaction.guild.get_channel(db_guild.welcome_channel_id)  # pyright: ignore
-        gb_chn = interaction.guild.get_channel(db_guild.goodbye_channel_id)  # pyright: ignore
-        mute_role = interaction.guild.get_role(db_guild.mute_role_id)  # pyright: ignore
+        wc_chn = interaction.guild.get_channel(db_guild.welcome_channel_id)
+        gb_chn = interaction.guild.get_channel(db_guild.goodbye_channel_id)
+        vc_chn = interaction.guild.get_channel(db_guild.voice_room_channel_id)
+        mute_role = interaction.guild.get_role(db_guild.mute_role_id)
         reaction = [":x:", ":white_check_mark:"]
         dm = db_guild.is_dm_preferred
 
         embed: discord.Embed = (
             discord.Embed(color=discord.Color.orange(), timestamp=datetime.datetime.now())
             .set_thumbnail(url=interaction.guild.icon.url)
-            .set_author(icon_url=interaction.client.user.display_avatar.url, name="Configured properties")
+            .set_author(
+                icon_url=interaction.client.user.display_avatar.url,
+                name=f"Configured properties for '{interaction.guild.name}'",
+            )
         )
 
         embed.add_field(
@@ -110,7 +137,9 @@ class ConfigCog(commands.GroupCog, name="config"):
             inline=False,
         ).add_field(name="Use native timeout feature", value=db_guild.is_timeout_preferred, inline=False).add_field(
             name="Max warning count", value=db_guild.max_warn_count
-        ).add_field(name="Mute role", value=mute_role.mention if mute_role else "Unset")
+        ).add_field(name="Mute role", value=mute_role.mention if mute_role else "Unset").add_field(
+            name="Voice room", value=vc_chn.mention if vc_chn else "Unset"
+        )
 
         await interaction.followup.send(embeds=[embed])
 
@@ -130,7 +159,6 @@ class ConfigCog(commands.GroupCog, name="config"):
         await modal.wait()
 
         db_guild.welcome_message = modal.text.value
-        
 
         await interaction.followup.send(content=f"Your new welcome text:\n\n{db_guild.welcome_message}")
 
@@ -150,7 +178,6 @@ class ConfigCog(commands.GroupCog, name="config"):
         await modal.wait()
 
         db_guild.goodbye_message = modal.text.value
-        
 
         await interaction.followup.send(f"Your new goodbye text:\n\n{db_guild.goodbye_message}")
 
@@ -166,7 +193,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         await interaction.response.defer()
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.goodbye_channel_id = dest_channel.id
-        
+
         await interaction.followup.send(f"Done updating goodbye channel to {dest_channel.mention}")
 
     @app_commands.command()
@@ -181,7 +208,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         await interaction.response.defer()
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.welcome_channel_id = dest_channel.id
-        
+
         await interaction.followup.send(f"Done updating welcome channel to {dest_channel.mention}")
 
     @app_commands.command()
@@ -193,7 +220,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         await interaction.response.defer()
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.is_welcome_enabled = not db_guild.is_welcome_enabled
-        
+
         await interaction.followup.send(f"Welcome message delivery: {'on' if db_guild.is_welcome_enabled else 'off'}")
 
     @app_commands.command()
@@ -205,7 +232,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         await interaction.response.defer()
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.is_goodbye_enabled = not db_guild.is_goodbye_enabled
-        
+
         await interaction.followup.send(f"Goodbye message delivery: {'on' if db_guild.is_goodbye_enabled else 'off'}")
 
     @app_commands.command()
@@ -217,7 +244,7 @@ class ConfigCog(commands.GroupCog, name="config"):
         await interaction.response.defer()
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.is_bot_greeting_enabled = not db_guild.is_bot_greeting_enabled
-        
+
         await interaction.followup.send(f"BOTs greeter delivery: {'on' if db_guild.is_bot_greeting_enabled else 'off'}")
 
     @app_commands.command()
@@ -229,8 +256,20 @@ class ConfigCog(commands.GroupCog, name="config"):
         await interaction.response.defer()
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
         db_guild.is_dm_preferred = not db_guild.is_dm_preferred
-        CRUD.save_changes()
+
         await interaction.followup.send(f"DM greeter delivery: {'on' if db_guild.is_dm_preferred else 'off'}")
+
+    @app_commands.command()
+    @app_commands.guild_only()
+    @app_commands.checks.has_permissions(manage_guild=True)
+    @app_commands.describe(dest_channel="Target room channel")
+    async def set_voice_room_channel(self, interaction: discord.Interaction, dest_channel: discord.VoiceChannel):
+        """Change welcome message delivery channel"""
+        await interaction.response.defer()
+        db_guild = CRUD.get_or_create_guild_record(interaction.guild)
+        db_guild.voice_room_channel_id = dest_channel.id
+
+        await interaction.followup.send(f"Done setting voice room to {dest_channel.mention}")
 
     @app_commands.command()
     @app_commands.guild_only()

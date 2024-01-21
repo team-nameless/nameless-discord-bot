@@ -35,4 +35,5 @@ needed_permissions.use_external_emojis = True
 needed_permissions.add_reactions = True
 needed_permissions.connect = True
 needed_permissions.speak = True
+needed_permissions.move_members = True
 needed_permissions.use_voice_activation = True

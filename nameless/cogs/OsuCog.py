@@ -98,9 +98,7 @@ class OsuCog(commands.GroupCog, name="osu"):
         db_user = CRUD.get_or_create_user_record(member)
         db_user.osu_username, db_user.osu_mode = username, mode.title()
 
-        await interaction.followup.send(
-            f"Successfully updated the profile details of " f"**@{member.display_name}**!"
-        )
+        await interaction.followup.send(f"Successfully updated the profile details of **@{member.display_name}**!")
 
     async def __generic_check(
         self,

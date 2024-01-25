@@ -28,8 +28,7 @@ class ConfigCog(commands.GroupCog, name="config"):
     ):
         if send_target is not None and (isinstance(send_target, discord.TextChannel | discord.Thread | discord.Member)):
             await send_target.send(
-                content=content.replace("{guild}", member.guild.name)
-                .replace("{name}", member.display_name)
+                content=content.replace("{guild}", member.guild.name).replace("{name}", member.display_name)
             )
 
     @commands.Cog.listener()

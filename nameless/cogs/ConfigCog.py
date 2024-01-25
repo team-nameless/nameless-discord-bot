@@ -30,7 +30,6 @@ class ConfigCog(commands.GroupCog, name="config"):
             await send_target.send(
                 content=content.replace("{guild}", member.guild.name)
                 .replace("{name}", member.display_name)
-                .replace("{tag}", member.discriminator)
             )
 
     @commands.Cog.listener()

@@ -35,7 +35,7 @@ class ModeratorCog(commands.GroupCog, name="mod"):
             await interaction.followup.send("You can not do this to yourself, or me.")
             return
 
-        response = f"Trying to {action} member {member.display_name}#{member.discriminator}. "
+        response = f"Trying to {action} member @{member.display_name}. "
 
         try:
             if delete_past_message_days != -1:

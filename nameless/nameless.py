@@ -95,9 +95,19 @@ class Nameless(commands.AutoShardedBot):
         logging.info("Shard #%s is ready", shard_id)
 
     async def setup_hook(self) -> None:
+        logging.info("Initiate database.")
         CRUD.init()
+
+        logging.info("Constructing internal variables.")
         await self.construct_shared_vars()
+
+        logging.info("Checking for upstream updates.")
         self.check_for_updates()
+
+        if shared_vars.is_debug:
+            logging.info("This bot is running in debug mode.")
+        else:
+            logging.warning("This bot is running in production mode.")
 
         logging.info("Registering commands")
         await self.__register_all_cogs()
@@ -234,5 +244,7 @@ class Nameless(commands.AutoShardedBot):
         return False
 
     def start_bot(self):
+        logging.info("Patching loggers.")
         self.patch_loggers()
+
         self.run(NamelessConfig.TOKEN, log_handler=None)

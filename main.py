@@ -6,6 +6,7 @@ import discord
 from discord import InteractionResponded
 from discord.app_commands import AppCommandError, errors
 from discord.ext import commands
+from filelock import Timeout, FileLock
 
 from nameless import Nameless
 from nameless.customs.NamelessCommandTree import NamelessCommandTree
@@ -49,4 +50,12 @@ async def on_app_command_error(interaction: discord.Interaction, err: AppCommand
 # from nameless.database import CRUD
 # CRUD.in_case_of_getting_f_up()
 
-nameless.start_bot()
+lock = FileLock("nameless.lck", timeout=5)
+
+try:
+    with lock.acquire(timeout=1):
+        nameless.start_bot()
+except Timeout:
+    raise RuntimeError("Another 'nameless*' instance is running.")
+finally:
+    lock.release()

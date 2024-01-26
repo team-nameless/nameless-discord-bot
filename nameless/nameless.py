@@ -35,6 +35,7 @@ class Nameless(commands.AutoShardedBot):
             logging.getLogger("sqlalchemy.orm"),
             logging.getLogger("sqlalchemy.pool"),
             logging.getLogger("ossapi.ossapiv2"),
+            logging.getLogger("filelock")
         ]
         self.description = NamelessConfig.__description__
 

@@ -61,4 +61,4 @@ jobs:
       - name: Push the changes if needed.
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Automated code format commit."
+          commit_message: "[ci skip] Automated code format commit."

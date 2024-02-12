@@ -1,6 +1,7 @@
 import argparse
 import contextlib
 import logging
+import sys
 
 import discord
 from discord import InteractionResponded
@@ -30,6 +31,14 @@ if args.version:
         version_file.write(NamelessConfig.__version__)
 
     exit(0)
+
+logging.basicConfig(
+    format="%(asctime)s - [%(levelname)s] [%(name)s] %(message)s",
+    stream=sys.stdout,
+    level=logging.DEBUG if args.debug else logging.INFO
+)
+
+logging.getLogger().name = "nameless"
 
 intents = discord.Intents.default()
 intents.message_content = NamelessConfig.INTENT.MESSAGE

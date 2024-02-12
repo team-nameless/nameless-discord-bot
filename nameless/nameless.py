@@ -177,27 +177,6 @@ class Nameless(commands.AutoShardedBot):
 
         return False
 
-    def patch_loggers(self) -> None:
-        stdout_log_handler = logging.StreamHandler(sys.stdout)
-        stdout_log_handler.setFormatter(logging.Formatter("%(asctime)s - [%(levelname)s] [%(name)s] %(message)s"))
-
-        for logger in self.loggers:
-            if logger.name != "root":
-                logger.propagate = False
-
-            if logger.name == "root":
-                logger.name = "nameless"
-
-            logger.handlers[:] = [stdout_log_handler]
-            logger.setLevel(self.log_level)
-
-            parent = logger.parent
-
-            while parent:
-                parent.setLevel(self.log_level)
-                parent.propagate = False
-                parent = parent.parent
-
     async def construct_shared_vars(self):
         """
         Constructs variables to shared_vars.py.

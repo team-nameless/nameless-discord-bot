@@ -1,19 +1,21 @@
 import asyncio
 import logging
 import os
-import sys
+import re
+import json
 from datetime import datetime
 
 import aiohttp
 import discord
+from discord import Permissions
 from discord.ext import commands
 from discord.ext.commands import errors
 from discord.message import Message
+from filelock import FileLock
 from packaging import version
 from sqlalchemy.orm import close_all_sessions
 
-from nameless import shared_vars
-from nameless.database import CRUD
+from .database import CRUD
 from NamelessConfig import NamelessConfig
 
 __all__ = ["Nameless"]
@@ -38,23 +40,70 @@ class Nameless(commands.AutoShardedBot):
             logging.getLogger("filelock"),
         ]
 
-    def check_for_updates(self):
+        self.needed_permissions: Permissions = Permissions(
+            view_channel=True,
+            send_messages=True,
+            send_messages_in_threads=True,
+            embed_links=True,
+            attach_files=True,
+            read_message_history=True,
+            use_external_emojis=True,
+            use_external_stickers=True,
+            add_reactions=True,
+            connect=True,
+            speak=True,
+            use_voice_activation=True
+        )
+
+        self.internals = {
+            "debug": False,
+            "start_time": 0,
+            "modules": {
+                "loaded": [],
+                "not_loaded": []
+            }
+        }
+
+    async def check_for_updates(self) -> bool | None:
+        """
+        Performs an update check.
+
+        Returns True if at the latest version, False if falling behind.
+        And None if your version is newer than the latest.
+        """
+        __nameless_upstream_version__ = f"{NamelessConfig.__version__}-offline"
+
+        try:
+            async with aiohttp.ClientSession() as session, session.get(
+                    NamelessConfig.META.UPSTREAM_VERSION_FILE, timeout=10
+            ) as response:
+                if 200 <= response.status <= 299:
+                    __nameless_upstream_version__ = await response.text()
+                else:
+                    logging.warning("Upstream version fetching failed.")
+        except asyncio.exceptions.TimeoutError:
+            logging.error("Upstream version failed to fetch within 10 seconds.")
+
         nameless_version = version.parse(NamelessConfig.__version__)
-        upstream_version = version.parse(shared_vars.__nameless_upstream_version__)
+        upstream_version = version.parse(__nameless_upstream_version__)
 
         logging.info("Current version: %s - Upstream version: %s", nameless_version, upstream_version)
 
         if nameless_version < upstream_version:
             logging.warning("You need to update your code!")
+            return False
         elif nameless_version == upstream_version:
             logging.info("You are using latest version!")
-        else:
-            logging.warning("You are using a version NEWER than original code!")
+            return True
 
-    async def __register_all_cogs(self):
-        # Sometimes os.cwd() is bad
+        logging.warning("You are using a version NEWER than original code!")
+        return None
+
+    async def register_all_cogs(self):
+        """Registers all cogs in the `cogs` directory."""
         current_path = os.path.dirname(__file__)
-        allowed_cogs = list(filter(shared_vars.cogs_regex.match, os.listdir(f"{current_path}{os.sep}cogs")))
+        cog_regex = re.compile(r"^(?!_.).*Cog.py")
+        allowed_cogs = list(filter(cog_regex.match, os.listdir(f"{current_path}{os.sep}cogs")))
         cogs = NamelessConfig.COGS
 
         for cog_name in cogs:
@@ -64,53 +113,48 @@ class Nameless(commands.AutoShardedBot):
             if cog_name + "Cog.py" in allowed_cogs:
                 try:
                     await self.load_extension(full_qualified_name)
-                    shared_vars.loaded_cogs_list.append(full_qualified_name)
+                    self.internals["modules"]["loaded"].append(full_qualified_name)
                 except commands.ExtensionError as ex:
                     fail_reason = str(ex)
-                    shared_vars.unloaded_cogs_list.append(full_qualified_name)
-
-                can_load = fail_reason == ""
             else:
-                can_load = False
                 fail_reason = "It does not exist in 'allowed_cogs' list."
 
-            if not can_load:
+            if not (fail_reason == ""):
                 logging.error("Unable to load %s! %s", cog_name, fail_reason, stack_info=False)
-                shared_vars.unloaded_cogs_list.append(full_qualified_name)
+                self.internals["modules"]["not_loaded"].append(full_qualified_name)
 
         # Convert .py files to valid module names
         loaded_cog_modules = [f"nameless.cogs.{cog.replace('.py', '')}Cog" for cog in cogs]
         allowed_cog_modules = [f"nameless.cogs.{cog.replace('.py', '')}" for cog in allowed_cogs]
+
+        # Get the cogs that are not loaded at will (not specified in NamelessConfig
         excluded_cogs = list(set(set(allowed_cog_modules) - set(loaded_cog_modules)))
-        shared_vars.unloaded_cogs_list.extend(excluded_cogs)
+        self.internals["modules"]["not_loaded"].extend(excluded_cogs)
 
-        # An extra set() to exclude cogs ignored by load failure.
-        shared_vars.unloaded_cogs_list = list(set(shared_vars.unloaded_cogs_list))
+        # An extra set() to exclude dupes.
+        self.internals["modules"]["loaded"] = list(set(self.internals["modules"]["loaded"]))
+        self.internals["modules"]["not_loaded"] = list(set(self.internals["modules"]["not_loaded"]))
 
-        logging.debug("Loaded cog list: [ %s ]", ", ".join(shared_vars.loaded_cogs_list))
-        logging.debug("Excluded cog list: [ %s ]", ", ".join(shared_vars.unloaded_cogs_list))
+        logging.debug("Loaded cog list: [ %s ]", ", ".join(self.internals["modules"]["loaded"]))
+        logging.debug("Excluded cog list: [ %s ]", ", ".join(self.internals["modules"]["not_loaded"]))
 
     async def on_shard_ready(self, shard_id: int):
         logging.info("Shard #%s is ready", shard_id)
 
     async def setup_hook(self) -> None:
-        logging.info("Initiate database.")
+        logging.info("Initiating database.")
         CRUD.init()
 
         logging.info("Constructing internal variables.")
-        await self.construct_shared_vars()
+        await self.construct_internals()
 
         logging.info("Checking for upstream updates.")
-        self.check_for_updates()
-
-        if shared_vars.is_debug:
-            logging.info("This bot is running in debug mode.")
-        else:
-            logging.warning("This bot is running in production mode.")
+        await self.check_for_updates()
 
         logging.info("Registering commands")
-        await self.__register_all_cogs()
+        await self.register_all_cogs()
 
+        logging.info("Syncing commands")
         if ids := NamelessConfig.GUILDS:
             for _id in ids:
                 logging.info("Syncing commands with guild ID %d", _id)
@@ -121,6 +165,12 @@ class Nameless(commands.AutoShardedBot):
             logging.info("Syncing commands globally")
             await self.tree.sync()
             logging.warning("Please wait at least one hour before using global commands")
+
+        with (
+            FileLock("internals.json.lck"), \
+                open(f"{os.path.dirname(__file__)}{os.sep}internals.json", "w") as internals_file
+        ):
+            json.dump(self.internals, internals_file)
 
     async def on_ready(self):
         logging.info("Setting presence")
@@ -153,55 +203,36 @@ class Nameless(commands.AutoShardedBot):
 
             logging.exception("[on_command_error] We have gone under a crisis!!!", stack_info=True, exc_info=err)
 
-    async def construct_shared_vars(self):
+    async def construct_internals(self):
         """
-        Constructs variables to shared_vars.py.
+        Constructs internal variables to internals.json
         """
-        logging.info("Populating nameless/shared_vars.py")
+        logging.info("Populating internals.json")
 
-        shared_vars.start_time = datetime.now()
-        shared_vars.is_debug = self.is_debug
-        # shared_vars.crud_database = CRUD()
+        self.internals["debug"] = self.is_debug
+        self.internals["start_time"] = int(datetime.utcnow().timestamp())
 
-        try:
-            async with aiohttp.ClientSession() as session, session.get(
-                NamelessConfig.META.UPSTREAM_VERSION_FILE, timeout=10
-            ) as response:
-                if 200 <= response.status <= 299:
-                    shared_vars.__nameless_upstream_version__ = await response.text()
-                else:
-                    logging.warning("Upstream version fetching failed, using 0.0.0 as upstream version")
-                    shared_vars.__nameless_upstream_version__ = "0.0.0"
-
-        except asyncio.exceptions.TimeoutError:
-            logging.error("Upstream version fetching error, using 0.0.0 as upstream version")
-            logging.info("This is because your internet failed to fetch within 10 seconds timeout")
-            shared_vars.__nameless_upstream_version__ = "0.0.0"
-
-        # Debug data
-        logging.debug("Bot start time: %s", shared_vars.start_time)
-
-    async def on_message(self, message: Message):
-        if not await self.is_blacklisted(message.author, message.guild):
-            await super().on_message(message)
-
-    async def is_blacklisted(self, user: discord.User | discord.Member, guild: discord.Guild | None) -> bool:
+    async def is_blacklisted(self, *,
+                             user: discord.User | discord.Member = None,
+                             guild: discord.Guild | None = None
+                             ) -> bool:
+        """Check if an entity is blacklisted from using the bot."""
         # The owners, even if they are in the blacklist, can still use the bot
-        if await self.is_owner(user):
+        if user and await self.is_owner(user):
             return False
 
-        if guild.id in NamelessConfig.BLACKLISTS.GUILD_BLACKLIST:
+        if guild and guild.id in NamelessConfig.BLACKLISTS.GUILD_BLACKLIST:
             return True
 
-        if user.id in NamelessConfig.BLACKLISTS.USER_BLACKLIST:
+        if user and user.id in NamelessConfig.BLACKLISTS.USER_BLACKLIST:
             return True
 
         return False
 
     def start_bot(self) -> None:
         """Starts the bot."""
+        logging.info(f"This bot will start in {'debug' if self.is_debug else 'production'} mode.")
         logging.info("Starting the bot...")
-
         self.run(NamelessConfig.TOKEN, log_handler=None)
 
     async def close(self) -> None:

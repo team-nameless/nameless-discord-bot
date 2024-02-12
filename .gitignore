@@ -11,6 +11,8 @@
 # Files should not not be exposed to the public
 nameless.db
 NamelessConfig.py
+nameless/internals.json
+nameless/internals.json.lck
 
 # Why?
 .vscode/setting.json

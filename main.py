@@ -77,9 +77,11 @@ async def on_app_command_error(interaction: discord.Interaction, err: AppCommand
 lock = FileLock("nameless.lck", timeout=5)
 
 try:
-    with lock.acquire(timeout=1):
+    logging.warning("Acquiring lock...")
+    with lock.acquire():
         nameless.start_bot()
-except Timeout:
-    raise RuntimeError("Another 'nameless*' instance is running.")
+except Timeout as timeout:
+    raise RuntimeError("Another 'nameless*' instance is running.") from timeout
 finally:
+    logging.warning("Releasing lock...")
     lock.release()

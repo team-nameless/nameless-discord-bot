@@ -48,7 +48,6 @@ nameless = Nameless(
     intents=intents,
     tree_cls=NamelessCommandTree,
     is_debug=args.debug,
-    command_prefix=commands.when_mentioned_or(*NamelessConfig.PREFIXES),
     description=NamelessConfig.__description__,
 )
 

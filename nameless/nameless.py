@@ -22,8 +22,8 @@ __all__ = ["Nameless"]
 class Nameless(commands.AutoShardedBot):
     """Customized Discord sharded bot"""
 
-    def __init__(self, command_prefix, is_debug: bool = False, *args, **kwargs):
-        super().__init__(command_prefix, *args, **kwargs)
+    def __init__(self, is_debug: bool = False, *args, **kwargs):
+        super().__init__([], *args, **kwargs)
 
         self.log_level: int = logging.DEBUG if is_debug else logging.INFO
         self.is_debug = is_debug

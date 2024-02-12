@@ -164,9 +164,6 @@ class NamelessConfig:
     #                       Owner
     COGS: list[LiteralString] = ["Music", "Owner", "General", "Config", "Moderator", "Osu"]
 
-    # Guild prefixes for text commands
-    PREFIXES: list[LiteralString] = ["nameless."]
-
     # Bot status
     STATUS: NamelessStatus = NamelessStatus()
 

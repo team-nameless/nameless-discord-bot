@@ -37,7 +37,6 @@ class Nameless(commands.AutoShardedBot):
             logging.getLogger("ossapi.ossapiv2"),
             logging.getLogger("filelock"),
         ]
-        self.description = NamelessConfig.__description__
 
     def check_for_updates(self):
         nameless_version = version.parse(NamelessConfig.__version__)

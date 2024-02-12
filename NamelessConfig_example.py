@@ -124,8 +124,7 @@ class NamelessBlacklist:
 class NamelessConfig:
     # Current version of nameless.
     # I ill-advise you to NOT change this line
-    with open("version.txt") as f:
-        __version__ = f.read().strip()
+    __version__ = "2.10.0"
 
     # Bot description string
     # Placeholders:

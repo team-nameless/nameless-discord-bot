@@ -116,11 +116,10 @@ class GeneralCog(commands.Cog):
         servers_count = len(interaction.client.guilds)
         total_members_count = sum(len(guild.members) for guild in interaction.client.guilds)
         uptime = int(shared_vars.start_time.timestamp())
-        bot_inv = (
-            f"https://discord.com/api/oauth2/authorize"
-            f"?client_id={interaction.client.user.id}"
-            f"&permissions={shared_vars.needed_permissions.value}"
-            f"&scope=bot%20applications.commands"
+        bot_inv = discord.utils.oauth_url(
+            interaction.client.user.id,
+            permissions=self.bot.needed_permissions,
+            scopes=["bot", "applications.commands"]
         )
 
         nameless_meta = NamelessConfig.META

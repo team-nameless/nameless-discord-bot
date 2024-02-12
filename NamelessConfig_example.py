@@ -124,19 +124,12 @@ class NamelessBlacklist:
 class NamelessConfig:
     # Current version of nameless.
     # I ill-advise you to NOT change this line
-    __version__ = "2.10.0"
+    __version__ = "2.11.0"
 
     # Bot description string
     # Placeholders:
     # - {github_url} - The link to the bots GitHub repo
     __description__ = "Just a bot"
-
-    # Add owners to Nameless
-    # The bot creator is added by default
-    # Bot team members are added by default
-    # If you have nothing other than "the bot creator" and "team members", leave this as []
-    # Otherwise, leave their IDs here: Right-click on a user -> Copy ID
-    OWNERS: list[int] = []
 
     BLACKLISTS: NamelessBlacklist = NamelessBlacklist()
 

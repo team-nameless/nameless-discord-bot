@@ -155,22 +155,6 @@ class Nameless(commands.AutoShardedBot):
 
             logging.exception("[on_command_error] We have gone under a crisis!!!", stack_info=True, exc_info=err)
 
-    async def is_owner(self, user: discord.User | discord.Member, /) -> bool:
-        the_app = self.application
-        assert the_app is not None
-
-        if await super().is_owner(user):
-            return True
-
-        if the_app.team and user in the_app.team.members:
-            return True
-
-        owner_list = NamelessConfig.OWNERS
-        if user.id in owner_list:
-            return True
-
-        return False
-
     async def construct_shared_vars(self):
         """
         Constructs variables to shared_vars.py.

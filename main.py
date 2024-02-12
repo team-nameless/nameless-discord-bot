@@ -6,7 +6,7 @@ import discord
 from discord import InteractionResponded
 from discord.app_commands import AppCommandError, errors
 from discord.ext import commands
-from filelock import Timeout, FileLock
+from filelock import FileLock, Timeout
 
 from nameless import Nameless
 from nameless.customs.NamelessCommandTree import NamelessCommandTree
@@ -17,8 +17,8 @@ VERSION_FLAG = "--version"
 
 parser = argparse.ArgumentParser(prog="nameless*", description="A Discord bot written on python")
 
-parser.add_argument(DEBUG_FLAG, action='store_true')
-parser.add_argument(VERSION_FLAG, action='store_true')
+parser.add_argument(DEBUG_FLAG, action="store_true")
+parser.add_argument(VERSION_FLAG, action="store_true")
 
 args = parser.parse_args()
 

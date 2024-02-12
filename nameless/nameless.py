@@ -123,20 +123,18 @@ class Nameless(commands.AutoShardedBot):
             logging.warning("Please wait at least one hour before using global commands")
 
     async def on_ready(self):
-        if status := NamelessConfig.STATUS:
-            logging.info("Setting presence")
-            url = status.DISCORD_ACTIVITY.URL
+        logging.info("Setting presence")
+        status = NamelessConfig.STATUS
 
-            await self.change_presence(
-                status=status.STATUS,
-                activity=discord.Activity(
-                    type=status.DISCORD_ACTIVITY.TYPE, name=status.DISCORD_ACTIVITY.NAME, url=url or None
-                ),
-            )
-        else:
-            logging.warning("Presence is not set since you did not provide values properly")
+        await self.change_presence(
+            status=status.STATUS,
+            activity=discord.Activity(
+                type=status.DISCORD_ACTIVITY.TYPE,
+                name=status.DISCORD_ACTIVITY.NAME,
+                url=status.DISCORD_ACTIVITY.URL
+            ),
+        )
 
-        assert self.user is not None
         logging.info("Logged in as %s (ID: %s)", str(self.user), self.user.id)
 
     async def on_error(self, event_method: str, /, *args, **kwargs) -> None:

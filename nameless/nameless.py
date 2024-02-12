@@ -155,11 +155,6 @@ class Nameless(commands.AutoShardedBot):
 
             logging.exception("[on_command_error] We have gone under a crisis!!!", stack_info=True, exc_info=err)
 
-    async def close(self) -> None:
-        logging.warning(msg="Shutting down...")
-        close_all_sessions()
-        await super().close()
-
     async def is_owner(self, user: discord.User | discord.Member, /) -> bool:
         the_app = self.application
         assert the_app is not None
@@ -226,3 +221,8 @@ class Nameless(commands.AutoShardedBot):
         self.patch_loggers()
 
         self.run(NamelessConfig.TOKEN, log_handler=None)
+
+    async def close(self) -> None:
+        logging.warning("Shutting down...")
+        close_all_sessions()
+        await super().close()

@@ -10,6 +10,7 @@
 
 # Files should not not be exposed to the public
 nameless.db
+nameless.lck
 NamelessConfig.py
 nameless/internals.json
 nameless/internals.json.lck

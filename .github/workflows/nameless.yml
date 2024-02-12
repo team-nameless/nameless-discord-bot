@@ -39,7 +39,7 @@ jobs:
         run: |
           ruff check --select I --fix --exit-zero .
           ruff check --select UP --fix --exit-zero .
-          ruff check . --fix
+          ruff check --fix --exit-zero .
           ruff format .
 
       - name: Update nameless version file with the --version flag

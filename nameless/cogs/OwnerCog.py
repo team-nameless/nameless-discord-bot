@@ -15,21 +15,39 @@ from discord import app_commands
 from discord.ext import commands
 from discord.utils import escape_markdown
 
-from nameless import Nameless, shared_vars
-from nameless.customs import Autocomplete
+from nameless import Nameless
 
 __all__ = ["OwnerCog"]
+
+from ui_kit import NamelessModal
 
 
 class OwnerCog(commands.Cog):
     def __init__(self, bot: Nameless):
         self.bot = bot
 
+    def load_cogs_list(self):
+        modules = self.bot.internals["modules"]
+        return modules["loaded"], modules["not_loaded"]
+
+    async def load_module_complete(
+        self, interaction: discord.Interaction, current: str
+    ) -> list[app_commands.Choice[str]]:
+        """An autofill method for load module command"""
+        _discard, choices = self.load_cogs_list()
+        return [app_commands.Choice(name=choice, value=choice) for choice in choices if current.lower() in choice.lower()]
+
+    async def module_complete(
+            self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        """An autofill method for reload and unload module command."""
+        choices, _discard = self.load_cogs_list()
+        return [app_commands.Choice(name=choice, value=choice) for choice in choices if current.lower() in choice.lower()]
+
     @app_commands.command()
     @app_commands.guild_only()
     @BaseCheck.owns_the_bot()
     async def shutdown(self, interaction: discord.Interaction):
-        """Shutdown the bot"""
+        """Shutdown the bot."""
         await interaction.response.defer()
 
         await interaction.followup.send("Bye owo!")
@@ -38,9 +56,9 @@ class OwnerCog(commands.Cog):
     @app_commands.command()
     @app_commands.guild_only()
     @BaseCheck.owns_the_bot()
-    @app_commands.autocomplete(module_name=Autocomplete.module_complete)
+    @app_commands.autocomplete(module_name=module_complete)
     @app_commands.describe(module_name="The Python-qualified module name")
-    async def reload(self, interaction: discord.Interaction, module_name: str):
+    async def reload_module(self, interaction: discord.Interaction, module_name: str):
         """Reload a module"""
         await interaction.response.defer()
 
@@ -50,30 +68,30 @@ class OwnerCog(commands.Cog):
     @app_commands.command()
     @app_commands.guild_only()
     @BaseCheck.owns_the_bot()
-    @app_commands.autocomplete(module_name=Autocomplete.load_module_complete)
+    @app_commands.autocomplete(module_name=load_module_complete)
     @app_commands.describe(module_name="The Python-qualified module name")
-    async def load(self, interaction: discord.Interaction, module_name: str):
-        """Load a module"""
+    async def load_module(self, interaction: discord.Interaction, module_name: str):
+        """Load a module."""
         await interaction.response.defer()
 
         await self.bot.load_extension(module_name)
-        shared_vars.loaded_cogs_list.append(module_name)
-        shared_vars.unloaded_cogs_list.remove(module_name)
+        self.bot.loaded_cogs.append(module_name)
+        self.bot.not_loaded_cogs.remove(module_name)
 
         await interaction.followup.send(f"Done loading {module_name}")
 
     @app_commands.command()
     @app_commands.guild_only()
     @BaseCheck.owns_the_bot()
-    @app_commands.autocomplete(module_name=Autocomplete.module_complete)
+    @app_commands.autocomplete(module_name=module_complete)
     @app_commands.describe(module_name="The Python-qualified module name")
-    async def unload(self, interaction: discord.Interaction, module_name: str):
-        """Unload a module"""
+    async def eject_module(self, interaction: discord.Interaction, module_name: str):
+        """Eject a module."""
         await interaction.response.defer()
 
         await self.bot.unload_extension(module_name)
-        shared_vars.loaded_cogs_list.remove(module_name)
-        shared_vars.unloaded_cogs_list.append(module_name)
+        self.bot.loaded_cogs.remove(module_name)
+        self.bot.not_loaded_cogs.append(module_name)
 
         await interaction.followup.send(f"Done unloading {module_name}")
 
@@ -81,7 +99,7 @@ class OwnerCog(commands.Cog):
     @app_commands.guild_only()
     @BaseCheck.owns_the_bot()
     async def restart(self, interaction: discord.Interaction):
-        """Restart the bot"""
+        """Restart the bot."""
         await interaction.response.defer()
         await interaction.followup.send("See you soon!")
 
@@ -90,20 +108,18 @@ class OwnerCog(commands.Cog):
     @app_commands.command()
     @app_commands.guild_only()
     @BaseCheck.owns_the_bot()
-    async def run_python_code(self, interaction: discord.Interaction, *, code: str):
-        """Evaluate some pieces of Python code"""
-        await interaction.response.defer()
+    async def run_python_code(self, interaction: discord.Interaction):
+        """Evaluate Python code."""
+        # await interaction.response.defer()
 
-        groups = re.search(r"```(?:python|py)?\n([\w\W\r\n]*)\n?```", code)
+        modal = NamelessModal(title="Python code", initial_text="print('Hello world!')")
+        modal.text.label = "Python code"
+        modal.text.required = True
 
-        if not groups:
-            groups = re.search(r"`*([\w\W]*[^`])`*", code)
+        await interaction.response.send_modal(modal)
+        await modal.wait()
 
-        code = groups.group(1) if groups else ""
-
-        if not code:
-            await interaction.followup.send("No code to run")
-            return
+        code = modal.text.value
 
         pending_message = await interaction.followup.send("Running...")
 
@@ -157,13 +173,15 @@ class OwnerCog(commands.Cog):
     @app_commands.guild_only()
     @BaseCheck.owns_the_bot()
     async def refresh_command_list(self, interaction: discord.Interaction):
-        """Refresh command list, mostly for deduplication"""
+        """Refresh command list, mostly for deduplication. Should take a long time."""
         await interaction.response.defer()
 
         for guild in interaction.client.guilds:
             self.bot.tree.clear_commands(guild=guild)
+            await self.bot.tree.sync(guild=guild)
 
         self.bot.tree.clear_commands(guild=None)
+        await self.bot.tree.sync(guild=None)
 
         await interaction.followup.send("Command cleaning done, you should restart me to update the new commands")
 

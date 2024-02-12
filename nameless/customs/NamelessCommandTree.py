@@ -14,4 +14,4 @@ class NamelessCommandTree(CommandTree[Nameless]):
         user = interaction.user
         guild = interaction.guild
 
-        return not await self.client.is_blacklisted(user, guild)
+        return not await self.client.is_blacklisted(user=user, guild=guild)

@@ -2,7 +2,7 @@
   <configuration default="false" name="Run nameless" type="PythonConfigurationType" factoryName="Python">
     <module name="nameless" />
     <option name="ENV_FILES" value="" />
-    <option name="INTERPRETER_OPTIONS" value="-OO" />
+    <option name="INTERPRETER_OPTIONS" value="-O" />
     <option name="PARENT_ENVS" value="true" />
     <envs>
       <env name="PYTHONUNBUFFERED" value="1" />

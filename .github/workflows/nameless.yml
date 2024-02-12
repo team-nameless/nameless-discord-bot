@@ -1,0 +1,56 @@
+name: Lint and test code
+
+on:
+  push:
+    branches:
+      - 'feat/**'
+      - 'fix/**'
+      - 'main'
+  pull_request:
+    branches:
+      - 'feat/**'
+      - 'fix/**'
+      - 'main'
+
+jobs:
+  python:
+    if: ${{ github.repository == 'team-nameless/nameless-discord-bot' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install --upgrade setuptools wheel
+          pip install -U -r requirements_core.txt -r requirements_dev.txt
+
+      - name: Create dummy config file
+        run: |
+          cp NamelessConfig_example.py NamelessConfig.py
+          rm NamelessConfig_example.py
+
+      - name: Update code with ruff
+        run: |
+          ruff check --select I --fix .
+          ruff check --select UP --fix .
+          ruff check . --fix
+          ruff format .
+
+      - name: Update nameless version file with the --version flag
+        run: |
+          python -m main --version
+
+      - uses: mikeal/publish-to-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH_NAME: "main"
+
+      - name: Run tests and return coverages (pytest & friends)
+        run: |
+          pytest --cov-report term-missing --cov=nameless.database --cov=nameless.commons.Utility tests/

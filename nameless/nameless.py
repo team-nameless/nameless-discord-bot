@@ -64,6 +64,11 @@ class Nameless(commands.AutoShardedBot):
             }
         }
 
+        self.loaded_cogs: list[str] = []
+        self.not_loaded_cogs: list[str] = []
+
+        self.start_time = 0
+
     async def check_for_updates(self) -> bool | None:
         """
         Performs an update check.
@@ -132,8 +137,8 @@ class Nameless(commands.AutoShardedBot):
         self.internals["modules"]["not_loaded"].extend(excluded_cogs)
 
         # An extra set() to exclude dupes.
-        self.internals["modules"]["loaded"] = list(set(self.internals["modules"]["loaded"]))
-        self.internals["modules"]["not_loaded"] = list(set(self.internals["modules"]["not_loaded"]))
+        self.loaded_cogs = self.internals["modules"]["loaded"] = list(set(self.internals["modules"]["loaded"]))
+        self.not_loaded_cogs = self.internals["modules"]["not_loaded"] = list(set(self.internals["modules"]["not_loaded"]))
 
         logging.debug("Loaded cog list: [ %s ]", ", ".join(self.internals["modules"]["loaded"]))
         logging.debug("Excluded cog list: [ %s ]", ", ".join(self.internals["modules"]["not_loaded"]))
@@ -210,7 +215,7 @@ class Nameless(commands.AutoShardedBot):
         logging.info("Populating internals.json")
 
         self.internals["debug"] = self.is_debug
-        self.internals["start_time"] = int(datetime.utcnow().timestamp())
+        self.internals["start_time"] = int(self.start_time)
 
     async def is_blacklisted(self, *,
                              user: discord.User | discord.Member = None,
@@ -233,6 +238,7 @@ class Nameless(commands.AutoShardedBot):
         """Starts the bot."""
         logging.info(f"This bot will start in {'debug' if self.is_debug else 'production'} mode.")
         logging.info("Starting the bot...")
+        self.start_time = datetime.utcnow().timestamp()
         self.run(NamelessConfig.TOKEN, log_handler=None)
 
     async def close(self) -> None:

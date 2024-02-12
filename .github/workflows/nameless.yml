@@ -37,8 +37,8 @@ jobs:
 
       - name: Update code with ruff
         run: |
-          ruff check --select I --fix .
-          ruff check --select UP --fix .
+          ruff check --select I --fix --exit-zero .
+          ruff check --select UP --fix --exit-zero .
           ruff check . --fix
           ruff format .
 

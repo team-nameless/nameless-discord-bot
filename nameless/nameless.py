@@ -200,9 +200,9 @@ class Nameless(commands.AutoShardedBot):
 
         return False
 
-    def start_bot(self):
-        logging.info("Patching loggers.")
-        self.patch_loggers()
+    def start_bot(self) -> None:
+        """Starts the bot."""
+        logging.info("Starting the bot...")
 
         self.run(NamelessConfig.TOKEN, log_handler=None)
 

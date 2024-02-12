@@ -12,6 +12,9 @@ on:
       - 'fix/**'
       - 'main'
 
+permissions:
+  contents: write
+
 jobs:
   python:
     if: ${{ github.repository == 'team-nameless/nameless-discord-bot' }}
@@ -33,9 +36,8 @@ jobs:
       - name: Create dummy config file
         run: |
           cp NamelessConfig_example.py NamelessConfig.py
-          rm NamelessConfig_example.py
 
-      - name: Update code with ruff
+      - name: Fix the code with ruff
         run: |
           ruff check --select I --fix --exit-zero .
           ruff check --select UP --fix --exit-zero .
@@ -46,11 +48,15 @@ jobs:
         run: |
           python -m main --version
 
-      - uses: mikeal/publish-to-github-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH_NAME: "main"
-
       - name: Run tests and return coverages (pytest & friends)
         run: |
           pytest --cov-report term-missing --cov=nameless.database --cov=nameless.commons.Utility tests/
+
+      - name: Delete the dummy config file
+        run: |
+           rm NamelessConfig.py
+
+      - name: Push the changes if needed.
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Automated code format commit."

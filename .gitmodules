@@ -1,0 +1,3 @@
+[submodule "nameless-tools"]
+	path = nameless-tools
+	url = https://github.com/team-nameless/nameless-tools

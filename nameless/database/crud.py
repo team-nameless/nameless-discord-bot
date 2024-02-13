@@ -7,7 +7,7 @@ from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.util import IdentitySet
 
-from nameless import shared_vars
+from nameless.customs import shared_variables
 from nameless.commons import Utility
 
 from .models import Base, DbGuild, DbUser
@@ -24,8 +24,12 @@ class CRUD:
 
     (db_url, dialect, driver, host, port, username, password, db_name) = Utility.get_db_url()
 
+    # Ye, why not?
+    assert shared_variables.nameless_debug_mode is True
+
     engine = create_engine(
-        db_url, logging_name=db_name, hide_parameters=not shared_vars.is_debug, isolation_level="AUTOCOMMIT"
+        db_url, logging_name=db_name, hide_parameters=not shared_variables.nameless_debug_mode,
+        isolation_level="AUTOCOMMIT"
     )
 
     _session = sessionmaker(bind=engine)

@@ -15,6 +15,7 @@ from discord import app_commands
 from discord.ext import commands
 from discord.utils import escape_markdown
 
+from customs import shared_variables
 from nameless import Nameless
 
 __all__ = ["OwnerCog"]
@@ -26,21 +27,14 @@ class OwnerCog(commands.Cog):
     def __init__(self, bot: Nameless):
         self.bot = bot
 
-    def load_cogs_list(self):
-        modules = self.bot.internals["modules"]
-        return modules["loaded"], modules["not_loaded"]
-
-    async def load_module_complete(
-        self, interaction: discord.Interaction, current: str
-    ) -> list[app_commands.Choice[str]]:
-        """An autofill method for load module command"""
-        _discard, choices = self.load_cogs_list()
+    async def pending_module_autocomplete(self, _: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        """An autocomplete for pending (not loaded) modules."""
+        choices = shared_variables.rejected_modules
         return [app_commands.Choice(name=choice, value=choice) for choice in choices if current.lower() in choice.lower()]
 
-    async def module_complete(
-            self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
-        """An autofill method for reload and unload module command."""
-        choices, _discard = self.load_cogs_list()
+    async def available_module_autocomplete(self, _: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        """An autocomplete for available (loaded) modules."""
+        choices = shared_variables.loaded_modules
         return [app_commands.Choice(name=choice, value=choice) for choice in choices if current.lower() in choice.lower()]
 
     @app_commands.command()
@@ -56,7 +50,7 @@ class OwnerCog(commands.Cog):
     @app_commands.command()
     @app_commands.guild_only()
     @BaseCheck.owns_the_bot()
-    @app_commands.autocomplete(module_name=module_complete)
+    @app_commands.autocomplete(module_name=available_module_autocomplete)
     @app_commands.describe(module_name="The Python-qualified module name")
     async def reload_module(self, interaction: discord.Interaction, module_name: str):
         """Reload a module"""
@@ -68,30 +62,30 @@ class OwnerCog(commands.Cog):
     @app_commands.command()
     @app_commands.guild_only()
     @BaseCheck.owns_the_bot()
-    @app_commands.autocomplete(module_name=load_module_complete)
+    @app_commands.autocomplete(module_name=pending_module_autocomplete)
     @app_commands.describe(module_name="The Python-qualified module name")
     async def load_module(self, interaction: discord.Interaction, module_name: str):
         """Load a module."""
         await interaction.response.defer()
 
         await self.bot.load_extension(module_name)
-        self.bot.loaded_cogs.append(module_name)
-        self.bot.not_loaded_cogs.remove(module_name)
+        sha.loaded_modules.append(module_name)
+        shared_variables.rejected_modules.remove(module_name)
 
         await interaction.followup.send(f"Done loading {module_name}")
 
     @app_commands.command()
     @app_commands.guild_only()
     @BaseCheck.owns_the_bot()
-    @app_commands.autocomplete(module_name=module_complete)
+    @app_commands.autocomplete(module_name=available_module_autocomplete)
     @app_commands.describe(module_name="The Python-qualified module name")
     async def eject_module(self, interaction: discord.Interaction, module_name: str):
         """Eject a module."""
         await interaction.response.defer()
 
         await self.bot.unload_extension(module_name)
-        self.bot.loaded_cogs.remove(module_name)
-        self.bot.not_loaded_cogs.append(module_name)
+        shared_variables.loaded_modules.remove(module_name)
+        shared_variables.rejected_modules.append(module_name)
 
         await interaction.followup.send(f"Done unloading {module_name}")
 

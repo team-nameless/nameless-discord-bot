@@ -15,7 +15,7 @@ from filelock import FileLock
 from packaging import version
 from sqlalchemy.orm import close_all_sessions
 
-from .database import CRUD
+from customs import shared_variables
 from NamelessConfig import NamelessConfig
 
 __all__ = ["Nameless"]
@@ -54,20 +54,6 @@ class Nameless(commands.AutoShardedBot):
             speak=True,
             use_voice_activation=True
         )
-
-        self.internals = {
-            "debug": False,
-            "start_time": 0,
-            "modules": {
-                "loaded": [],
-                "not_loaded": []
-            }
-        }
-
-        self.loaded_cogs: list[str] = []
-        self.not_loaded_cogs: list[str] = []
-
-        self.start_time = 0
 
     async def check_for_updates(self) -> bool | None:
         """
@@ -118,7 +104,7 @@ class Nameless(commands.AutoShardedBot):
             if cog_name + "Cog.py" in allowed_cogs:
                 try:
                     await self.load_extension(full_qualified_name)
-                    self.internals["modules"]["loaded"].append(full_qualified_name)
+                    shared_variables.loaded_modules.append(full_qualified_name)
                 except commands.ExtensionError as ex:
                     fail_reason = str(ex)
             else:
@@ -126,7 +112,7 @@ class Nameless(commands.AutoShardedBot):
 
             if not (fail_reason == ""):
                 logging.error("Unable to load %s! %s", cog_name, fail_reason, stack_info=False)
-                self.internals["modules"]["not_loaded"].append(full_qualified_name)
+                shared_variables.rejected_modules.append(full_qualified_name)
 
         # Convert .py files to valid module names
         loaded_cog_modules = [f"nameless.cogs.{cog.replace('.py', '')}Cog" for cog in cogs]
@@ -134,27 +120,28 @@ class Nameless(commands.AutoShardedBot):
 
         # Get the cogs that are not loaded at will (not specified in NamelessConfig
         excluded_cogs = list(set(set(allowed_cog_modules) - set(loaded_cog_modules)))
-        self.internals["modules"]["not_loaded"].extend(excluded_cogs)
+        shared_variables.rejected_modules.extend(excluded_cogs)
 
         # An extra set() to exclude dupes.
-        self.loaded_cogs = self.internals["modules"]["loaded"] = list(set(self.internals["modules"]["loaded"]))
-        self.not_loaded_cogs = self.internals["modules"]["not_loaded"] = list(set(self.internals["modules"]["not_loaded"]))
+        shared_variables.loaded_modules = list(set(shared_variables.loaded_modules))
+        shared_variables.rejected_modules = list(set(shared_variables.rejected_modules))
 
-        logging.debug("Loaded cog list: [ %s ]", ", ".join(self.internals["modules"]["loaded"]))
-        logging.debug("Excluded cog list: [ %s ]", ", ".join(self.internals["modules"]["not_loaded"]))
+        logging.debug("Loaded modules: [ %s ]", ", ".join(shared_variables.loaded_modules))
+        logging.debug("Excluded modules: [ %s ]", ", ".join(shared_variables.rejected_modules))
 
     async def on_shard_ready(self, shard_id: int):
         logging.info("Shard #%s is ready", shard_id)
 
     async def setup_hook(self) -> None:
-        logging.info("Initiating database.")
-        CRUD.init()
-
         logging.info("Constructing internal variables.")
         await self.construct_internals()
 
         logging.info("Checking for upstream updates.")
         await self.check_for_updates()
+
+        logging.info("Initiating database.")
+        from .database import CRUD
+        CRUD.init()
 
         logging.info("Registering commands")
         await self.register_all_cogs()
@@ -170,12 +157,6 @@ class Nameless(commands.AutoShardedBot):
             logging.info("Syncing commands globally")
             await self.tree.sync()
             logging.warning("Please wait at least one hour before using global commands")
-
-        with (
-            FileLock("internals.json.lck"), \
-                open(f"{os.path.dirname(__file__)}{os.sep}internals.json", "w") as internals_file
-        ):
-            json.dump(self.internals, internals_file)
 
     async def on_ready(self):
         logging.info("Setting presence")
@@ -214,8 +195,8 @@ class Nameless(commands.AutoShardedBot):
         """
         logging.info("Populating internals.json")
 
-        self.internals["debug"] = self.is_debug
-        self.internals["start_time"] = int(self.start_time)
+        shared_variables.nameless_debug_mode = self.is_debug
+        shared_variables.nameless_start_time = datetime.utcnow()
 
     async def is_blacklisted(self, *,
                              user: discord.User | discord.Member = None,
@@ -238,7 +219,6 @@ class Nameless(commands.AutoShardedBot):
         """Starts the bot."""
         logging.info(f"This bot will start in {'debug' if self.is_debug else 'production'} mode.")
         logging.info("Starting the bot...")
-        self.start_time = datetime.utcnow().timestamp()
         self.run(NamelessConfig.TOKEN, log_handler=None)
 
     async def close(self) -> None:

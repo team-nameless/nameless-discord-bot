@@ -6,6 +6,7 @@ import discord
 from discord import NotFound, app_commands
 from discord.ext import commands
 
+from customs import shared_variables
 from nameless import Nameless
 from NamelessConfig import NamelessConfig
 
@@ -100,7 +101,7 @@ class GeneralCog(commands.Cog):
 
         servers_count = len(interaction.client.guilds)
         total_members_count = sum(len(guild.members) for guild in interaction.client.guilds)
-        uptime = int(self.bot.start_time)
+        uptime = int(shared_variables.nameless_start_time.timestamp())
         bot_inv = discord.utils.oauth_url(
             interaction.client.user.id,
             permissions=self.bot.needed_permissions,

@@ -1,4 +1,4 @@
-name: Create experimental release on demand
+name: Create experimental release
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ permissions:
   contents: write
 
 jobs:
-  jar:
+  release-experimental:
     runs-on: ubuntu-latest
     steps:
       - name: Create experimental release
@@ -16,4 +16,4 @@ jobs:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           automatic_release_tag: "experimental"
           prerelease: true
-          title: "Experimental release of nameless*"
+          title: "Experimental (a.k.a. last known work) release of nameless*"

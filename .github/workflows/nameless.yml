@@ -59,3 +59,12 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "[ci skip] Automated code format commit."
+
+      - name: Create cutting-edge release
+        uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "cutting-edge"
+          prerelease: false
+          draft: true
+          title: "Cutting-edge release of nameless*"

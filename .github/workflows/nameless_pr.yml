@@ -1,14 +1,11 @@
-name: Lint and test code
+name: Lint and test code (pull-request)
 
 on:
-  push:
+  pull_request:
     branches:
       - 'feat/**'
       - 'fix/**'
       - 'main'
-
-permissions:
-  contents: write
 
 jobs:
   python:
@@ -16,8 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.PAT }}
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v4
@@ -34,26 +29,11 @@ jobs:
         run: |
           cp NamelessConfig_example.py NamelessConfig.py
 
-      - name: Fix the code with ruff
+      - name: Check the code with ruff
         run: |
-          ruff check --select I --fix --exit-zero .
-          ruff check --select UP --fix --exit-zero .
-          ruff check --fix --exit-zero .
-          ruff format .
-
-      - name: Update nameless version file with the --version flag
-        run: |
-          python -m main --version
+          ruff check . --diff
+          ruff format . --diff
 
       - name: Run tests and return coverages (pytest & friends)
         run: |
           pytest --cov-report term-missing --cov=nameless.database --cov=nameless.commons.Utility tests/
-
-      - name: Delete the dummy config file
-        run: |
-           rm NamelessConfig.py
-
-      - name: Push the changes if needed.
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "[ci skip] Automated code format commit."

@@ -8,7 +8,6 @@ from discord import InteractionResponded
 from discord.app_commands import AppCommandError, errors
 from filelock import FileLock, Timeout
 
-import version
 from nameless import Nameless
 from nameless.customs.NamelessCommandTree import NamelessCommandTree
 from NamelessConfig import NamelessConfig
@@ -33,7 +32,11 @@ logging.getLogger().name = "nameless"
 
 # If VERSION_FLAG is present, we print the version and update version file, then f- off.
 if args.version:
-    version.sanity_check()
+    print(NamelessConfig.__version__)
+
+    with FileLock("version.txt.lck"), open("version.txt", "w") as version_file:
+        version_file.write(NamelessConfig.__version__)
+
     exit(0)
 
 

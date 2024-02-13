@@ -1,7 +1,9 @@
 import argparse
 import contextlib
 import logging
+import os
 import sys
+from pathlib import Path
 
 import discord
 from discord import InteractionResponded
@@ -14,6 +16,14 @@ from nameless.customs.NamelessCommandTree import NamelessCommandTree
 
 import version
 from NamelessConfig import NamelessConfig
+
+# This is a dirty workarounds for inconsistencies between
+# manual run and "PyCharm run"
+cwd = Path(os.getcwd())
+required_paths = [cwd/"nameless", cwd/"tests"]
+for path in required_paths:
+    if path not in sys.path:
+        sys.path.append(str(path))
 
 DEBUG_FLAG = "--debug"
 VERSION_FLAG = "--version"

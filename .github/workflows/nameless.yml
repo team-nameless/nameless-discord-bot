@@ -13,7 +13,7 @@ permissions:
 jobs:
   python:
     if: ${{ github.repository == 'team-nameless/nameless-discord-bot' }}
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -53,7 +53,7 @@ jobs:
 
       - name: Delete the dummy config file
         run: |
-           del NamelessConfig.py
+           rm NamelessConfig.py
 
       - name: Push the changes if needed.
         uses: stefanzweifel/git-auto-commit-action@v5

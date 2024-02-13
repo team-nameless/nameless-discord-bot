@@ -7,9 +7,8 @@ from NamelessConfig import NamelessConfig
 def sanity_check():
     print(NamelessConfig.__version__)
 
-    with FileLock('version.txt.lock'):
-        with open("version.txt", "w") as version_file:
-            version_file.write(NamelessConfig.__version__)
+    with FileLock("version.txt.lock"), open("version.txt", "w") as version_file:
+        version_file.write(NamelessConfig.__version__)
 
 
 if __name__ == "__main__":

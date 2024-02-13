@@ -3,7 +3,6 @@ import datetime
 import io
 import logging
 import os
-import re
 import sys
 import textwrap
 import time
@@ -11,11 +10,11 @@ import time
 import discord
 import discord.ui
 from cogs.checks import BaseCheck
+from customs import shared_variables
 from discord import app_commands
 from discord.ext import commands
 from discord.utils import escape_markdown
 
-from customs import shared_variables
 from nameless import Nameless
 
 __all__ = ["OwnerCog"]
@@ -30,12 +29,18 @@ class OwnerCog(commands.Cog):
     async def pending_module_autocomplete(self, _: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         """An autocomplete for pending (not loaded) modules."""
         choices = shared_variables.rejected_modules
-        return [app_commands.Choice(name=choice, value=choice) for choice in choices if current.lower() in choice.lower()]
+        return [
+            app_commands.Choice(name=choice, value=choice) for choice in choices if current.lower() in choice.lower()
+        ]
 
-    async def available_module_autocomplete(self, _: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+    async def available_module_autocomplete(
+        self, _: discord.Interaction, current: str
+    ) -> list[app_commands.Choice[str]]:
         """An autocomplete for available (loaded) modules."""
         choices = shared_variables.loaded_modules
-        return [app_commands.Choice(name=choice, value=choice) for choice in choices if current.lower() in choice.lower()]
+        return [
+            app_commands.Choice(name=choice, value=choice) for choice in choices if current.lower() in choice.lower()
+        ]
 
     @app_commands.command()
     @app_commands.guild_only()

@@ -1,21 +1,16 @@
 import argparse
+import contextlib
 import logging
-import os
 import sys
-from pathlib import Path
 
-import version
-import directory_fix  # noqa: F401
 import discord
 from discord import InteractionResponded
 from discord.app_commands import AppCommandError, errors
-from discord.ext import commands
 from filelock import FileLock, Timeout
 
+import version
 from nameless import Nameless
 from nameless.customs.NamelessCommandTree import NamelessCommandTree
-
-import contextlib
 from NamelessConfig import NamelessConfig
 
 DEBUG_FLAG = "--debug"
@@ -31,7 +26,7 @@ args = parser.parse_args()
 logging.basicConfig(
     format="%(asctime)s - [%(levelname)s] [%(name)s] %(message)s",
     stream=sys.stdout,
-    level=logging.DEBUG if args.debug else logging.INFO
+    level=logging.DEBUG if args.debug else logging.INFO,
 )
 
 logging.getLogger().name = "nameless"
@@ -40,7 +35,6 @@ logging.getLogger().name = "nameless"
 if args.version:
     version.sanity_check()
     exit(0)
-
 
 
 intents = discord.Intents.default()

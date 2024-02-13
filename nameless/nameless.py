@@ -2,7 +2,6 @@ import asyncio
 import logging
 import os
 import re
-import json
 from datetime import datetime
 
 import aiohttp
@@ -10,13 +9,12 @@ import discord
 from discord import Permissions
 from discord.ext import commands
 from discord.ext.commands import errors
-from discord.message import Message
-from filelock import FileLock
 from packaging import version
 from sqlalchemy.orm import close_all_sessions
 
-from customs import shared_variables
 from NamelessConfig import NamelessConfig
+
+from .customs import shared_variables
 
 __all__ = ["Nameless"]
 
@@ -52,7 +50,7 @@ class Nameless(commands.AutoShardedBot):
             add_reactions=True,
             connect=True,
             speak=True,
-            use_voice_activation=True
+            use_voice_activation=True,
         )
 
     async def check_for_updates(self) -> bool | None:
@@ -66,7 +64,7 @@ class Nameless(commands.AutoShardedBot):
 
         try:
             async with aiohttp.ClientSession() as session, session.get(
-                    NamelessConfig.META.UPSTREAM_VERSION_FILE, timeout=10
+                NamelessConfig.META.UPSTREAM_VERSION_FILE, timeout=10
             ) as response:
                 if 200 <= response.status <= 299:
                     __nameless_upstream_version__ = await response.text()
@@ -112,7 +110,7 @@ class Nameless(commands.AutoShardedBot):
             else:
                 fail_reason = "It does not exist in 'allowed_cogs' list."
 
-            if not (fail_reason == ""):
+            if fail_reason != "":
                 logging.error("Unable to load %s! %s", cog_name, fail_reason, stack_info=False)
                 shared_variables.rejected_modules.append(full_qualified_name)
 
@@ -143,6 +141,7 @@ class Nameless(commands.AutoShardedBot):
 
         logging.info("Initiating database.")
         from .database import CRUD
+
         CRUD.init()
 
         logging.info("Registering commands")
@@ -167,9 +166,7 @@ class Nameless(commands.AutoShardedBot):
         await self.change_presence(
             status=status.STATUS,
             activity=discord.Activity(
-                type=status.DISCORD_ACTIVITY.TYPE,
-                name=status.DISCORD_ACTIVITY.NAME,
-                url=status.DISCORD_ACTIVITY.URL
+                type=status.DISCORD_ACTIVITY.TYPE, name=status.DISCORD_ACTIVITY.NAME, url=status.DISCORD_ACTIVITY.URL
             ),
         )
 
@@ -200,10 +197,9 @@ class Nameless(commands.AutoShardedBot):
         shared_variables.nameless_debug_mode = self.is_debug
         shared_variables.nameless_start_time = datetime.utcnow()
 
-    async def is_blacklisted(self, *,
-                             user: discord.User | discord.Member = None,
-                             guild: discord.Guild | None = None
-                             ) -> bool:
+    async def is_blacklisted(
+        self, *, user: discord.User | discord.Member = None, guild: discord.Guild | None = None
+    ) -> bool:
         """Check if an entity is blacklisted from using the bot."""
         # The owners, even if they are in the blacklist, can still use the bot
         if user and await self.is_owner(user):

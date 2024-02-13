@@ -1,10 +1,10 @@
-__all__ = ['NamelessSingleton']
+__all__ = ["NamelessSingleton"]
 
 
-class NamelessSingleton(object):
+class NamelessSingleton:
     _shared_state = {}
 
-    def __new__(cls, *args, **kwargs):
-        obj = super(NamelessSingleton, cls).__new__(cls, *args, **kwargs)
+    def __new__(cls):
+        obj = super().__new__(cls)
         obj.__dict__ = cls._shared_state
         return obj

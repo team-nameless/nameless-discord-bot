@@ -21,7 +21,7 @@ VERSION_FLAG = "--version"
 parser = argparse.ArgumentParser(prog="nameless*", description="A Discord bot written on python")
 
 parser.add_argument(DEBUG_FLAG, action="store_true")
-parser.add_argument(VERSION_FLAG, action="store_true")
+parser.add_argument(VERSION_FLAG, "-v", action="store_true")
 
 args = parser.parse_args()
 

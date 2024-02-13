@@ -7,7 +7,7 @@ __all__ = ["NamelessCommandTree"]
 
 
 class NamelessCommandTree(CommandTree[Nameless]):
-    def __init__(self, client: Nameless, *, fallback_to_global: bool = True):
+    def __init__(self, client, *, fallback_to_global: bool = True):
         super().__init__(client, fallback_to_global=fallback_to_global)
 
     async def interaction_check(self, interaction: Interaction) -> bool:

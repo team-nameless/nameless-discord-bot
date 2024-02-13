@@ -43,8 +43,6 @@ jobs:
 
       - name: Update nameless version file with the --version flag
         run: |
-          python -m main --version
-          python -m main -v
           python -m version
 
       - name: Run tests and return coverages (pytest & friends)

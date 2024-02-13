@@ -11,6 +11,8 @@ from filelock import FileLock, Timeout
 
 from nameless import Nameless
 from nameless.customs.NamelessCommandTree import NamelessCommandTree
+
+import version
 from NamelessConfig import NamelessConfig
 
 DEBUG_FLAG = "--debug"
@@ -25,12 +27,7 @@ args = parser.parse_args()
 
 # If VERSION_FLAG is present, we print the version and update version file, then f- off.
 if args.version:
-    print(NamelessConfig.__version__)
-
-    with open("version.txt", "w") as version_file:
-        version_file.write(NamelessConfig.__version__)
-
-    exit(0)
+    version.sanity_check()
 
 logging.basicConfig(
     format="%(asctime)s - [%(levelname)s] [%(name)s] %(message)s",

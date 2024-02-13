@@ -59,7 +59,7 @@ class Nameless(commands.AutoShardedBot):
         """
         Performs an update check.
 
-        Returns True if at the latest version, False if falling behind.
+        Returns True if at the latest version (or offline), False if falling behind.
         And None if your version is newer than the latest.
         """
         __nameless_upstream_version__ = f"{NamelessConfig.__version__}-offline"
@@ -72,8 +72,10 @@ class Nameless(commands.AutoShardedBot):
                     __nameless_upstream_version__ = await response.text()
                 else:
                     logging.warning("Upstream version fetching failed.")
+                    return True
         except asyncio.exceptions.TimeoutError:
             logging.error("Upstream version failed to fetch within 10 seconds.")
+            return True
 
         nameless_version = version.parse(NamelessConfig.__version__)
         upstream_version = version.parse(__nameless_upstream_version__)

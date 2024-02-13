@@ -1,3 +1,6 @@
+__all__ = ['NamelessSingleton']
+
+
 class NamelessSingleton(object):
     _shared_state = {}
 

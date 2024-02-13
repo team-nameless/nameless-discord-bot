@@ -2,6 +2,8 @@ import datetime
 
 from customs import NamelessSingleton
 
+__all__ = ['NamelessSharedVariables']
+
 
 class NamelessSharedVariables(NamelessSingleton):
     """A static, singleton class that stores shared runtime variables across nameless* infrastructures."""

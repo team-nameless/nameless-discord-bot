@@ -16,4 +16,5 @@ nameless/internals.json
 nameless/internals.json.lck
 
 # Why?
+.coverage
 .vscode/setting.json

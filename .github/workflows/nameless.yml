@@ -45,7 +45,6 @@ jobs:
         run: |
           python -m main --version
           python -m main -v
-          python -m version
 
       - name: Run tests and return coverages (pytest & friends)
         run: |

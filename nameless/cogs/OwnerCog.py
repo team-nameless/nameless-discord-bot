@@ -69,7 +69,7 @@ class OwnerCog(commands.Cog):
         await interaction.response.defer()
 
         await self.bot.load_extension(module_name)
-        sha.loaded_modules.append(module_name)
+        shared_variables.loaded_modules.append(module_name)
         shared_variables.rejected_modules.remove(module_name)
 
         await interaction.followup.send(f"Done loading {module_name}")

@@ -21,11 +21,7 @@ class CRUD:
     """
     Basic database CRUD operations.
     """
-
     (db_url, dialect, driver, host, port, username, password, db_name) = Utility.get_db_url()
-
-    # Ye, why not?
-    assert shared_variables.nameless_debug_mode is True
 
     engine = create_engine(
         db_url, logging_name=db_name, hide_parameters=not shared_variables.nameless_debug_mode,

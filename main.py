@@ -1,10 +1,11 @@
 import argparse
-import contextlib
 import logging
 import os
 import sys
 from pathlib import Path
 
+import version
+import directory_fix  # noqa: F401
 import discord
 from discord import InteractionResponded
 from discord.app_commands import AppCommandError, errors
@@ -14,16 +15,8 @@ from filelock import FileLock, Timeout
 from nameless import Nameless
 from nameless.customs.NamelessCommandTree import NamelessCommandTree
 
-import version
+import contextlib
 from NamelessConfig import NamelessConfig
-
-# This is a dirty workarounds for inconsistencies between
-# manual run and "PyCharm run"
-cwd = Path(os.getcwd())
-required_paths = [cwd/"nameless", cwd/"tests"]
-for path in required_paths:
-    if path not in sys.path:
-        sys.path.append(str(path))
 
 DEBUG_FLAG = "--debug"
 VERSION_FLAG = "--version"
@@ -35,10 +28,6 @@ parser.add_argument(VERSION_FLAG, "-v", action="store_true")
 
 args = parser.parse_args()
 
-# If VERSION_FLAG is present, we print the version and update version file, then f- off.
-if args.version:
-    version.sanity_check()
-
 logging.basicConfig(
     format="%(asctime)s - [%(levelname)s] [%(name)s] %(message)s",
     stream=sys.stdout,
@@ -46,6 +35,13 @@ logging.basicConfig(
 )
 
 logging.getLogger().name = "nameless"
+
+# If VERSION_FLAG is present, we print the version and update version file, then f- off.
+if args.version:
+    version.sanity_check()
+    exit(0)
+
+
 
 intents = discord.Intents.default()
 intents.message_content = NamelessConfig.INTENT.MESSAGE

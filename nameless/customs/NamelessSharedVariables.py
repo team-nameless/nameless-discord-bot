@@ -1,6 +1,6 @@
 import datetime
 
-from customs import NamelessSingleton
+from . import NamelessSingleton
 
 __all__ = ['NamelessSharedVariables']
 

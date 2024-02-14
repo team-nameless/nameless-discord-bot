@@ -14,8 +14,8 @@ class NamelessCommandTree(CommandTree[Nameless]):
         user = interaction.user
         guild = interaction.guild
 
-        is_user_blacklisted = self.client.is_blacklisted(user=user)
-        is_guild_blacklisted = self.client.is_blacklisted(guild=guild)
+        is_user_blacklisted = await self.client.is_blacklisted(user=user)
+        is_guild_blacklisted = await self.client.is_blacklisted(guild=guild)
 
         if is_user_blacklisted:
             interaction.response.send_message(

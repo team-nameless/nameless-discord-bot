@@ -152,7 +152,8 @@ class NamelessConfig:
     #                       Music - requires Lavalink server(s) and NAMELESS.MUSIC.NODES are available,
     #                       Owner
     #                       VoiceMaster
-    COGS: list[LiteralString] = ["Music", "Owner", "General"]
+    #                       Greeter
+    COGS: list[LiteralString] = ["VoiceMaster", "Owner", "General", "Greeter"]
 
     # Bot status
     STATUS: NamelessStatus = NamelessStatus()

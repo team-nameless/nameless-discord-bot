@@ -148,13 +148,10 @@ class NamelessConfig:
     GUILDS: list[int] = []
 
     # Choose which cog(s) to load
-    # Available options:    Config,
-    #                       Moderator,
-    #                       MusicV1 (requires `LAVALINK` to be properly provided),
-    #                       MusicV2 (MusicV1 must not be loaded)
-    #                       Osu (requires `OSU` to be properly provided),
+    # Available options:    General,
+    #                       Music - requires Lavalink server(s) and NAMELESS.MUSIC.NODES are available,
     #                       Owner
-    COGS: list[LiteralString] = ["Music", "Owner", "General", "Config", "Moderator", "Osu"]
+    COGS: list[LiteralString] = ["Music", "Owner", "General"]
 
     # Bot status
     STATUS: NamelessStatus = NamelessStatus()

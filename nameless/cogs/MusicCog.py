@@ -1119,5 +1119,5 @@ async def setup(bot: Nameless):
 
 
 async def teardown(bot: Nameless):
-    await bot.remove_cog("MusicLavalinkCog")
+    await bot.remove_cog("MusicCog")
     logging.warning("%s cog removed!", __name__)

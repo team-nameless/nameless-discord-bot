@@ -158,9 +158,9 @@ class GeneralCog(commands.Cog):
 
 async def setup(bot: Nameless):
     await bot.add_cog(GeneralCog(bot))
-    logging.info("%s added!", __name__)
+    logging.info("%s cog added!", __name__)
 
 
 async def teardown(bot: Nameless):
     await bot.remove_cog("GeneralCog")
-    logging.warning("%s removed!", __name__)
+    logging.warning("%s cog removed!", __name__)

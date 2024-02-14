@@ -6,6 +6,7 @@ from typing import cast
 
 import discord
 import wavelink
+from customs.ui_kit import NamelessTrackDropdown, NamelessVoteMenu
 from discord import ClientException, app_commands
 from discord.app_commands import Choice, Range
 from discord.ext import commands
@@ -18,7 +19,6 @@ from nameless.cogs.checks.MusicCogCheck import MusicCogCheck
 from nameless.commons.timed_lru_cache import lru_cache
 from nameless.customs.voice_backends.BaseVoiceBackend import Player, QueueAction
 from nameless.database import CRUD
-from customs.ui_kit import NamelessTrackDropdown, NamelessVoteMenu
 from NamelessConfig import NamelessConfig
 
 __all__ = ["MusicCog"]

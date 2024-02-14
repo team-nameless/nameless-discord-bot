@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta
 
 import discord
-from sqlalchemy import Column, ForeignKey
+from sqlalchemy import Column
 from sqlalchemy.ext.declarative import DeclarativeMeta
-from sqlalchemy.orm import Mapped, declarative_base, mapped_column, relationship
+from sqlalchemy.orm import Mapped, declarative_base
 from sqlalchemy.sql.sqltypes import *
 
 __all__ = ["DbUser", "DbGuild"]
@@ -20,7 +20,7 @@ class PascalCaseDeclarativeMeta(DeclarativeMeta):
         super().__setattr__(key, value)
 
     def to_camelcase(cls, s):
-        return ''.join([w.title() for w in s.split('_')])
+        return "".join([w.title() for w in s.split("_")])
 
     def undefer_column_name_only(cls, key, column):
         if column.name is None:

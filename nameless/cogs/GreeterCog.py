@@ -2,12 +2,12 @@ import logging
 from datetime import datetime
 
 import discord
-from discord import app_commands
-from discord.ext import commands
-
 from cogs.checks import BaseCheck
 from customs.ui_kit import NamelessModal
 from database import CRUD
+from discord import app_commands
+from discord.ext import commands
+
 from nameless import Nameless
 
 __all__ = ["GreeterCog"]
@@ -81,21 +81,21 @@ class GreeterCog(commands.Cog, name="greeter"):
         embed.add_field(
             name=":star: Greeters",
             value="```\n"
-                  "These are the settings related to greeters such as welcome/goodbye setup, BOTs "
-                  "checks, fail fast to DM if available, etc. You should use '/config placeholders' in "
-                  "addition to the setup process."
-                  "\n```",
+            "These are the settings related to greeters such as welcome/goodbye setup, BOTs "
+            "checks, fail fast to DM if available, etc. You should use '/config placeholders' in "
+            "addition to the setup process."
+            "\n```",
             inline=False,
         ).add_field(
             name=f"Welcome message {reaction[db_guild.is_welcome_enabled]}",
             value=f"**[Destination]** {wc_chn.mention if wc_chn and not dm else 'DM' if dm else 'Nowhere'}\n"
-                  "**[Content]**\n" + db_guild.welcome_message
+            "**[Content]**\n" + db_guild.welcome_message
             if db_guild.welcome_message
             else "Unset",
         ).add_field(
             name=f"Goodbye message {reaction[db_guild.is_goodbye_enabled]}",
             value=f"**[Destination]** {gb_chn.mention if gb_chn and not dm else 'DM' if dm else 'Nowhere'}\n"
-                  "**[Content]**\n" + db_guild.goodbye_message
+            "**[Content]**\n" + db_guild.goodbye_message
             if db_guild.goodbye_message
             else "Unset",
         ).add_field(name="Greeting to BOTs", value=db_guild.is_bot_greeting_enabled, inline=False)

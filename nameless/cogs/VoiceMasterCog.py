@@ -38,10 +38,7 @@ class VoiceMasterCog(commands.GroupCog, name="voicemaster"):
         is_a_leave = before.channel is not None and after.channel is None
 
         # If join to master channel, create the voice channel for that person, or just put them there.
-        if (
-                is_a_join
-                and after.channel.id == db_guild.voice_room_channel_id
-        ):
+        if is_a_join and after.channel.id == db_guild.voice_room_channel_id:
             target_vc_id = self.channel_track.get(member.id, None)
             vc: discord.VoiceChannel
 
@@ -60,10 +57,10 @@ class VoiceMasterCog(commands.GroupCog, name="voicemaster"):
 
         # If the left channel has no member, and is owned by someone, revoke.
         if (
-                is_a_leave
-                # Did d.py had a bug???
-                and len(before.channel.members) == 0
-                and self.channel_owner.get(before.channel.id, None) is not None
+            is_a_leave
+            # Did d.py had a bug???
+            and len(before.channel.members) == 0
+            and self.channel_owner.get(before.channel.id, None) is not None
         ):
             vc = before.channel.guild.get_channel(before.channel.id)
             await vc.delete()

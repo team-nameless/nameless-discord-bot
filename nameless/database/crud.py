@@ -14,7 +14,7 @@ from .models import Base, DbGuild, DbUser
 
 __all__ = ["CRUD"]
 
-from commons.staticproperty import staticproperty
+from nameless.commons import staticproperty
 
 
 class CRUD:

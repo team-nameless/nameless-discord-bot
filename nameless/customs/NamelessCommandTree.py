@@ -19,16 +19,16 @@ class NamelessCommandTree(CommandTree[Nameless]):
 
         if is_user_blacklisted:
             interaction.response.send_message(
-                "You have been blacklisted from using me, "
-                "please contact the owner for more information.",
-                ephemeral=True)
+                "You have been blacklisted from using me, " "please contact the owner for more information.",
+                ephemeral=True,
+            )
             return False
 
         if is_guild_blacklisted:
             interaction.response.send_message(
-                "This guild has been blacklisted from using me, "
-                "please inform the guild owner about this.",
-                ephemeral=True)
+                "This guild has been blacklisted from using me, " "please inform the guild owner about this.",
+                ephemeral=True,
+            )
             return False
 
         return True

@@ -191,5 +191,5 @@ async def setup(bot: Nameless):
 
 
 async def teardown(bot: Nameless):
-    await bot.remove_cog("OwnerCog")
+    await bot.remove_cog(OwnerCog.__cog_name__)
     logging.warning("%s cog removed!", __name__)

@@ -42,6 +42,7 @@ class Nameless(commands.AutoShardedBot):
             view_channel=True,
             send_messages=True,
             send_messages_in_threads=True,
+            manage_channels=True,
             embed_links=True,
             attach_files=True,
             read_message_history=True,

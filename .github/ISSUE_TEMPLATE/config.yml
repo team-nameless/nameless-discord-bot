@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Official nameless* Discord (Vietnamese)
+    about: Use our official Discord server to ask for help and questions as well. Or just hangout :D
+    url: https://discord.gg/PMVTHDgerp
+
+  - name: GitHub Discussion (other languages)
+    about: Use when you are struggling with anything with the bot, but not worth it to open an issue.
+    url: https://github.com/team-nameless/nameless-discord-bot/discussions

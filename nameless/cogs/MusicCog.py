@@ -15,10 +15,10 @@ from wavelink import AutoPlayMode, QueueMode, TrackStartEventPayload
 
 from nameless import Nameless
 from nameless.cogs.checks.MusicCogCheck import MusicCogCheck
-from nameless.commons.Cache import lru_cache
+from nameless.commons.timed_lru_cache import lru_cache
 from nameless.customs.voice_backends.BaseVoiceBackend import Player, QueueAction
 from nameless.database import CRUD
-from nameless.ui_kit import NamelessTrackDropdown, NamelessVoteMenu
+from customs.ui_kit import NamelessTrackDropdown, NamelessVoteMenu
 from NamelessConfig import NamelessConfig
 
 __all__ = ["MusicCog"]

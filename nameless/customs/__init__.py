@@ -1,6 +1,5 @@
 from .NamelessSharedVariables import NamelessSharedVariables
 from .NamelessSingleton import *
-from .staticproperty import *
 
 # If you are asking why this line is commented
 # It is because circular import(TM)

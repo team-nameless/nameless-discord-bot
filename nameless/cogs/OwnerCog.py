@@ -19,7 +19,7 @@ from nameless import Nameless
 
 __all__ = ["OwnerCog"]
 
-from ui_kit import NamelessModal
+from customs.ui_kit import NamelessModal
 
 
 class OwnerCog(commands.Cog):

@@ -123,8 +123,7 @@ class NamelessBlacklist:
 
 class NamelessConfig:
     # Current version of nameless.
-    # I ill-advise you to NOT change this line
-    __version__ = "2.11.0"
+    __version__ = "2.12.0"
 
     # Bot description string
     # Placeholders:

@@ -95,7 +95,7 @@ class CrosschatChannel(DiscordObject):
 
     # association between Child -> Association -> Parent
     guilds_associations: Mapped[List["CrosschatAssociation"]] = relationship(
-        backref="guild"
+        back_populates="channel"
     )
 
 

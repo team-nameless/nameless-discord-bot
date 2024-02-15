@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import discord
 from sqlalchemy import Column, ForeignKey
 from sqlalchemy.ext.declarative import DeclarativeMeta
-from sqlalchemy.orm import Mapped, declarative_base, relationship, mapped_column
+from sqlalchemy.orm import Mapped, declarative_base, mapped_column, relationship
 from sqlalchemy.sql.sqltypes import *
 
 __all__ = ["Base", "DiscordObject", "DbUser", "DbGuild", "CrosschatAssociation", "CrosschatChannel"]
@@ -72,13 +72,10 @@ class DbGuild(DiscordObject):
     voice_room_channel_id: int = Column(BigInteger, default=0)
 
     crosschat_channels: Mapped[List["CrosschatChannel"]] = relationship(
-        secondary="CrosschatAssociations",
-        back_populates="guilds"
+        secondary="CrosschatAssociations", back_populates="guilds"
     )
 
-    crosschat_channels_associations: Mapped[List["CrosschatAssociation"]] = relationship(
-        back_populates="guild"
-    )
+    crosschat_channels_associations: Mapped[List["CrosschatAssociation"]] = relationship(back_populates="guild")
 
 
 class CrosschatChannel(DiscordObject):
@@ -89,14 +86,11 @@ class CrosschatChannel(DiscordObject):
 
     # many-to-many relationship to Parent, bypassing the `Association` class
     guilds: Mapped[List["DbGuild"]] = relationship(
-        secondary="CrosschatAssociations",
-        back_populates="crosschat_channels"
+        secondary="CrosschatAssociations", back_populates="crosschat_channels"
     )
 
     # association between Child -> Association -> Parent
-    guilds_associations: Mapped[List["CrosschatAssociation"]] = relationship(
-        back_populates="channel"
-    )
+    guilds_associations: Mapped[List["CrosschatAssociation"]] = relationship(back_populates="channel")
 
 
 class CrosschatAssociation(Base):
@@ -107,4 +101,3 @@ class CrosschatAssociation(Base):
 
     channel: Mapped["CrosschatChannel"] = relationship(back_populates="guilds_associations")
     guild: Mapped["DbGuild"] = relationship(back_populates="crosschat_channels_associations")
-

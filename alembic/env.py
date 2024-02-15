@@ -8,7 +8,7 @@ import nameless
 from alembic import context
 from nameless.commons import Utility
 from nameless.database import Base
-
+from nameless.database.models import DbGuild, DbUser, DiscordObject, CrosschatChannel, CrosschatAssociation  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -27,7 +27,7 @@ config.set_main_option("sqlalchemy.url", db_url)
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = nameless.database.models.Base.metadata
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

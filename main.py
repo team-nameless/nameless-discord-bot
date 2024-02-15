@@ -1,11 +1,8 @@
 import argparse
-import contextlib
 import logging
 import sys
 
 import discord
-from discord import InteractionResponded
-from discord.app_commands import AppCommandError, errors
 from filelock import FileLock, Timeout
 
 from nameless import Nameless

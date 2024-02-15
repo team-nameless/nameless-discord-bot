@@ -3,7 +3,7 @@ import logging
 
 from discord import InteractionResponded
 from discord._types import ClientT
-from discord.app_commands import CommandTree, AppCommandError, errors
+from discord.app_commands import AppCommandError, CommandTree, errors
 from discord.interactions import Interaction
 
 from nameless.nameless import Nameless

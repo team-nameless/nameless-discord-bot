@@ -1,4 +1,9 @@
-from discord.app_commands import CommandTree
+import contextlib
+import logging
+
+from discord import InteractionResponded
+from discord._types import ClientT
+from discord.app_commands import CommandTree, AppCommandError, errors
 from discord.interactions import Interaction
 
 from nameless.nameless import Nameless
@@ -32,3 +37,14 @@ class NamelessCommandTree(CommandTree[Nameless]):
             return False
 
         return True
+
+    async def on_error(self, interaction: Interaction[ClientT], error: AppCommandError, /) -> None:
+        content = f"Something went wrong when executing the command:\n```\n{error}\n```"
+
+        if not isinstance(error, errors.CommandSignatureMismatch):
+            with contextlib.suppress(InteractionResponded):
+                await interaction.response.defer()
+
+            await interaction.followup.send(content)
+
+            logging.exception("[on_command_error] We have gone under a crisis!!!", stack_info=True, exc_info=err)

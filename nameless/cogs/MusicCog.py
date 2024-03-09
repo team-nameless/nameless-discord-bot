@@ -6,7 +6,6 @@ from typing import cast
 
 import discord
 import wavelink
-from customs.ui_kit import NamelessTrackDropdown, NamelessVoteMenu
 from discord import ClientException, app_commands
 from discord.app_commands import Choice, Range
 from discord.ext import commands
@@ -17,6 +16,7 @@ from wavelink import AutoPlayMode, QueueMode, TrackStartEventPayload
 from nameless import Nameless
 from nameless.cogs.checks.MusicCogCheck import MusicCogCheck
 from nameless.commons.timed_lru_cache import lru_cache
+from nameless.customs.ui_kit import NamelessTrackDropdown, NamelessVoteMenu
 from nameless.customs.voice_backends.BaseVoiceBackend import Player, QueueAction
 from nameless.database import CRUD
 from NamelessConfig import NamelessConfig

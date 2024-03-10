@@ -5,7 +5,6 @@ import sqlalchemy
 from sqlalchemy import create_engine
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.util import IdentitySet
 
 from nameless.commons import Utility
 from nameless.customs import shared_variables
@@ -13,8 +12,6 @@ from nameless.customs import shared_variables
 from .models import Base, DbGuild, DbUser
 
 __all__ = ["CRUD"]
-
-from nameless.commons import staticproperty
 
 
 class CRUD:
@@ -41,16 +38,6 @@ class CRUD:
     @staticmethod
     def in_case_of_getting_f_up():
         Base.metadata.drop_all(CRUD.engine)
-
-    @staticproperty
-    def dirty(self) -> IdentitySet:
-        """The data that is modified, but not updated to database"""
-        return self.session.dirty
-
-    @staticproperty
-    def new(self) -> IdentitySet:
-        """The pending new data"""
-        return self.session.new
 
     @staticmethod
     def is_new_record(model: sqlalchemy.Table, **kwargs) -> bool:

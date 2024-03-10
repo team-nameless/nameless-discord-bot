@@ -6,6 +6,7 @@ from typing import cast
 
 import discord
 import wavelink
+from cachetools.func import ttl_cache
 from discord import ClientException, app_commands
 from discord.app_commands import Choice, Range
 from discord.ext import commands
@@ -15,7 +16,6 @@ from wavelink import AutoPlayMode, QueueMode, TrackStartEventPayload
 
 from nameless import Nameless
 from nameless.cogs.checks.MusicCogCheck import MusicCogCheck
-from nameless.commons.timed_lru_cache import lru_cache
 from nameless.customs.ui_kit import NamelessTrackDropdown, NamelessVoteMenu
 from nameless.customs.voice_backends.BaseVoiceBackend import Player, QueueAction
 from nameless.database import CRUD
@@ -71,7 +71,7 @@ class MusicCog(commands.GroupCog, name="music"):
         return [k for k in before.__slots__ if getattr(before, k) != getattr(after, k)]
 
     @staticmethod
-    @lru_cache(maxsize=128)
+    @ttl_cache(maxsize=128, ttl=10 * 60)
     def remove_artist_suffix(name: str) -> str:
         if not name:
             return "N/A"

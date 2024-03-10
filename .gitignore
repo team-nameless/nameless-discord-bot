@@ -1,9 +1,10 @@
-# Local project files
-.idea/workspace.xml
-.idea/vcs.xml
-.idea/inspectionProfiles/**
-.idea/misc.xml
-.idea/dataSources.xml
+# Local workspace files.
+.idea
+.vscode
+
+# Virtual environment.
+.venv/
+venv
 
 # :eyes:
 **/__pycache__/**
@@ -17,4 +18,3 @@ nameless/internals.json.lck
 
 # Why?
 .coverage
-.vscode/setting.json

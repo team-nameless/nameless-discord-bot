@@ -1,6 +1,7 @@
 import datetime
 import logging
 from platform import python_implementation, python_version
+from typing import cast
 
 import discord
 from discord import NotFound, app_commands
@@ -20,11 +21,11 @@ class GeneralCog(commands.Cog):
 
     @app_commands.command()
     @app_commands.describe(member="Target member, default to you.")
-    async def user(self, interaction: discord.Interaction, member: discord.Member | discord.User | None):
+    async def user(self, interaction: discord.Interaction, member: discord.Member | None):
         """View someone's information."""
         await interaction.response.defer()
 
-        member = member if member else interaction.user
+        member = member if member else cast(discord.Member, interaction.user)
 
         account_create_date = member.created_at
         join_date = member.joined_at

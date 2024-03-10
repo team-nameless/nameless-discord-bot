@@ -1,4 +1,5 @@
 import logging
+from typing import cast
 
 import discord
 from discord import app_commands
@@ -51,7 +52,7 @@ class VoiceMasterCog(commands.GroupCog, name="voicemaster"):
                 self.channel_track[member.id] = vc.id
                 self.channel_owner[vc.id] = member.id
             else:
-                vc = after.channel.guild.get_channel(target_vc_id)
+                vc = cast(discord.VoiceChannel, after.channel.guild.get_channel(target_vc_id))
 
             await member.move_to(vc)
 
@@ -62,7 +63,7 @@ class VoiceMasterCog(commands.GroupCog, name="voicemaster"):
             and len(before.channel.members) == 0
             and self.channel_owner.get(before.channel.id, None) is not None
         ):
-            vc = before.channel.guild.get_channel(before.channel.id)
+            vc = cast(discord.VoiceChannel, before.channel.guild.get_channel(before.channel.id))
             await vc.delete()
 
             del self.channel_track[member.id]

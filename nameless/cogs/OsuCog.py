@@ -9,8 +9,8 @@ from ossapi import GameMode, Ossapi, Score, ScoreType, User, UserLookupKey
 from reactionmenu import ViewButton, ViewMenu
 
 from nameless import Nameless
+from nameless.customs.ui_kit import NamelessYNPrompt
 from nameless.database import CRUD
-from nameless.ui_kit import NamelessYNPrompt
 from NamelessConfig import NamelessConfig
 
 __all__ = ["OsuCog"]

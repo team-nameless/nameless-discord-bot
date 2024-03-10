@@ -9,8 +9,8 @@ from discord.app_commands import Range
 from discord.ext import commands
 
 import nameless
+from nameless.customs.ui_kit import NamelessYNPrompt
 from nameless.database.crud import CRUD
-from nameless.ui_kit import NamelessYNPrompt
 
 __all__ = ["ModeratorCog"]
 

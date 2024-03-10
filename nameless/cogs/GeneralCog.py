@@ -3,11 +3,11 @@ import logging
 from platform import python_implementation, python_version
 
 import discord
-from customs import shared_variables
 from discord import NotFound, app_commands
 from discord.ext import commands
 
 from nameless import Nameless
+from nameless.customs import NamelessSharedVariables
 from NamelessConfig import NamelessConfig
 
 __all__ = ["GeneralCog"]
@@ -95,7 +95,7 @@ class GeneralCog(commands.Cog):
 
         servers_count = len(interaction.client.guilds)
         total_members_count = sum(len(guild.members) for guild in interaction.client.guilds)
-        uptime = int(shared_variables.nameless_start_time.timestamp())
+        uptime = int(NamelessSharedVariables.nameless_start_time.timestamp())
         bot_inv = discord.utils.oauth_url(
             interaction.client.user.id, permissions=self.bot.needed_permissions, scopes=["bot", "applications.commands"]
         )

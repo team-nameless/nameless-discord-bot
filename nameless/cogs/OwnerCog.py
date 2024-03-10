@@ -119,8 +119,6 @@ class OwnerCog(commands.Cog):
 
         code = modal.text.value
 
-        pending_message = await interaction.followup.send("Running...")
-
         start_time = time.time()
         stdout_result, stderr_result = None, None
 
@@ -162,10 +160,10 @@ class OwnerCog(commands.Cog):
             )
             .add_field(name="stdout", value=f"```\n{stdout_result}\n```", inline=False)
             .add_field(name="stderr", value=f"```\n{stderr_result}\n```", inline=False)
-            .add_field(name="Elapsed time", value=f"{round(end_time - start_time, 3)} second(s)", inline=False)
+            .add_field(name="Elapsed time", value=f"{round(end_time - start_time, 5)} second(s)", inline=False)
         )
 
-        await pending_message.edit(content=None, embed=embed)
+        await interaction.followup.send(embed=embed)
 
     @app_commands.command()
     @app_commands.guild_only()

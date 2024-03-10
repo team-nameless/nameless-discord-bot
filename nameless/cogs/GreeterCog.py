@@ -2,13 +2,13 @@ import logging
 from datetime import datetime
 
 import discord
-from cogs.checks import BaseCheck
-from customs.ui_kit import NamelessModal
-from database import CRUD
 from discord import app_commands
 from discord.ext import commands
 
 from nameless import Nameless
+from nameless.cogs.checks import BaseCheck
+from nameless.customs.ui_kit import NamelessModal
+from nameless.database import CRUD
 
 __all__ = ["GreeterCog"]
 

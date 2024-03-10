@@ -9,17 +9,16 @@ import time
 
 import discord
 import discord.ui
-from cogs.checks import BaseCheck
-from customs import shared_variables
 from discord import app_commands
 from discord.ext import commands
 from discord.utils import escape_markdown
 
 from nameless import Nameless
+from nameless.cogs.checks import BaseCheck
+from nameless.customs import shared_variables
+from nameless.customs.ui_kit import NamelessModal
 
 __all__ = ["OwnerCog"]
-
-from customs.ui_kit import NamelessModal
 
 
 class OwnerCog(commands.Cog):

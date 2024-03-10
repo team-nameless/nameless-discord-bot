@@ -64,9 +64,10 @@ class Nameless(commands.AutoShardedBot):
         __nameless_upstream_version__ = f"{NamelessConfig.__version__}-offline"
 
         try:
-            async with aiohttp.ClientSession() as session, session.get(
-                NamelessConfig.META.UPSTREAM_VERSION_FILE, timeout=10
-            ) as response:
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(NamelessConfig.META.UPSTREAM_VERSION_FILE, timeout=10) as response,
+            ):
                 if 200 <= response.status <= 299:
                     __nameless_upstream_version__ = await response.text()
                 else:

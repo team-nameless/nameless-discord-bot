@@ -1,4 +1,4 @@
 pip-autoremove==0.10.0
 pytest==8.0.2
 pytest-cov==4.1.0
-ruff==0.1.6
+ruff==0.3.0

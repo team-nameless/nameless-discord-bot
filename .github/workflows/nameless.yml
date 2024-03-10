@@ -44,6 +44,10 @@ jobs:
           ruff check --fix --exit-zero .
           ruff format .
 
+      - name: Type checking with PyWrong
+        run: |
+          pyright
+
       - name: Update nameless version file with the --version flag
         run: |
           python -m main --version
@@ -55,7 +59,7 @@ jobs:
 
       - name: Delete the dummy config file
         run: |
-           rm NamelessConfig.py
+          rm NamelessConfig.py
 
       - name: Push the changes if needed.
         uses: stefanzweifel/git-auto-commit-action@v5

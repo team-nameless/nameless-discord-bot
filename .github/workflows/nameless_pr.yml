@@ -37,6 +37,10 @@ jobs:
           ruff check . --diff
           ruff format . --diff
 
+      - name: Type checking with PyWrong
+        run: |
+          pyright
+
       - name: Run tests and return coverages (pytest & friends)
         run: |
           pytest --cov-report term-missing --cov=nameless.database --cov=nameless.commons.Utility tests/

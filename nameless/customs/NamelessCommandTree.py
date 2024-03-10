@@ -47,4 +47,4 @@ class NamelessCommandTree(CommandTree[Nameless]):
 
             await interaction.followup.send(content)
 
-            logging.exception("[on_command_error] We have gone under a crisis!!!", stack_info=True, exc_info=err)
+            logging.exception("[on_command_error] We have gone under a crisis!!!", stack_info=True, exc_info=error)

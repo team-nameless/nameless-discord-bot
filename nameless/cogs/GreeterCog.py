@@ -106,7 +106,7 @@ class GreeterCog(commands.Cog, name="greeter"):
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.describe(edit="Whether you want to edit on the old message.")
-    @app_commands.check(BaseCheck.require_interaction_intents([discord.Intents.members]))
+    @BaseCheck.require_gateway_intents([discord.Intents.members])
     async def set_welcome_message(self, interaction: discord.Interaction, edit: bool = True):
         """Change greeter welcome message"""
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
@@ -125,7 +125,7 @@ class GreeterCog(commands.Cog, name="greeter"):
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.describe(edit="Whether you want to edit on the old message.")
-    @app_commands.check(BaseCheck.require_interaction_intents([discord.Intents.members]))
+    @BaseCheck.require_gateway_intents([discord.Intents.members])
     async def set_goodbye_message(self, interaction: discord.Interaction, edit: bool = True):
         """Change goodbye message"""
         db_guild = CRUD.get_or_create_guild_record(interaction.guild)
@@ -144,7 +144,7 @@ class GreeterCog(commands.Cog, name="greeter"):
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.describe(dest_channel="Goodbye message delivery channel")
-    @app_commands.check(BaseCheck.require_interaction_intents([discord.Intents.members]))
+    @BaseCheck.require_gateway_intents([discord.Intents.members])
     async def set_goodbye_channel(
         self, interaction: discord.Interaction, dest_channel: discord.TextChannel | discord.Thread
     ):
@@ -159,7 +159,7 @@ class GreeterCog(commands.Cog, name="greeter"):
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.describe(dest_channel="Welcome message delivery channel")
-    @app_commands.check(BaseCheck.require_interaction_intents([discord.Intents.members]))
+    @BaseCheck.require_gateway_intents([discord.Intents.members])
     async def set_welcome_channel(
         self, interaction: discord.Interaction, dest_channel: discord.TextChannel | discord.Thread
     ):
@@ -173,7 +173,7 @@ class GreeterCog(commands.Cog, name="greeter"):
     @app_commands.command()
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
-    @app_commands.check(BaseCheck.require_interaction_intents([discord.Intents.members]))
+    @BaseCheck.require_gateway_intents([discord.Intents.members])
     async def toggle_welcome(self, interaction: discord.Interaction):
         """Toggle welcome message delivery allowance"""
         await interaction.response.defer()
@@ -185,7 +185,7 @@ class GreeterCog(commands.Cog, name="greeter"):
     @app_commands.command()
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
-    @app_commands.check(BaseCheck.require_interaction_intents([discord.Intents.members]))
+    @BaseCheck.require_gateway_intents([discord.Intents.members])
     async def toggle_goodbye(self, interaction: discord.Interaction):
         """Toggle goodbye message delivery allowance"""
         await interaction.response.defer()
@@ -197,7 +197,7 @@ class GreeterCog(commands.Cog, name="greeter"):
     @app_commands.command()
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
-    @app_commands.check(BaseCheck.require_interaction_intents([discord.Intents.members]))
+    @BaseCheck.require_gateway_intents([discord.Intents.members])
     async def toggle_bot_greeter(self, interaction: discord.Interaction):
         """Toggle greeting delivery allowance to BOTs"""
         await interaction.response.defer()
@@ -209,7 +209,7 @@ class GreeterCog(commands.Cog, name="greeter"):
     @app_commands.command()
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_guild=True)
-    @app_commands.check(BaseCheck.require_interaction_intents([discord.Intents.members]))
+    @BaseCheck.require_gateway_intents([discord.Intents.members])
     async def toggle_dm_instead_of_channel(self, interaction: discord.Interaction):
         """Toggle greeting delivery to user's DM instead of the channel."""
         await interaction.response.defer()

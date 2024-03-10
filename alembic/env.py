@@ -4,11 +4,10 @@ from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
 
-import nameless
 from alembic import context
 from nameless.commons import Utility
 from nameless.database import Base
-from nameless.database.models import DbGuild, DbUser, DiscordObject, CrosschatChannel, CrosschatAssociation  # noqa: F401
+from nameless.database.models import *  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -67,7 +66,7 @@ def run_migrations_online() -> None:
 
     """
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section),
+        config.get_section(config.config_ini_section),  # pyright: ignore
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

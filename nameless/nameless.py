@@ -199,7 +199,7 @@ class Nameless(commands.AutoShardedBot):
         shared_variables.nameless_start_time = datetime.utcnow()
 
     async def is_blacklisted(
-        self, *, user: discord.User | discord.Member = None, guild: discord.Guild | None = None
+        self, *, user: discord.User | discord.Member | None = None, guild: discord.Guild | None = None
     ) -> bool:
         """Check if an entity is blacklisted from using the bot."""
         # The owners, even if they are in the blacklist, can still use the bot

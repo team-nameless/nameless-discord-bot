@@ -2,7 +2,7 @@ __all__ = ["NamelessSingleton"]
 
 
 class NamelessSingleton:
-    _shared_state = {}
+    _shared_state: dict = {}
 
     def __new__(cls):
         obj = super().__new__(cls)

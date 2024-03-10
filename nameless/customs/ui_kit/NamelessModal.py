@@ -13,7 +13,7 @@ class NamelessModal(ui.Modal):
         if initial_text is not None:
             self.text.default = initial_text
 
-    text = ui.TextInput(
+    text: ui.TextInput = ui.TextInput(
         label="...",  # this attribute should be edited per-command
         style=discord.TextStyle.paragraph,
         max_length=2000,

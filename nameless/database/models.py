@@ -23,21 +23,21 @@ class DiscordObject(Base):
 class DbUser(DiscordObject):
     __tablename__ = "Users"
 
-    osu_username: Mapped[str] = mapped_column("OsuUsername")
-    osu_mode: Mapped[str] = mapped_column("OsuMode")
+    osu_username: Mapped[str] = mapped_column("OsuUsername", default="")
+    osu_mode: Mapped[str] = mapped_column("OsuMode", default="")
 
 
 class DbGuild(DiscordObject):
     __tablename__ = "Guilds"
 
-    is_welcome_enabled: Mapped[bool] = mapped_column("IsWelcomeEnabled")
-    is_goodbye_enabled: Mapped[bool] = mapped_column("IsGoodbyeEnabled")
+    is_welcome_enabled: Mapped[bool] = mapped_column("IsWelcomeEnabled", default=True)
+    is_goodbye_enabled: Mapped[bool] = mapped_column("IsGoodbyeEnabled", default=True)
     is_bot_greeting_enabled: Mapped[bool] = mapped_column("IsBotGreetingEnabled", default=True)
-    is_dm_preferred: Mapped[bool] = mapped_column("IsDmPreferred")
-    welcome_channel_id: Mapped[int] = mapped_column("WelcomeChannelId", BigInteger)
-    goodbye_channel_id: Mapped[int] = mapped_column("GoodbyeChannelId", BigInteger)
-    welcome_message: Mapped[str] = mapped_column("WelcomeMessage", UnicodeText)
-    goodbye_message: Mapped[str] = mapped_column("GoodbyeMessage", UnicodeText)
-    audio_role_id: Mapped[int] = mapped_column("AudioRoleId", BigInteger)
-    radio_start_time: Mapped[datetime] = mapped_column("RadioStartTime")
-    voice_room_channel_id: Mapped[int] = mapped_column("VoiceRoomChannelId", BigInteger)
+    is_dm_preferred: Mapped[bool] = mapped_column("IsDmPreferred", default=False)
+    welcome_channel_id: Mapped[int] = mapped_column("WelcomeChannelId", BigInteger, default=0)
+    goodbye_channel_id: Mapped[int] = mapped_column("GoodbyeChannelId", BigInteger, default=0)
+    welcome_message: Mapped[str] = mapped_column("WelcomeMessage", UnicodeText, default="")
+    goodbye_message: Mapped[str] = mapped_column("GoodbyeMessage", UnicodeText, default="")
+    audio_role_id: Mapped[int] = mapped_column("AudioRoleId", BigInteger, default=0)
+    radio_start_time: Mapped[datetime] = mapped_column("RadioStartTime", default=datetime.min)
+    voice_room_channel_id: Mapped[int] = mapped_column("VoiceRoomChannelId", BigInteger, default=0)

@@ -1,3 +1,5 @@
+from .NamelessPlayer import *
+from .NamelessQueue import *
 from .NamelessSharedVariables import NamelessSharedVariables
 from .NamelessSingleton import *
 

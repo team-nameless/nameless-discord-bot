@@ -251,9 +251,7 @@ class MusicCog(commands.GroupCog, name="music"):
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_in_voice)
     async def connect(self, interaction: discord.Interaction):
-        """
-        Connect to your current voice channel.
-        """
+        """Connect to your current voice channel."""
         await interaction.response.defer()
 
         # A rare case where LavaLink node is slow to connect and causes an error
@@ -275,7 +273,7 @@ class MusicCog(commands.GroupCog, name="music"):
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.bot_in_voice)
     async def disconnect(self, interaction: discord.Interaction):
-        """Disconnect from my current voice channel"""
+        """Disconnect from my current voice channel."""
         await interaction.response.defer()
 
         player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
@@ -435,46 +433,46 @@ class MusicCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.bot_is_playing_something)
     async def pause(self, interaction: discord.Interaction):
-        """Pause current track"""
+        """Pause current playback."""
         await interaction.response.defer()
 
         player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
 
         if player.paused:
-            await interaction.followup.send("Already paused")
+            await interaction.followup.send("Already paused.")
             return
 
         await player.pause(True)
-        await interaction.followup.send("Paused")
+        await interaction.followup.send("Paused.")
 
     @app_commands.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.bot_is_silent)
     async def resume(self, interaction: discord.Interaction):
-        """Resume current playback, if paused"""
+        """Resume current playback."""
         await interaction.response.defer()
 
         player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
 
         if not player.paused:
-            await interaction.followup.send("Already playing")
+            await interaction.followup.send("Already playing.")
             return
 
         await player.pause(False)
-        await interaction.followup.send("Resumed")
+        await interaction.followup.send("Resuming.")
 
     @app_commands.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     async def stop(self, interaction: discord.Interaction):
-        """Stop playback. To start playing again, use 'music.queue.start'"""
+        """Stop playback (or terminate the session, idk)."""
         await interaction.response.defer()
 
         player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
 
         if not player.playing:
-            await interaction.followup.send("Not playing anything")
+            await interaction.followup.send("Not playing anything.")
             return
 
         player.autoplay = AutoPlayMode.disabled
@@ -493,7 +491,7 @@ class MusicCog(commands.GroupCog, name="music"):
         player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
         track: wavelink.Playable | None = player.current
         if not track:
-            await interaction.response.send_message("Not playing anything")
+            await interaction.response.send_message("I am not playing anything.")
             return
 
         dbg = CRUD.get_or_create_guild_record(interaction.guild)
@@ -567,7 +565,7 @@ class MusicCog(commands.GroupCog, name="music"):
         ]
     )
     async def loop(self, interaction: discord.Interaction, mode: int):
-        """Change 'Loop' mode."""
+        """Set loop mode."""
         await self.set_loop_mode(interaction, mode)
 
     @app_commands.command()
@@ -815,13 +813,13 @@ class MusicCog(commands.GroupCog, name="music"):
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     async def repopulate_autoqueue(self, interaction: discord.Interaction):
-        """Repopulate autoplay queue based on current song"""
+        """Repopulate autoplay queue based on current song(s)."""
         await interaction.response.defer()
 
         player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
 
         if player.autoplay != AutoPlayMode.enabled:
-            await interaction.followup.send("Seems like autoplay is disabled")
+            await interaction.followup.send("Seems like autoplay is disabled.")
             return
 
         await player.repopulate_auto_queue()
@@ -859,8 +857,8 @@ class MusicCog(commands.GroupCog, name="music"):
     @app_commands.choices(mode=[Choice(name=k, value=k) for k in ["difference", "position"]])
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.queue_has_element)
-    async def move(self, interaction: discord.Interaction, pos: Range[int, 1], value: int, mode: str = "pos"):
-        """Move track to new position using relative difference"""
+    async def move(self, interaction: discord.Interaction, pos: Range[int, 1], value: int, mode: str = "position"):
+        """Move a track to new position using relative difference/absolute position."""
         await interaction.response.defer()
 
         player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
@@ -893,7 +891,7 @@ class MusicCog(commands.GroupCog, name="music"):
     @app_commands.describe(pos1="Position of first track", pos2="Position of second track")
     @app_commands.checks.has_permissions(manage_guild=True)
     async def swap(self, interaction: discord.Interaction, pos1: Range[int, 1], pos2: Range[int, 1]):
-        """Swap two tracks."""
+        """Swap two tracks in the queue."""
         await interaction.response.defer()
 
         player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
@@ -915,12 +913,13 @@ class MusicCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.queue_has_element)
     @app_commands.checks.has_permissions(manage_guild=True)
     async def shuffle(self, interaction: discord.Interaction):
-        """Shuffle the queue"""
+        """Shuffle the queue."""
         await interaction.response.defer()
 
         player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
+
         player.queue.shuffle()
-        await interaction.followup.send("Shuffled the queue")
+        await interaction.followup.send("Done shuffling the queue.")
 
     @queue.command()
     @app_commands.guild_only()

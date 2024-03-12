@@ -498,18 +498,6 @@ class MusicCog(commands.GroupCog, name="music"):
         embed = self.generate_embed_np_from_playable(player, track, interaction.user, dbg)
         await interaction.followup.send(embed=embed)
 
-    @app_commands.command()
-    @app_commands.guild_only()
-    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @app_commands.describe(volume="Change player volume")
-    async def volume(self, interaction: discord.Interaction, volume: Range[int, 0, 500]):
-        """Change the volume."""
-        await interaction.response.defer()
-
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
-        await player.set_volume(volume)
-        await interaction.followup.send(f"Changed the volume to {volume}%")
-
     @app_commands.command(name="autoplay")
     @app_commands.guild_only()
     @app_commands.describe(value="Intended autoplay mode if enabled: 'enable' or 'disable'")

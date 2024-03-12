@@ -935,21 +935,24 @@ class MusicCog(commands.GroupCog, name="music"):
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.queue_has_element)
     async def clear(self, interaction: discord.Interaction):
-        """Clear the queue, using vote system."""
+        """Clear the queue - vote if you don't have MANAGE_GUILD permission, 'no questions' otherwise."""
         await interaction.response.defer()
 
         player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
 
-        async def clear_action():
+        if (
+            # The invoker has the MANAGE_GUILD
+            interaction.user.guild_permissions.manage_guild or
+            # Only you & the bot
+            len(player.client.users) == 2 or
+            # The voting passes.
+            await NamelessVoteMenu(interaction, player, "clear", "queue").start()
+        ):
             player.queue.clear()
-            await interaction.followup.send(content="Cleared the queue")
+            await interaction.followup.send(content="Cleared the queue.")
+        else:
+            await interaction.followup.send(content="Nah, I'd pass.")
 
-        if len(player.client.users) == 2:
-            await clear_action()
-            return
-
-        if await NamelessVoteMenu(interaction, player, "clear", "queue").start():
-            await clear_action()
             return
 
     @queue.command()

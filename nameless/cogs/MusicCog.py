@@ -45,7 +45,7 @@ class MusicCog(commands.GroupCog, name="music"):
             for node in NamelessConfig.MUSIC.NODES
         ]
 
-        bot.loop.create_task(self.connect_nodes())
+        self.bot.loop.create_task(self.connect_nodes())
 
     async def connect_nodes(self):
         """Connect to lavalink nodes."""
@@ -71,13 +71,6 @@ class MusicCog(commands.GroupCog, name="music"):
             return "N/A"
         name = escape_markdown(name, as_needed=True)
         return name.removesuffix(" - Topic")
-
-    async def connect_nodes(self):
-        await self.bot.wait_until_ready()
-        await wavelink.Pool.connect(client=self.bot, nodes=self.nodes, cache_capacity=100)
-
-        if not self.is_ready.is_set():
-            self.is_ready.set()
 
     @commands.Cog.listener()
     async def on_wavelink_node_ready(self, payload: wavelink.NodeReadyEventPayload):

@@ -81,8 +81,7 @@ class MusicCog(commands.GroupCog, name="music"):
 
     @commands.Cog.listener()
     async def on_wavelink_node_ready(self, payload: wavelink.NodeReadyEventPayload):
-        node = payload.node
-        logging.info("Node {%s} (%s) is ready!", node.identifier or "N/A", node.uri)
+        logging.info("Node {%s} (%s) is ready!", payload.node.identifier, payload.node.uri)
 
     @commands.Cog.listener()
     async def on_wavelink_track_start(self, payload: wavelink.TrackStartEventPayload):

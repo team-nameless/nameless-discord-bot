@@ -1,7 +1,7 @@
-name: Lint and test code (pull-request)
+name: Code validation
 
 on:
-  pull_request:
+  push:
     branches:
       - 'feat/**'
       - 'fix/**'

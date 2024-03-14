@@ -8,10 +8,10 @@ Please put the summary here.
 ## Sanity Check
 
 ### Code
-- [ ] I fixed these GitHub issue(s): *put the numbers here, like #1, #2*.
+- [ ] I fixed these GitHub issue(s): *put the numbers here, like `#1`, `#2`*.
     - [ ] I have tested the code.
 - [ ] I cooked something new.
-  - [ ] I cooked breaking change(s) (command name, parameters, group, database, ...) 
+  - [ ] I cooked breaking change(s) (command name, parameters, group, database, ...)
   - [ ] I made modifications to existing code (typo, small bug fix, ...)
   - [ ] I have tested the code.
 

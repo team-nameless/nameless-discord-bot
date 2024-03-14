@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import discord
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.sql.sqltypes import *
@@ -22,7 +20,7 @@ class DiscordObject(Base):
 class DbUser(DiscordObject):
     __tablename__ = "Users"
 
-    osu_username: Mapped[str] = mapped_column("OsuUsername", default="")
+    osu_username: Mapped[str] = mapped_column("OsuUsername", UnicodeText, default="")
     osu_mode: Mapped[str] = mapped_column("OsuMode", default="")
 
 
@@ -38,5 +36,4 @@ class DbGuild(DiscordObject):
     welcome_message: Mapped[str] = mapped_column("WelcomeMessage", UnicodeText, default="")
     goodbye_message: Mapped[str] = mapped_column("GoodbyeMessage", UnicodeText, default="")
     audio_role_id: Mapped[int] = mapped_column("AudioRoleId", BigInteger, default=0)
-    radio_start_time: Mapped[datetime] = mapped_column("RadioStartTime", default=datetime.min)
     voice_room_channel_id: Mapped[int] = mapped_column("VoiceRoomChannelId", BigInteger, default=0)

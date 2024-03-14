@@ -65,7 +65,7 @@ class MusicCog(commands.GroupCog, name="music"):
         return [k for k in before.__slots__ if getattr(before, k) != getattr(after, k)]
 
     @staticmethod
-    @ttl_cache(maxsize=128, ttl=10 * 60)
+    @ttl_cache(ttl=300)
     def remove_artist_suffix(name: str) -> str:
         if not name:
             return "N/A"

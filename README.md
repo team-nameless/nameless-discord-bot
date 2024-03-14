@@ -11,8 +11,6 @@ An combination of [original nameless*](https://github.com/FoxeiZ/nameless) and [
 ![Style](https://img.shields.io/badge/Code_Style-ruff-orange?style=for-the-badge&logo=python)
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue?style=for-the-badge&logo=python)
-[![CodeFactor Grade](https://img.shields.io/codefactor/grade/github/nameless-on-discord/nameless/main?style=for-the-badge)](https://www.codefactor.io/repository/github/nameless-on-discord/nameless)
-![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/nameless-on-discord/nameless/codeql.yml?style=for-the-badge&logo=github&label=CodeQL&link=https%3A%2F%2Fgithub.com%2Fnameless-on-discord%2Fnameless%2Factions%2Fworkflows%2Fanything-python.yml)
 ![License](https://img.shields.io/github/license/nameless-on-discord/nameless?style=for-the-badge&logo=github&color=white)
 
 <p>For donations:</p>
@@ -32,5 +30,3 @@ An combination of [original nameless*](https://github.com/FoxeiZ/nameless) and [
 | ![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/team-nameless/nameless-discord-bot/nameless.yml?style=for-the-badge&logo=github&label=Stable) | ![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/team-nameless/nameless-discord-bot/nameless_release_experimental.yml?style=for-the-badge&logo=github&label=Experimental) | ![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/team-nameless/nameless-discord-bot/nameless.yml?style=for-the-badge&logo=github&label=Cutting-Edge) |
 
 </div>
-
-<div align="center" id="contribute">

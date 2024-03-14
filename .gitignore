@@ -2,11 +2,8 @@
 .idea
 .vscode
 
-# Virtual environment.
-.venv/
-venv
-
-# :eyes:
+# Python stuffs.
+*venv*/
 **/__pycache__/**
 
 # Files should not not be exposed to the public

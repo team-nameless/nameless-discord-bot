@@ -1,4 +1,4 @@
-"""add mute_timeout_interval
+"""Add mute_timeout_interval
 
 Revision ID: 629190f29858
 Revises: 7075bbb95141

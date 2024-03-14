@@ -1,6 +1,0 @@
-[submodule "nameless-tools"]
-	path = nameless-tools
-	url = https://github.com/team-nameless/nameless-tools
-[submodule "nameless-extensions"]
-	path = nameless-extensions
-	url = https://github.com/team-nameless/nameless-extensions

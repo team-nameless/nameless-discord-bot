@@ -52,18 +52,6 @@ class MusicCog(commands.GroupCog, name="music"):
         await self.bot.wait_until_ready()
         await wavelink.Pool.connect(client=self.bot, nodes=self.nodes, cache_capacity=100)
 
-        if not self.is_ready.is_set():
-            self.is_ready.set()
-
-    @staticmethod
-    async def list_voice_state_change(before: discord.VoiceState, after: discord.VoiceState):
-        """Method to check what has been updated in voice state."""
-        # diff = []
-        # for k in before.__slots__:
-        #     if getattr(before, k) != getattr(after, k):
-        #         diff.append(k)
-        return [k for k in before.__slots__ if getattr(before, k) != getattr(after, k)]
-
     @staticmethod
     @ttl_cache(ttl=300)
     def resolve_artist_name(name: str) -> str:
@@ -106,7 +94,7 @@ class MusicCog(commands.GroupCog, name="music"):
                 dbg,
                 original is not None and original.recommended,
             )
-            await chn.send(embed=embed)  # type: ignore
+            await chn.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_wavelink_inactive_player(self, player: wavelink.Player):
@@ -262,11 +250,6 @@ class MusicCog(commands.GroupCog, name="music"):
     async def connect(self, interaction: discord.Interaction):
         """Connect to your current voice channel."""
         await interaction.response.defer()
-
-        # A rare case where LavaLink node is slow to connect and causes an error
-        if not self.is_ready.is_set():
-            await interaction.followup.send("Waiting for the bot to connect to all Lavalink nodes...")
-            await self.is_ready.wait()
 
         try:
             await interaction.user.voice.channel.connect(cls=wavelink.Player, self_deaf=True)
@@ -474,6 +457,7 @@ class MusicCog(commands.GroupCog, name="music"):
 
         player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
         track: wavelink.Playable | None = player.current
+
         if not track:
             await interaction.response.send_message("I am not playing anything.")
             return
@@ -531,9 +515,9 @@ class MusicCog(commands.GroupCog, name="music"):
         seconds: app_commands.Range[int, 0, 59] = 0,
         minutes: app_commands.Range[int, 0, 59] = 0,
         hours: app_commands.Range[int, 0] = 0,
-        percent: app_commands.Range[int, 0, 100] = 0,
+        percent: app_commands.Range[float, 0, 100] = 0,
     ):
-        """Seek to position in a track. Leave empty to seek to track beginning."""
+        """Seek to position in a track. Leave empty to seek to start of the track."""
         await interaction.response.defer()
 
         player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)
@@ -631,7 +615,7 @@ class MusicCog(commands.GroupCog, name="music"):
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     async def view_autoplay(self, interaction: discord.Interaction):
-        """View current autoplay queue. Can be none if autoplay is disabled."""
+        """View current autoplay queue. Can be none if autoplay is 'disabled' or 'partial'."""
         await interaction.response.defer()
 
         player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
@@ -663,7 +647,7 @@ class MusicCog(commands.GroupCog, name="music"):
 
     @queue.command()
     @app_commands.guild_only()
-    @app_commands.describe(index="The index to remove")
+    @app_commands.describe(index="The index to remove.")
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.queue_has_element)
@@ -688,7 +672,7 @@ class MusicCog(commands.GroupCog, name="music"):
 
     @queue.command()
     @app_commands.guild_only()
-    @app_commands.describe(pos="Current position", value="Position value", mode="Move mode")
+    @app_commands.describe(pos="Current position.", value="Position value.", mode="Move mode.")
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.choices(mode=[Choice(name=k, value=k) for k in ["difference", "position"]])
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)

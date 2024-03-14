@@ -1,7 +1,7 @@
 name: Code validation
 
 on:
-  push:
+  pull_request:
     branches:
       - 'feat/**'
       - 'fix/**'

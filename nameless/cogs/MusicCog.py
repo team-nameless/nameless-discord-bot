@@ -40,7 +40,7 @@ class MusicCog(commands.GroupCog, name="music"):
                 uri=f"{'https' if node.secure else 'http'}://{node.host}:{node.port}",
                 password=node.password,
                 inactive_player_timeout=NamelessConfig.MUSIC.AUTOLEAVE_TIME,
-                client=self.bot
+                client=self.bot,
             )
             for node in NamelessConfig.MUSIC.NODES
         ]
@@ -66,7 +66,7 @@ class MusicCog(commands.GroupCog, name="music"):
 
     @staticmethod
     @ttl_cache(ttl=300)
-    def remove_artist_suffix(name: str) -> str:
+    def resolve_artist_name(name: str) -> str:
         if not name:
             return "N/A"
         name = escape_markdown(name, as_needed=True)
@@ -99,7 +99,7 @@ class MusicCog(commands.GroupCog, name="music"):
 
         dbg = CRUD.get_or_create_guild_record(player.guild)
         if chn is not None and player.play_now_allowed and player.should_send_play_now:
-            embed = self.generate_embed_np_from_playable(
+            embed = self.generate_embed_from_track(
                 player,
                 track,
                 self.bot.user,
@@ -123,22 +123,30 @@ class MusicCog(commands.GroupCog, name="music"):
         if member.id == self.bot.user.id and not after.deaf:
             await member.edit(deafen=True)
 
-    def generate_embeds_from_playable(
+    def generate_embeds_from_tracks(
         self,
         tracks: wavelink.Queue | list[wavelink.Playable] | wavelink.Playlist,
-        title: str = "Tracks currently in queue",
+        embed_title: str = "Tracks currently in queue",
     ) -> list[discord.Embed]:
+        """Generate embeds from supported track list types."""
         txt = ""
         embeds: list[discord.Embed] = []
+        track_list: list[wavelink.Playable] = []
 
-        for idx, track in enumerate(tracks, start=1):
+        if isinstance(tracks, wavelink.Queue):
+            track_list = tracks.copy()._items
+
+        if isinstance(tracks, wavelink.Playlist):
+            track_list = tracks.tracks
+
+        for i, track in enumerate(track_list, start=1):
             upcoming = (
-                f"{idx} - " f"[{track.title} by {self.remove_artist_suffix(track.author)}]" f"({track.uri or 'N/A'})\n"
+                f"{i} - " f"[{track.title} by {self.resolve_artist_name(track.author)}]" f"({track.uri or 'N/A'})\n"
             )
 
             if len(txt) + len(upcoming) > 2048:
                 eb = discord.Embed(
-                    title=title,
+                    title=embed_title,
                     color=discord.Color.orange(),
                     description=txt,
                 )
@@ -149,7 +157,7 @@ class MusicCog(commands.GroupCog, name="music"):
 
         embeds.append(
             discord.Embed(
-                title=title,
+                title=embed_title,
                 color=discord.Color.orange(),
                 description=txt,
             )
@@ -157,15 +165,16 @@ class MusicCog(commands.GroupCog, name="music"):
 
         return embeds
 
-    def generate_embed_np_from_playable(
+    def generate_embed_from_track(
         self,
         player: NamelessPlayer,
-        track: wavelink.Playable,
+        track: wavelink.Playable | None,
         user: discord.User | discord.Member | discord.ClientUser | None,
         dbg,
         is_recommended=False,
     ) -> discord.Embed:
         assert user is not None
+        assert track is not None
 
         def convert_time(milli):
             td = str(datetime.timedelta(milliseconds=milli)).split(".")[0].split(":")
@@ -205,7 +214,7 @@ class MusicCog(commands.GroupCog, name="music"):
             )
             .add_field(
                 name="Author",
-                value=self.remove_artist_suffix(track.author) if track.author else "N/A",
+                value=self.resolve_artist_name(track.author) if track.author else "N/A",
             )
             .add_field(
                 name="Source",
@@ -230,7 +239,7 @@ class MusicCog(commands.GroupCog, name="music"):
             embed.add_field(
                 name="Next track",
                 value=f"[{escape_markdown(next_tr.title) if next_tr.title else 'Unknown title'} "
-                f"by {self.remove_artist_suffix(next_tr.author)}]"
+                f"by {self.resolve_artist_name(next_tr.author)}]"
                 f"({next_tr.uri or 'N/A'})",
             )
 
@@ -260,7 +269,7 @@ class MusicCog(commands.GroupCog, name="music"):
             await self.is_ready.wait()
 
         try:
-            await interaction.user.voice.channel.connect(cls=Player, self_deaf=True)  # type: ignore
+            await interaction.user.voice.channel.connect(cls=wavelink.Player, self_deaf=True)
             await interaction.followup.send("Connected to your voice channel")
 
             player = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
@@ -385,6 +394,7 @@ class MusicCog(commands.GroupCog, name="music"):
             msg = f"Added the playlist **`{tracks.name}`** ({added} songs) to the queue."
         else:
             soon_added = await self.pick_track_from_results(interaction, tracks)
+
             if not soon_added:
                 return
 
@@ -392,7 +402,7 @@ class MusicCog(commands.GroupCog, name="music"):
             msg = f"{action.name.title()}ed {added} {'songs' if added > 1 else 'song'} to the queue"
 
         if soon_added:
-            embeds = self.generate_embeds_from_playable(soon_added, title=msg)
+            embeds = self.generate_embeds_from_tracks(soon_added, embed_title=msg)
             self.bot.loop.create_task(self.show_paginated_tracks(interaction, embeds))
 
         if player.current and player.current.is_stream:
@@ -401,32 +411,6 @@ class MusicCog(commands.GroupCog, name="music"):
 
         if should_play:
             await player.play(player.queue.get(), add_history=False)
-
-    async def set_loop_mode(self, interaction: discord.Interaction, mode: int):
-        """Set loop mode"""
-        await interaction.response.defer()
-
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
-        enum_mode = QueueMode(mode)
-
-        def normalize_enum_name(e: QueueMode) -> str:
-            return e.name.lower().replace(" ", "_")
-
-        if player.queue.mode is enum_mode:
-            await interaction.followup.send("Already in this mode")
-            return
-
-        player.queue.mode = enum_mode
-        await interaction.followup.send(f"Loop mode set to {normalize_enum_name(enum_mode)}")
-
-    @app_commands.command()
-    @app_commands.guild_only()
-    @app_commands.describe(query="Search query", source="Source to search")
-    @app_commands.choices(source=[Choice(name=k, value=k) for k in SOURCE_MAPPING])
-    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    async def play(self, interaction: discord.Interaction, query: str, source: str = "youtube"):
-        """Add or search track(s) to queue. Also allows you to play a playlist"""
-        await self._play(interaction, query, source)
 
     @app_commands.command()
     @app_commands.guild_only()
@@ -495,66 +479,8 @@ class MusicCog(commands.GroupCog, name="music"):
             return
 
         dbg = CRUD.get_or_create_guild_record(interaction.guild)
-        embed = self.generate_embed_np_from_playable(player, track, interaction.user, dbg)
+        embed = self.generate_embed_from_track(player, track, interaction.user, dbg)
         await interaction.followup.send(embed=embed)
-
-    @app_commands.command(name="autoplay")
-    @app_commands.guild_only()
-    @app_commands.describe(value="Intended autoplay mode if enabled: 'enable' or 'disable'")
-    @app_commands.choices(
-        value=[
-            Choice(name="enable", value=0),  # wavelink.AutoPlayMode.enabled
-            Choice(name="disable", value=1),  # wavelink.AutoPlayMode.partial
-        ]
-    )
-    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(MusicCogCheck.must_not_be_a_stream)
-    async def autoplay_mode(
-        self,
-        interaction: discord.Interaction,
-        value: int,
-    ):
-        """
-        Change AutoPlay mode.
-        Priority normal queue over autoqueue so you can add songs to the normal queue and autoqueue won't be triggered.
-        """
-        await interaction.response.defer()
-
-        player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
-        await player.set_autoplay_mode(value)
-
-        await interaction.followup.send(
-            f"AutoPlay mode is now {'enabled' if player.autoplay is AutoPlayMode.enabled else 'disabled'}"
-        )
-
-    @app_commands.command()
-    @app_commands.guild_only()
-    @app_commands.describe(value="Intended track loop mode value: 'enable' or 'disable'")
-    @app_commands.choices(
-        value=[
-            Choice(name="enable", value=1),  # wavelink.QueueMode.loop
-            Choice(name="disable", value=0),  # wavelink.QueueMode.normal
-        ]
-    )
-    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    async def loop_track(self, interaction: discord.Interaction, value: int):
-        """Change 'Loop track' mode."""
-        await self.set_loop_mode(interaction, value)
-
-    @app_commands.command()
-    @app_commands.guild_only()
-    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @app_commands.describe(mode="All mode available for looping")
-    @app_commands.choices(
-        mode=[
-            Choice(name="Disable", value=0),
-            Choice(name="Track", value=1),
-            Choice(name="All", value=2),
-        ]
-    )
-    async def loop(self, interaction: discord.Interaction, mode: int):
-        """Set loop mode."""
-        await self.set_loop_mode(interaction, mode)
 
     @app_commands.command()
     @app_commands.guild_only()
@@ -565,142 +491,73 @@ class MusicCog(commands.GroupCog, name="music"):
         await interaction.response.defer()
 
         player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)
-        track: wavelink.Playable = player.current  # type: ignore
+        track: wavelink.Playable | None = player.current
 
-        if await NamelessVoteMenu(interaction, player, "skip", track.title).start():
+        if (
+            # The invoker has the MANAGE_GUILD
+            interaction.user.guild_permissions.manage_guild
+            or
+            # Only you & the bot
+            len(player.client.users) == 2
+            or
+            # The voting passes.
+            await NamelessVoteMenu(interaction, player, "skip", track.title).start()
+        ):
             await player.skip()
+            await interaction.followup.send(content="Skipping current track.")
+
             if bool(player.queue):
-                await interaction.followup.send("Next track should be played now")
+                await interaction.followup.send("Next track should be played now.")
         else:
-            await interaction.followup.send("Not skipping because not enough votes!")
-
-    @app_commands.command()
-    @app_commands.guild_only()
-    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
-    async def force_skip(self, interaction: discord.Interaction):
-        """Force skip a song, if you have enough permissions"""
-        await interaction.response.defer()
-
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
-        if interaction.user.guild_permissions.manage_guild or interaction.user.guild_permissions.manage_channels:  # type: ignore
-            await player.skip()
-            await interaction.followup.send("Force skip success! Next track should be played now")
-        else:
-            await interaction.followup.send("Not skipping because not enough permissions!")
-
-    async def seek_position(self, player: Player, position: int):
-        """Seek to position in milliseconds. Returns the new position in milliseconds"""
-
-        if not 0 <= position <= player.current.length:  # type: ignore
-            raise ValueError("Invalid position to seek")
-        await player.seek(position)
-
-    async def seek_position_sec(self, player: NamelessPlayer, position: float):
-        """Seek to position in seconds"""
-        await self.seek_position(player, int(position * 1000))
-
-    async def seek_position_format(self, player: NamelessPlayer, position: str):
-        """Seek to position in time format (ex: `position="7:27"` or `position="00:07:27"`)"""
-        time_split = position.split(":")
-        if len(time_split) == 2:
-            real_sec = int(time_split[0]) * 60 + int(time_split[1])
-        elif len(time_split) == 3:
-            real_sec = int(time_split[0]) * 3600 + int(time_split[1]) * 60 + int(time_split[2])
-        else:
-            raise ValueError("Invalid time format")
-
-        await self.seek_position(player, real_sec * 1000)
-
-    async def seek_percent(self, player: NamelessPlayer, percent: int):
-        pos = 0
-        if not 0 <= percent <= 100:
-            raise ValueError("Invalid percent to seek")
-
-        # last check
-        if not player.current:
-            raise ValueError("Not playing anything")
-
-        if percent == 0:
-            pos = 0
-        elif percent == 100:
-            pos = player.current.length
-        else:
-            pos = int(player.current.length * percent / 100)
-
-        await player.seek(pos)
+            await interaction.followup.send(content="Nah, I'd pass.")
 
     @app_commands.command()
     @app_commands.guild_only()
     @app_commands.describe(
-        in_milliseconds="Seek to position in milliseconds",
-        in_seconds="Seek to position in seconds",
-        in_percent="Seek to position in percent",
-        position='Seek to position in time format (ex: `position="7:27"` or `position="00:07:27"`)',
+        milliseconds="Milisecond component of position",
+        seconds="Second component of position",
+        minutes="Minute component of position",
+        hours="Hour component of position",
+        percent="Percentage of track, HAS THE HIGHEST OF PRECEDENCE.",
     )
-    # @app_commands.checks.has_permissions(manage_guild=True)
+    @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.check(MusicCogCheck.bot_must_play_track_not_stream)
     async def seek(
         self,
         interaction: discord.Interaction,
-        in_milliseconds: app_commands.Range[int, 0] = 0,
-        in_seconds: app_commands.Range[int, 0] = 0,
-        in_percent: app_commands.Range[int, 0] = 0,
-        position: str = "0",
+        # https://stackoverflow.com/a/35720280/9151833
+        milliseconds: app_commands.Range[int, 0, 9999999] = 0,
+        seconds: app_commands.Range[int, 0, 59] = 0,
+        minutes: app_commands.Range[int, 0, 59] = 0,
+        hours: app_commands.Range[int, 0] = 0,
+        percent: app_commands.Range[int, 0, 100] = 0,
     ):
         """Seek to position in a track. Leave empty to seek to track beginning."""
         await interaction.response.defer()
 
-        player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
-        track: wavelink.Playable = player.current  # type: ignore
+        player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)
+        track: wavelink.Playable | None = player.current
 
         if not track.is_seekable:
             await interaction.followup.send("This track is not seekable!")
             return
 
         if await NamelessVoteMenu(interaction, player, "seek", track.title).start():
-            if in_seconds:
-                await self.seek_position_sec(player, in_seconds)
-            elif position != "0":
-                await self.seek_position_format(player, position)
-            elif in_percent:
-                await self.seek_percent(player, in_percent)
+            # In miliseconds.
+            final_position = -1
+
+            if percent:
+                final_position = int(track.length * (percent / 100) / 100)
             else:
-                await self.seek_position(player, in_milliseconds)
+                total_seconds = hours * 3600 + minutes * 60 + seconds
+                final_position = total_seconds * 1000 + milliseconds
+
+            await player.seek(final_position)
 
             dbg = CRUD.get_or_create_guild_record(interaction.guild)
-            embed = self.generate_embed_np_from_playable(player, track, interaction.user, dbg)
+            embed = self.generate_embed_from_track(player, track, interaction.user, dbg)
             await interaction.followup.send(content="Seeked", embed=embed)
-
-    toggle = app_commands.Group(name="toggle", description="Commands related to toggling function in player.")
-
-    @toggle.command(name="nowplaying_message")
-    @app_commands.guild_only()
-    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    async def toggle_nowplaying_message(self, interaction: discord.Interaction):
-        """Toggle 'Now playing' message delivery on every non-looping track."""
-        await interaction.response.defer()
-
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
-        player.play_now_allowed = not player.play_now_allowed
-        await interaction.followup.send(f"'Now playing message' is now {'on' if player.play_now_allowed else 'off'}")
-
-    @toggle.command(name="autoplay")
-    @app_commands.guild_only()
-    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(MusicCogCheck.must_not_be_a_stream)
-    async def toggle_autoplay(
-        self,
-        interaction: discord.Interaction,
-    ):
-        """Toggle AutoPlay feature."""
-        await interaction.response.defer()
-
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
-        current_mode = await player.toggle_autoplay()
-
-        await interaction.followup.send(f"AutoPlay is now {'on' if current_mode else 'off'}")
 
     queue = app_commands.Group(name="queue", description="Commands related to queue management.")
 
@@ -708,7 +565,7 @@ class MusicCog(commands.GroupCog, name="music"):
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     async def start(self, interaction: discord.Interaction):
-        """Start playing the queue"""
+        """Start playing the queue."""
         await interaction.response.defer()
 
         player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
@@ -734,35 +591,26 @@ class MusicCog(commands.GroupCog, name="music"):
     @queue.command()
     @app_commands.guild_only()
     @app_commands.describe(
-        url="Playlist URL", reverse="Add playlist in reverse order", shuffle="Add playlist in shuffled order"
+        url="Playlist URL",
+        position="Position to add the playlist, '-1' means at the end of queue",
+        reverse="Process pending playlist in reversed order",
+        shuffle="Process pending playlist in shuffled order",
     )
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     async def add_playlist(
-        self, interaction: discord.Interaction, url: str, reverse: bool = False, shuffle: bool = False
+        self,
+        interaction: discord.Interaction,
+        url: str,
+        position: app_commands.Range[int, -1] = -1,
+        reverse: bool = False,
+        shuffle: bool = False,
     ):
-        """Add playlist to the queue"""
+        """Add playlist to the queue."""
+        await interaction.response.defer()
+
+        player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
+
         await self._play(interaction, url, reverse=reverse, shuffle=shuffle)
-
-    @queue.command()
-    @app_commands.guild_only()
-    @app_commands.describe(
-        url="Playlist URL", reverse="Insert playlist in reverse order", shuffle="Insert playlist in shuffled order"
-    )
-    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    async def insert_playlist(
-        self, interaction: discord.Interaction, url: str, reverse: bool = False, shuffle: bool = False
-    ):
-        """Insert playlist to the queue"""
-        await self._play(interaction, url, action=QueueAction.INSERT, reverse=reverse, shuffle=shuffle)
-
-    @queue.command()
-    @app_commands.guild_only()
-    @app_commands.describe(query="Search query", source="Source to search")
-    @app_commands.choices(source=[Choice(name=k, value=k) for k in SOURCE_MAPPING])
-    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    async def insert(self, interaction: discord.Interaction, query: str, source: str = "youtube"):
-        """Insert track(s) to the front queue"""
-        await self._play(interaction, query, source, action=QueueAction.INSERT)
 
     @queue.command()
     @app_commands.guild_only()
@@ -776,7 +624,7 @@ class MusicCog(commands.GroupCog, name="music"):
             await interaction.followup.send("Wow, such empty queue. Mind adding some cool tracks?")
             return
 
-        embeds = self.generate_embeds_from_playable(player.queue)
+        embeds = self.generate_embeds_from_tracks(player.queue)
         self.bot.loop.create_task(self.show_paginated_tracks(interaction, embeds))
 
     @queue.command()
@@ -794,7 +642,7 @@ class MusicCog(commands.GroupCog, name="music"):
             )
             return
 
-        embeds = self.generate_embeds_from_playable(player.auto_queue, title="Autoplay queue")
+        embeds = self.generate_embeds_from_tracks(player.auto_queue, embed_title="Autoplay queue")
         self.bot.loop.create_task(self.show_paginated_tracks(interaction, embeds))
 
     @queue.command()
@@ -825,17 +673,17 @@ class MusicCog(commands.GroupCog, name="music"):
 
         player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
 
-        q = player.queue._queue
-        index = index - 1
-
-        if index >= len(q):
-            await interaction.followup.send("Oops! You picked the position beyond the queue size.")
+        if not 0 <= index <= player.queue.count:
+            await interaction.followup.send("Oops! You picked the position beyond the queue.")
             return
 
-        deleted_track = q[index]
-        await player.queue.delete(index)
+        index = index - 1
+
+        deleted_track = player.queue.get_at(index)
+        player.queue.delete(index)
+
         await interaction.followup.send(
-            f"Deleted track at position #{index}: **{deleted_track.title}** from **{deleted_track.author}**"
+            f"Deleted track #{index}: **{deleted_track.title}** from **{deleted_track.author}**"
         )
 
     @queue.command()
@@ -851,26 +699,25 @@ class MusicCog(commands.GroupCog, name="music"):
 
         player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
 
-        int_queue = player.queue._queue
-        queue_length = len(int_queue)
+        queue_length = player.queue.count
 
         before = pos
         after = -1
 
-        if mode == "diff":
+        if mode == "difference":
             after = pos + value
-        elif mode == "pos":
+        elif mode == "position":
             after = value
 
-        if not (1 <= before <= queue_length and 1 <= after <= queue_length):
-            await interaction.followup.send(f"Invalid position(s): `{before} -> {after}`")
+        if not (1 <= before <= queue_length and 1 <= after <= queue_length and before <= after):
+            await interaction.followup.send(f"Invalid position(s): `before: {before} -> after: {after}`")
             return
 
-        temp = int_queue[before - 1]
-        del int_queue[before - 1]
-        int_queue.insert(after - 1, temp)
+        track_temp = player.queue.get_at(before - 1)
+        player.queue.delete(before - 1)
+        player.queue.put_at(after - 1, track_temp)
 
-        await interaction.followup.send(f"Moved track #{before} to #{after}")
+        await interaction.followup.send(f"Moved track from #{before} to #{after}")
 
     @queue.command()
     @app_commands.guild_only()
@@ -884,16 +731,8 @@ class MusicCog(commands.GroupCog, name="music"):
 
         player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
 
-        q = player.queue._queue
-        q_length = len(q)
-
-        if not (1 <= pos1 <= q_length and 1 <= pos2 <= q_length):
-            await interaction.followup.send(f"Invalid position(s): ({pos1}, {pos2})")
-            return
-
-        q[pos1 - 1], q[pos2 - 1] = q[pos2 - 1], q[pos1 - 1]
-
-        await interaction.followup.send(f"Swapped track #{pos1} and #{pos2}")
+        player.queue.swap(pos1 - 1, pos2 - 1)
+        await interaction.followup.send(f"Swapped track #{pos1} and #{pos2}.")
 
     @queue.command()
     @app_commands.guild_only()
@@ -921,9 +760,11 @@ class MusicCog(commands.GroupCog, name="music"):
 
         if (
             # The invoker has the MANAGE_GUILD
-            interaction.user.guild_permissions.manage_guild or
+            interaction.user.guild_permissions.manage_guild
+            or
             # Only you & the bot
-            len(player.client.users) == 2 or
+            len(player.client.users) == 2
+            or
             # The voting passes.
             await NamelessVoteMenu(interaction, player, "clear", "queue").start()
         ):
@@ -932,28 +773,13 @@ class MusicCog(commands.GroupCog, name="music"):
         else:
             await interaction.followup.send(content="Nah, I'd pass.")
 
-            return
+    config = app_commands.Group(name="config", description="Configure this music session.")
 
-    @queue.command()
+    @config.command()
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @app_commands.check(MusicCogCheck.queue_has_element)
-    @app_commands.checks.has_permissions(manage_guild=True)
-    async def force_clear(self, interaction: discord.Interaction):
-        """Force clear the queue, guild managers only."""
-        await interaction.response.defer()
-
-        player: Player = cast(Player, interaction.guild.voice_client)  # type: ignore
-        player.queue.clear()
-        await interaction.followup.send("Cleared the queue")
-
-    settings = app_commands.Group(name="settings", description="Settings for the music cog")
-
-    @settings.command()
-    @app_commands.guild_only()
-    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    @app_commands.describe(channel="The channel that you want the now-playing messages to be sent to")
-    async def set_feed_channel(self, interaction: discord.Interaction, channel: discord.TextChannel):
+    @app_commands.describe(channel="The target channel for 'Now playing' message delivery.")
+    async def set_feed_channel(self, interaction: discord.Interaction, channel: discord.abc.Messageable):
         """Change where the now-playing messages are sent."""
         await interaction.response.defer()
 
@@ -965,17 +791,17 @@ class MusicCog(commands.GroupCog, name="music"):
         player.trigger_channel_id = channel.id
         await interaction.followup.send(f"Changed the trigger channel to {channel.mention}")
 
-    @settings.command(name="nowplaying_message")
+    @config.command()
     @app_commands.guild_only()
-    @app_commands.describe(value="Intended 'Now playing' message mode value: 'enable' or 'disable'")
+    @app_commands.describe(value="Desired 'Now playing' message delivery status.")
     @app_commands.choices(
         value=[
-            Choice(name="enable", value=1),
-            Choice(name="disable", value=0),
+            Choice(name="on", value=1),
+            Choice(name="off", value=0),
         ]
     )
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    async def settings_nowplaying_message(self, interaction: discord.Interaction, value: int):
+    async def set_now_playing(self, interaction: discord.Interaction, value: int):
         """Change 'Now playing' message mode."""
         await interaction.response.defer()
 
@@ -983,6 +809,59 @@ class MusicCog(commands.GroupCog, name="music"):
         player.play_now_allowed = bool(value)
 
         await interaction.followup.send(f"Now playing message is now {'on' if player.play_now_allowed else 'off'}")
+
+    @config.command()
+    @app_commands.guild_only()
+    @app_commands.describe(value="Autoplay mode. 'partial' means no auto_queue population.")
+    @app_commands.choices(
+        value=[
+            Choice(name="Enabled - enable autoplay with 'auto_queue' population.", value=0),
+            Choice(name="Partial - enable autoplay WITHOUT 'auto_queue' population.", value=1),
+            Choice(name="Disabled - disable autoplay.", value=2),
+        ]
+    )
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.check(MusicCogCheck.must_not_be_a_stream)
+    async def set_auto_play(
+        self,
+        interaction: discord.Interaction,
+        value: int,
+    ):
+        """Change AutoPlay mode."""
+        await interaction.response.defer()
+
+        player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)
+        player.autoplay = AutoPlayMode(value)
+
+        await interaction.followup.send(f"AutoPlay mode is now {player.autoplay.name}")
+
+    @config.command()
+    @app_commands.guild_only()
+    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
+    @app_commands.describe(mode="Loop mode.")
+    @app_commands.choices(
+        mode=[
+            Choice(name="Disable - disable looping.", value=0),
+            Choice(name="Track - looping the current track.", value=1),
+            Choice(name="All - looping *every* track in the queue.", value=2),
+        ]
+    )
+    async def set_loop(self, interaction: discord.Interaction, mode: int):
+        """Set loop mode."""
+        await interaction.response.defer()
+
+        player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
+        enum_mode = QueueMode(mode)
+
+        def normalize_enum_name(e: QueueMode) -> str:
+            return e.name.lower().replace(" ", "_")
+
+        if player.queue.mode is enum_mode:
+            await interaction.followup.send("Already in this mode")
+            return
+
+        player.queue.mode = enum_mode
+        await interaction.followup.send(f"Loop mode set to {normalize_enum_name(enum_mode)}")
 
 
 async def setup(bot: Nameless):

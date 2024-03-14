@@ -14,6 +14,9 @@ jobs:
   python:
     if: ${{ github.repository == 'team-nameless/nameless-discord-bot' }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
 
     steps:
       - uses: actions/checkout@v4
@@ -63,6 +66,10 @@ jobs:
         with:
           commit_message: "[ci skip] Automated code format commit."
 
+  release:
+    if: ${{ github.repository == 'team-nameless/nameless-discord-bot' }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Create cutting-edge release
         uses: "marvinpinto/action-automatic-releases@latest"
         with:

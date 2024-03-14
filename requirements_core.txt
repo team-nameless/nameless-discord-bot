@@ -2,7 +2,7 @@ SQLAlchemy==2.0.28
 ossapi==3.2.0
 discord.py==2.3.2
 discord.py[speed]==2.3.2
-reactionmenu==3.1.3
+reactionmenu==3.1.5
 Wavelink==3.2.0
 alembic==1.11.1
 packaging==23.1

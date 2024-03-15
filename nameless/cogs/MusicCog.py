@@ -16,7 +16,7 @@ from wavelink import AutoPlayMode, QueueMode
 
 from nameless import Nameless
 from nameless.cogs.checks.MusicCogCheck import MusicCogCheck
-from nameless.customs import NamelessPlayer, QueueAction
+from nameless.customs import NamelessPlayer
 from nameless.customs.ui_kit import NamelessTrackDropdown, NamelessVoteMenu
 from nameless.database import CRUD
 from NamelessConfig import NamelessConfig

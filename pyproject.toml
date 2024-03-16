@@ -6,12 +6,10 @@ exclude = [
     "**/__pycache__",
 ]
 
-reportWildcardImportFromLibrary = "none"
+reportWildcardImportFromLibrary = "warning"
 reportUnnecessaryTypeIgnoreComment = "error"
-reportUnusedImport = "warning"
 reportOptionalMemberAccess = "warning"
 reportOptionalSubscript = "warning"
-reportAttributeAccessIssue = "warning"
 useLibraryCodeForTypes = true
 pythonVersion = "3.11"
 typeCheckingMode = "basic"

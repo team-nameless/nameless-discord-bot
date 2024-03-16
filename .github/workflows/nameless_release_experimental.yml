@@ -3,8 +3,6 @@ name: Create experimental release
 on:
   push:
     branches:
-      - 'feat/**'
-      - 'fix/**'
       - 'main'
 
 permissions:
@@ -69,6 +67,7 @@ jobs:
   release:
     if: ${{ github.repository == 'team-nameless/nameless-discord-bot' }}
     runs-on: ubuntu-latest
+    needs: [ "python" ]
     steps:
       - name: Create cutting-edge release
         uses: "marvinpinto/action-automatic-releases@latest"

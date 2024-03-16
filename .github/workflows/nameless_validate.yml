@@ -1,10 +1,12 @@
 name: Code validation
 
 on:
-  pull_request:
+  push:
     branches:
       - 'feat/**'
       - 'fix/**'
+  pull_request:
+    branches:
       - 'main'
 
 jobs:

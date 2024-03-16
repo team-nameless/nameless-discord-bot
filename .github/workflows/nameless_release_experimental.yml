@@ -65,7 +65,7 @@ jobs:
           commit_message: "[ci skip] Automated code format commit."
 
   release:
-    if: ${{ github.repository == 'team-nameless/nameless-discord-bot' && always() }}
+    if: ${{ github.repository == 'team-nameless/nameless-discord-bot' && !cancelled() }}
     runs-on: ubuntu-latest
     needs: [ "python" ]
     steps:

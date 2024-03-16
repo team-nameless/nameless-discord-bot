@@ -1,7 +1,6 @@
 import asyncio
 import datetime
 import logging
-import random
 from typing import cast
 
 import discord
@@ -75,17 +74,12 @@ class MusicCog(commands.GroupCog, name="music"):
             logging.warning("Player is not connected. Or we have been banned from the guild!")
             return
 
-
         chn = player.guild.get_channel(player.trigger_channel_id)
 
         if not isinstance(chn, discord.abc.Messageable):
             return
 
-        can_send = (
-            not player.current.is_stream
-            and player.play_now_allowed
-            and player.queue.mode is not QueueMode.loop
-        )
+        can_send = not player.current.is_stream and player.play_now_allowed and player.queue.mode is not QueueMode.loop
 
         if not can_send:
             return
@@ -493,7 +487,7 @@ class MusicCog(commands.GroupCog, name="music"):
         position="Position to add the playlist, '0' means at the end of queue.",
         origin="Where to search for your source, defaults to 'YouTube' origin.",
         reverse="Whether to reverse the input track list before adding to queue. Has higher precedence.",
-        shuffle="Whether to shuffle the input track list before adding to queue. Has lower precedence."
+        shuffle="Whether to shuffle the input track list before adding to queue. Has lower precedence.",
     )
     @app_commands.choices(origin=[Choice(name=k, value=k) for k in SOURCE_MAPPING])
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
@@ -505,7 +499,6 @@ class MusicCog(commands.GroupCog, name="music"):
         origin: str = "youtube",
         reverse: bool = False,
         shuffle: bool = False,
-
     ):
         """Add playlist to the queue."""
         await interaction.response.defer()

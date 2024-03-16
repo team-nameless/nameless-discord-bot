@@ -23,6 +23,7 @@ from NamelessConfig import NamelessConfig
 
 __all__ = ["MusicCog"]
 
+# source -> type
 SOURCE_MAPPING = {
     "youtube": wavelink.TrackSource.YouTube,
     "soundcloud": wavelink.TrackSource.SoundCloud,
@@ -74,19 +75,23 @@ class MusicCog(commands.GroupCog, name="music"):
             logging.warning("Player is not connected. Or we have been banned from the guild!")
             return
 
+
         chn = player.guild.get_channel(player.trigger_channel_id)
+
+        if not isinstance(chn, discord.abc.Messageable):
+            return
+
         can_send = (
-            chn is not None
+            not player.current.is_stream
             and player.play_now_allowed
-            and player.should_send_play_now
             and player.queue.mode is not QueueMode.loop
         )
 
         if not can_send:
             return
+        else:
+            dbg = CRUD.get_or_create_guild_record(player.guild)
 
-        dbg = CRUD.get_or_create_guild_record(player.guild)
-        if chn is not None and player.play_now_allowed and player.should_send_play_now:
             embed = self.generate_embed_from_track(
                 player,
                 track,
@@ -94,6 +99,7 @@ class MusicCog(commands.GroupCog, name="music"):
                 dbg,
                 original is not None and original.recommended,
             )
+
             await chn.send(embed=embed)
 
     @commands.Cog.listener()
@@ -252,7 +258,7 @@ class MusicCog(commands.GroupCog, name="music"):
         await interaction.response.defer()
 
         try:
-            await interaction.user.voice.channel.connect(cls=wavelink.Player, self_deaf=True)
+            await cast(discord.Member, interaction.user).voice.channel.connect(cls=wavelink.Player, self_deaf=True)
             await interaction.followup.send("Connected to your voice channel")
 
             player = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
@@ -311,89 +317,6 @@ class MusicCog(commands.GroupCog, name="music"):
 
         pick_list: list[wavelink.Playable] = [tracks[int(val)] for val in vals]
         return pick_list
-
-    async def _play(
-        self,
-        interaction: discord.Interaction,
-        query: str,
-        source: str = "youtube",
-        action: QueueAction = QueueAction.ADD,
-        reverse: bool = False,
-        shuffle: bool = False,
-    ):
-        """
-        Add or insert a track or playlist in the player queue.
-
-        Parameters:
-        ----------
-            interaction (discord.Interaction): The interaction object representing the user's interaction with the bot.
-            query (str): The search query for the track or playlist.
-            source (str, optional): The source of the track or playlist (default: "youtube").
-            action (str, optional): The action to perform on the track or playlist (default: "add").
-            reverse (bool, optional): Whether to reverse the order of the tracks (default: False).
-            shuffle (bool, optional): Whether to shuffle the order of the tracks (default: False).
-
-        Raises:
-        ----------
-            wavelink.LavalinkLoadException: If there is an error loading the track or playlist.
-
-        """
-        await interaction.response.defer()
-
-        player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
-        should_play = not player.playing and not bool(player.queue) and player.auto_play_queue
-        msg: str = ""
-
-        async def add_to_queue(tracks: list[wavelink.Playable] | wavelink.Playlist) -> int:
-            if reverse:
-                if isinstance(tracks, wavelink.Playlist):
-                    tracks = list(reversed(tracks))
-                else:
-                    tracks.reverse()
-
-            if shuffle:
-                random.shuffle(tracks if isinstance(tracks, list) else tracks.tracks)
-
-            if action == QueueAction.ADD:
-                return await player.queue.put_wait(tracks)
-            elif action == QueueAction.INSERT:
-                return await player.queue.insert_wait(tracks)
-            return 0
-
-        try:
-            tracks: wavelink.Search = await wavelink.Playable.search(query, source=SOURCE_MAPPING[source])
-        except wavelink.LavalinkLoadException as err:
-            logging.error(err)
-            await interaction.followup.send("Lavalink error occurred. Please contact the bot owner.")
-            return
-
-        if not tracks:
-            await interaction.followup.send("No results found")
-            return
-
-        if isinstance(tracks, wavelink.Playlist):
-            added = await add_to_queue(tracks)
-            soon_added = tracks
-            msg = f"Added the playlist **`{tracks.name}`** ({added} songs) to the queue."
-        else:
-            soon_added = await self.pick_track_from_results(interaction, tracks)
-
-            if not soon_added:
-                return
-
-            added = await add_to_queue(soon_added)
-            msg = f"{action.name.title()}ed {added} {'songs' if added > 1 else 'song'} to the queue"
-
-        if soon_added:
-            embeds = self.generate_embeds_from_tracks(soon_added, embed_title=msg)
-            self.bot.loop.create_task(self.show_paginated_tracks(interaction, embeds))
-
-        if player.current and player.current.is_stream:
-            should_play = True
-            await player.stop(force=True)
-
-        if should_play:
-            await player.play(player.queue.get(), add_history=False)
 
     @app_commands.command()
     @app_commands.guild_only()
@@ -479,7 +402,7 @@ class MusicCog(commands.GroupCog, name="music"):
 
         if (
             # The invoker has the MANAGE_GUILD
-            interaction.user.guild_permissions.manage_guild
+            cast(discord.Member, interaction.user).guild_permissions.manage_guild
             or
             # Only you & the bot
             len(player.client.users) == 2
@@ -565,36 +488,69 @@ class MusicCog(commands.GroupCog, name="music"):
 
     @queue.command()
     @app_commands.guild_only()
-    @app_commands.describe(query="Search query", source="Source to search")
-    @app_commands.choices(source=[Choice(name=k, value=k) for k in SOURCE_MAPPING])
-    @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    async def add(self, interaction: discord.Interaction, query: str, source: str = "youtube"):
-        """Alias for `play` command."""
-        await self._play(interaction, query, source)
-
-    @queue.command()
-    @app_commands.guild_only()
     @app_commands.describe(
-        url="Playlist URL",
-        position="Position to add the playlist, '-1' means at the end of queue",
-        reverse="Process pending playlist in reversed order",
-        shuffle="Process pending playlist in shuffled order",
+        source="Playlist URL or query search.",
+        position="Position to add the playlist, '0' means at the end of queue.",
+        origin="Where to search for your source, defaults to 'YouTube' origin.",
+        reverse="Whether to reverse the input track list before adding to queue. Has higher precedence.",
+        shuffle="Whether to shuffle the input track list before adding to queue. Has lower precedence."
     )
+    @app_commands.choices(origin=[Choice(name=k, value=k) for k in SOURCE_MAPPING])
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
-    async def add_playlist(
+    async def add(
         self,
         interaction: discord.Interaction,
-        url: str,
-        position: app_commands.Range[int, -1] = -1,
+        source: str,
+        position: app_commands.Range[int, 0] = 0,
+        origin: str = "youtube",
         reverse: bool = False,
         shuffle: bool = False,
+
     ):
         """Add playlist to the queue."""
         await interaction.response.defer()
 
-        player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)  # type: ignore
+        player: NamelessPlayer = cast(NamelessPlayer, interaction.guild.voice_client)
+        msg: str = ""
 
-        await self._play(interaction, url, reverse=reverse, shuffle=shuffle)
+        tracks: wavelink.Search = await wavelink.Playable.search(source, source=SOURCE_MAPPING[origin])
+
+        if not tracks:
+            await interaction.followup.send("No results found.")
+            return
+
+        if isinstance(tracks, wavelink.Playlist):
+            soon_added = tracks.tracks
+            msg = f"Added the playlist **`{tracks.name}`** ({tracks.tracks.count} songs) to the queue."
+        else:
+            soon_added = await self.pick_track_from_results(interaction, tracks)
+
+            if not soon_added:
+                await interaction.followup.send("Nothing will be added.")
+                return
+
+            msg = f"Added {soon_added.count} track(s) to the queue."
+
+        if reverse:
+            player.queue._items = list(reversed(player.queue._items))
+
+        if shuffle:
+            player.queue.shuffle()
+
+        if soon_added:
+            embeds = self.generate_embeds_from_tracks(soon_added, embed_title=msg)
+            self.bot.loop.create_task(self.show_paginated_tracks(interaction, embeds))
+
+        position_to_add = position if position >= 0 else -1
+
+        if position_to_add == 0:
+            await player.queue.put_wait(soon_added)
+        else:
+            position -= 1
+            player.queue._items = player.queue._items[:position] + soon_added + player.queue._items[position:]
+
+        if not player.current:
+            await player.play(player.queue.get())
 
     @queue.command()
     @app_commands.guild_only()
@@ -642,7 +598,9 @@ class MusicCog(commands.GroupCog, name="music"):
             await interaction.followup.send("Seems like autoplay is disabled.")
             return
 
-        await player.repopulate_auto_queue()
+        player.auto_queue.clear()
+        await player._do_recommendation()
+
         await interaction.followup.send("Repopulated autoplay queue!")
 
     @queue.command()
@@ -744,7 +702,7 @@ class MusicCog(commands.GroupCog, name="music"):
 
         if (
             # The invoker has the MANAGE_GUILD
-            interaction.user.guild_permissions.manage_guild
+            cast(discord.Member, interaction.user).guild_permissions.manage_guild
             or
             # Only you & the bot
             len(player.client.users) == 2
@@ -763,7 +721,7 @@ class MusicCog(commands.GroupCog, name="music"):
     @app_commands.guild_only()
     @app_commands.check(MusicCogCheck.user_and_bot_in_voice)
     @app_commands.describe(channel="The target channel for 'Now playing' message delivery.")
-    async def set_feed_channel(self, interaction: discord.Interaction, channel: discord.abc.Messageable):
+    async def set_feed_channel(self, interaction: discord.Interaction, channel: discord.abc.GuildChannel):
         """Change where the now-playing messages are sent."""
         await interaction.response.defer()
 

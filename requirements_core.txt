@@ -7,5 +7,5 @@ Wavelink==3.2.0
 alembic==1.13.1
 packaging==24.0
 aiohttp==3.9.3
-filelock==3.13.1
+filelock==3.13.3
 cachetools==5.3.3

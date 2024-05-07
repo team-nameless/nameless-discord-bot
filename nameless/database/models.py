@@ -5,8 +5,7 @@ from sqlalchemy.sql.sqltypes import *
 __all__ = ["Base", "DiscordObject", "DbUser", "DbGuild"]
 
 
-class Base(DeclarativeBase):
-    ...
+class Base(DeclarativeBase): ...
 
 
 class DiscordObject(Base):

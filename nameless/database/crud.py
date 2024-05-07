@@ -17,6 +17,7 @@ class CRUD:
     """
     Basic database CRUD operations.
     """
+
     engine = create_engine(
         "sqlite:///nameless.db",
         logging_name="nameless",

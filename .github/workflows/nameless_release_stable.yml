@@ -1,4 +1,4 @@
-name: Create stable release
+name: Create stable release (14th and 28th day of the month)
 
 on:
   workflow_dispatch:

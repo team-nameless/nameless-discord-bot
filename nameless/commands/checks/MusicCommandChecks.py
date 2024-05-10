@@ -20,7 +20,9 @@ class MusicCommandChecks(BaseCheck):
 
     @staticmethod
     def bot_must_play_track_not_stream(interaction: discord.Interaction):
-        return MusicCommandChecks.bot_is_playing_something(interaction) and MusicCommandChecks.must_not_be_a_stream(interaction)
+        return MusicCommandChecks.bot_is_playing_something(interaction) and MusicCommandChecks.must_not_be_a_stream(
+            interaction
+        )
 
     @staticmethod
     def bot_in_voice(interaction: discord.Interaction):

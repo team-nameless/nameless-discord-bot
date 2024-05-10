@@ -5,14 +5,12 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
-from nameless.commons import Utility
-from nameless.database import Base
+from nameless.database import Base  # noqa: F401
 from nameless.database.models import *  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-db_url, *and_the_rest = Utility.get_db_url()
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -20,7 +18,6 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-config.set_main_option("sqlalchemy.url", db_url)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
@@ -68,7 +65,7 @@ def run_migrations_online() -> None:
 
     """
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section),  # pyright: ignore
+        config.get_section(config.config_ini_section),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

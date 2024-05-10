@@ -48,18 +48,6 @@ class NamelessStatus:
     CUSTOM_ACTIVITY: NamelessStatusFromCustomActivity = NamelessStatusFromCustomActivity()
 
 
-class NamelessDatabase:
-    # Nameless' database connection string components.
-    # Read more: https://docs.sqlalchemy.org/en/14/core/engines.html#database-urls
-    DIALECT: LiteralString = "sqlite"
-    DRIVER: LiteralString = ""
-    USERNAME: LiteralString = ""
-    PASSWORD: LiteralString = ""
-    HOST: LiteralString = ""
-    PORT: int | None = None
-    NAME: LiteralString = "nameless.db"
-
-
 class NamelessMusicNode:
     def __init__(self, *, host: str, port: int, password: str, secure: bool = False) -> None:
         self.host = host
@@ -123,7 +111,7 @@ class NamelessBlacklist:
 
 class NamelessConfig:
     # Current version of nameless.
-    __version__ = "2.13.0"
+    __version__ = "2.16.0"
 
     # Bot description string
     # Placeholders:
@@ -157,9 +145,6 @@ class NamelessConfig:
 
     # Bot status
     STATUS: NamelessStatus = NamelessStatus()
-
-    # Database configuration
-    DATABASE: NamelessDatabase = NamelessDatabase()
 
     # Music configuration
     # Has both Lavalink & Native configuration fields

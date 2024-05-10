@@ -2,17 +2,6 @@ from nameless.commons import Utility
 
 
 class TestUtility:
-    def test_get_db_url_default(self):
-        (url, dialect, driver, username, password, host, port, db_name) = Utility.get_db_url()
-        assert url == "sqlite:///nameless.db"
-        assert dialect == "sqlite"
-        assert driver == ""
-        assert username == ""
-        assert password == ""
-        assert host == ""
-        assert port is None
-        assert db_name == "nameless.db"
-
     def test_url_check_true(self):
         assert Utility.is_an_url("http://example.com")
         assert Utility.is_an_url("https://discord.com")

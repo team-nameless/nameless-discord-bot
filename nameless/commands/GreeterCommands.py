@@ -6,14 +6,14 @@ from discord import app_commands
 from discord.ext import commands
 
 from nameless import Nameless
-from nameless.cogs.checks import BaseCheck
+from nameless.commands.checks import BaseCheck
 from nameless.customs.ui_kit import NamelessModal
 from nameless.database import CRUD
 
-__all__ = ["GreeterCog"]
+__all__ = ["GreeterCommands"]
 
 
-class GreeterCog(commands.Cog, name="greeter"):
+class GreeterCommands(commands.Cog, name="greeter"):
     def __init__(self, bot: Nameless):
         self.bot = bot
 
@@ -236,10 +236,10 @@ class GreeterCog(commands.Cog, name="greeter"):
 
 
 async def setup(bot: Nameless):
-    await bot.add_cog(GreeterCog(bot))
+    await bot.add_cog(GreeterCommands(bot))
     logging.info("%s cog added!", __name__)
 
 
 async def teardown(bot: Nameless):
-    await bot.remove_cog(GreeterCog.__cog_name__)
+    await bot.remove_cog(GreeterCommands.__cog_name__)
     logging.warning("%s cog removed!", __name__)

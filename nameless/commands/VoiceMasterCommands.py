@@ -9,10 +9,10 @@ import nameless
 from nameless import Nameless
 from nameless.database import CRUD
 
-__all__ = ["VoiceMasterCog"]
+__all__ = ["VoiceMasterCommands"]
 
 
-class VoiceMasterCog(commands.GroupCog, name="voicemaster"):
+class VoiceMasterCommands(commands.GroupCog, name="voicemaster"):
     def __init__(self, bot: nameless.Nameless):
         super().__init__()
         self.bot = bot
@@ -98,10 +98,10 @@ class VoiceMasterCog(commands.GroupCog, name="voicemaster"):
 
 
 async def setup(bot: Nameless):
-    await bot.add_cog(VoiceMasterCog(bot))
+    await bot.add_cog(VoiceMasterCommands(bot))
     logging.info("%s added!", __name__)
 
 
 async def teardown(bot: nameless.Nameless):
-    await bot.remove_cog(VoiceMasterCog.__cog_name__)
+    await bot.remove_cog(VoiceMasterCommands.__cog_name__)
     logging.warning("%s removed!", __name__)

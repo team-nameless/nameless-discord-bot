@@ -93,15 +93,15 @@ class Nameless(commands.AutoShardedBot):
         return None
 
     async def register_all_cogs(self):
-        """Registers all cogs in the `cogs` directory."""
+        """Registers all commands in the `commands` directory."""
         current_path = os.path.dirname(__file__)
         cog_regex = re.compile(r"^(?!_.).*Cog.py")
-        allowed_cogs = list(filter(cog_regex.match, os.listdir(f"{current_path}{os.sep}cogs")))
+        allowed_cogs = list(filter(cog_regex.match, os.listdir(f"{current_path}{os.sep}commands")))
         cogs = NamelessConfig.COGS
 
         for cog_name in cogs:
             fail_reason = ""
-            full_qualified_name = f"nameless.cogs.{cog_name}Cog"
+            full_qualified_name = f"nameless.commands.{cog_name}Cog"
 
             if cog_name + "Cog.py" in allowed_cogs:
                 try:
@@ -117,10 +117,10 @@ class Nameless(commands.AutoShardedBot):
                 shared_variables.rejected_modules.append(full_qualified_name)
 
         # Convert .py files to valid module names
-        loaded_cog_modules = [f"nameless.cogs.{cog.replace('.py', '')}Cog" for cog in cogs]
-        allowed_cog_modules = [f"nameless.cogs.{cog.replace('.py', '')}" for cog in allowed_cogs]
+        loaded_cog_modules = [f"nameless.commands.{cog.replace('.py', '')}Cog" for cog in cogs]
+        allowed_cog_modules = [f"nameless.commands.{cog.replace('.py', '')}" for cog in allowed_cogs]
 
-        # Get the cogs that are not loaded at will (not specified in NamelessConfig
+        # Get the commands that are not loaded at will (not specified in NamelessConfig
         excluded_cogs = list(set(set(allowed_cog_modules) - set(loaded_cog_modules)))
         shared_variables.rejected_modules.extend(excluded_cogs)
 

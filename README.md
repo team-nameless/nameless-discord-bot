@@ -10,7 +10,7 @@ An combination of [original nameless*](https://github.com/FoxeiZ/nameless) and [
 [![Discord](https://img.shields.io/discord/708668574201544745?style=for-the-badge&logo=discord&label=Join%20us%20(VN)&labelColor=hex&color=5865F2)](https://discord.com/channels/708668574201544745/865597156203167754/926665709940011120)
 ![Style](https://img.shields.io/badge/Code_Style-ruff-orange?style=for-the-badge&logo=python)
 
-![Python](https://img.shields.io/badge/Python-3.11-blue?style=for-the-badge&logo=python)
+![Python](https://img.shields.io/badge/Python-3.12-blue?style=for-the-badge&logo=python)
 ![License](https://img.shields.io/github/license/nameless-on-discord/nameless?style=for-the-badge&logo=github&color=white)
 
 <p>For donations:</p>

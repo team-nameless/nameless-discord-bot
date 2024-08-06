@@ -9,14 +9,8 @@ from nameless import Nameless
 from nameless.customs.NamelessCommandTree import NamelessCommandTree
 from NamelessConfig import NamelessConfig
 
-DEBUG_FLAG = "--debug"
-VERSION_FLAG = "--version"
-
 parser = argparse.ArgumentParser(prog="nameless*", description="A Discord bot written on python")
-
-parser.add_argument(DEBUG_FLAG, action="store_true")
-parser.add_argument(VERSION_FLAG, "-v", action="store_true")
-
+parser.add_argument("--debug", action="store_true")
 args = parser.parse_args()
 
 logging.basicConfig(
@@ -26,16 +20,6 @@ logging.basicConfig(
 )
 
 logging.getLogger().name = "nameless"
-
-# If VERSION_FLAG is present, we print the version and update version file, then f- off.
-if args.version:
-    print(NamelessConfig.__version__)
-
-    with FileLock("version.txt.lck"), open("version.txt", "w") as version_file:
-        version_file.write(NamelessConfig.__version__)
-
-    exit(0)
-
 
 intents = discord.Intents.default()
 intents.message_content = NamelessConfig.INTENT.MESSAGE

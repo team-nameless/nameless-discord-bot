@@ -54,44 +54,7 @@ class Nameless(commands.AutoShardedBot):
             use_voice_activation=True,
         )
 
-    async def check_for_updates(self) -> bool | None:
-        """
-        Performs an update check.
-
-        Returns True if at the latest version (or offline), False if falling behind.
-        And None if your version is newer than the latest.
-        """
-        __nameless_upstream_version__ = f"{NamelessConfig.__version__}-offline"
-
-        try:
-            async with (
-                aiohttp.ClientSession() as session,
-                session.get(NamelessConfig.META.UPSTREAM_VERSION_FILE, timeout=10) as response,
-            ):
-                if 200 <= response.status <= 299:
-                    __nameless_upstream_version__ = await response.text()
-                else:
-                    logging.warning("Upstream version fetching failed.")
-                    return True
-        except asyncio.exceptions.TimeoutError:
-            logging.error("Upstream version failed to fetch within 10 seconds.")
-            return True
-
-        nameless_version = version.parse(NamelessConfig.__version__)
-        upstream_version = version.parse(__nameless_upstream_version__)
-
-        logging.info("Current version: %s - Upstream version: %s", nameless_version, upstream_version)
-
-        if nameless_version < upstream_version:
-            logging.warning("You need to update your code!")
-            return False
-        elif nameless_version == upstream_version:
-            logging.info("You are using latest version!")
-            return True
-
-        logging.warning("You are using a version NEWER than original code!")
-        return None
-
+    async def register_all_commands(self):
     async def register_all_cogs(self):
         """Registers all commands in the `commands` directory."""
         current_path = os.path.dirname(__file__)
@@ -137,9 +100,6 @@ class Nameless(commands.AutoShardedBot):
     async def setup_hook(self) -> None:
         logging.info("Constructing internal variables.")
         await self.construct_internals()
-
-        logging.info("Checking for upstream updates.")
-        await self.check_for_updates()
 
         logging.info("Initiating database.")
         from .database import CRUD

@@ -9,11 +9,6 @@ class NamelessMetadata:
     # Any source control link, official repo by default.
     SOURCE_CODE_URL: LiteralString = "https://github.com/team-nameless/nameless-discord-bot"
 
-    # A link leading to the RAW version.txt file, used for upstream version checking
-    UPSTREAM_VERSION_FILE: LiteralString = (
-        "https://raw.githubusercontent.com/team-nameless/nameless-discord-bot/main/version.txt"
-    )
-
     # A link to the bot support server.
     SUPPORT_SERVER_URL: LiteralString = "https://discord.gg/PMVTHDgerp"
 

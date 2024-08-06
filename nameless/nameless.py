@@ -1,15 +1,12 @@
-import asyncio
 import logging
 import os
 import re
 from datetime import datetime
 
-import aiohttp
 import discord
 from discord import Permissions
 from discord.ext import commands
 from discord.ext.commands import errors
-from packaging import version
 from sqlalchemy.orm import close_all_sessions
 
 from NamelessConfig import NamelessConfig

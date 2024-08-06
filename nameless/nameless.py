@@ -6,7 +6,6 @@ from datetime import datetime
 import discord
 from discord import Permissions
 from discord.ext import commands
-from discord.ext.commands import errors
 from sqlalchemy.orm import close_all_sessions
 
 from NamelessConfig import NamelessConfig
@@ -130,22 +129,6 @@ class Nameless(commands.AutoShardedBot):
 
         logging.info("Logged in as %s (ID: %s)", str(self.user), self.user.id)
 
-    async def on_error(self, event_method: str, /, *args, **kwargs) -> None:
-        logging.error(
-            "[%s] We have gone under a crisis!!! (args: [ %s ])",
-            event_method,
-            ", ".join([str(a) for a in list(args)]),
-            stack_info=True,
-            exc_info=True,
-            extra={**kwargs},
-        )
-
-    async def on_command_error(self, ctx: commands.Context, err: errors.CommandError, /) -> None:
-        if not isinstance(err, errors.CommandNotFound):
-            await ctx.send(f"Something went wrong when executing the command:\n```\n{err}\n```")
-
-            logging.exception("[on_command_error] We have gone under a crisis!!!", stack_info=True, exc_info=err)
-
     async def construct_internals(self):
         """
         Constructs internal variables to internals.json
@@ -154,22 +137,6 @@ class Nameless(commands.AutoShardedBot):
 
         shared_variables.nameless_debug_mode = self.is_debug
         shared_variables.nameless_start_time = datetime.utcnow()
-
-    async def is_blacklisted(
-        self, *, user: discord.User | discord.Member | None = None, guild: discord.Guild | None = None
-    ) -> bool:
-        """Check if an entity is blacklisted from using the bot."""
-        # The owners, even if they are in the blacklist, can still use the bot
-        if user and await self.is_owner(user):
-            return False
-
-        if guild and guild.id in NamelessConfig.BLACKLISTS.GUILD_BLACKLIST:
-            return True
-
-        if user and user.id in NamelessConfig.BLACKLISTS.USER_BLACKLIST:
-            return True
-
-        return False
 
     def start_bot(self) -> None:
         """Starts the bot."""

@@ -12,6 +12,7 @@ class DiscordObject(Base):
     Represents anything using Discord ID (known as Snowflake).
     Everything related to a Discord entity MUST inherit from this class.
     """
+
     __abstract__ = True
 
     discord_id: Mapped[int] = mapped_column("DiscordId", BigInteger, primary_key=True)

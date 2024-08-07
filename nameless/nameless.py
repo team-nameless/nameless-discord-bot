@@ -15,6 +15,7 @@ __all__ = ["Nameless"]
 
 class Nameless(commands.AutoShardedBot):
     """Customized Discord sharded bot"""
+
     __version__ = "2.22.1"
 
     def __init__(self, is_debug: bool = False, *args, **kwargs):
@@ -122,7 +123,7 @@ class Nameless(commands.AutoShardedBot):
                 activity=discord.CustomActivity(
                     name=status.CUSTOM_ACTIVITY.CONTENT,
                     emoji=discord.PartialEmoji(name=status.CUSTOM_ACTIVITY.EMOJI),
-                )
+                ),
             )
         except TypeError:
             logging.error("Failed to set custom activity. Falling back to basic activity.")
@@ -131,7 +132,7 @@ class Nameless(commands.AutoShardedBot):
                 activity=discord.Activity(
                     type=status.DISCORD_ACTIVITY.TYPE,
                     name=status.DISCORD_ACTIVITY.NAME,
-                    url=status.DISCORD_ACTIVITY.URL
+                    url=status.DISCORD_ACTIVITY.URL,
                 ),
             )
 

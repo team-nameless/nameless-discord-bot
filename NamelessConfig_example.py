@@ -4,7 +4,6 @@ import discord
 
 __all__ = ["NamelessConfig"]
 
-import wavelink
 from wavelink import Node
 
 

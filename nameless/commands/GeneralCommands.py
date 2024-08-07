@@ -131,7 +131,7 @@ class GeneralCommands(commands.Cog):
                 inline=False,
             )
             .add_field(name="👋 Online since", value=f"<t:{uptime}:F>", inline=False)
-            .add_field(name="ℹ️ Version", value=NamelessConfig.__version__)
+            .add_field(name="ℹ️ Version", value=Nameless.__version__)
             .add_field(
                 name="💻 Runtime",
                 value=f"**discord.py {discord.__version__}** on **{python_implementation()} {python_version()}**",

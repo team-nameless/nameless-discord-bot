@@ -105,9 +105,6 @@ class NamelessBlacklist:
 
 
 class NamelessConfig:
-    # Current version of nameless.
-    __version__ = "2.18.2"
-
     # Bot description string
     # Placeholders:
     # - {github_url} - The link to the bots GitHub repo

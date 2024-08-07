@@ -8,7 +8,8 @@ from sqlalchemy.orm import sessionmaker
 
 from nameless.customs import shared_variables
 
-from .models import Base, DbGuild, DbUser
+from nameless.database.models import DbGuild, DbUser
+from nameless.database.models.base import Base
 
 __all__ = ["CRUD"]
 

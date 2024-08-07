@@ -39,6 +39,7 @@ select = ["E", "F", "UP", "B", "SIM", "I", "Q"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402", "F401", "F403"]
+"alembic/env.py" = ["F401"]
 "nameless/database/models.py" = ["F403", "F405"]
 "nameless/cogs/ModeratorCog.py" = ["E999"]
 "NamelessConfig_example.py" = ["SIM115"]

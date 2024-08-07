@@ -4,6 +4,9 @@ import discord
 
 __all__ = ["NamelessConfig"]
 
+import wavelink
+from wavelink import Node
+
 
 class NamelessMetadata:
     # Any source control link, official repo by default.
@@ -49,28 +52,6 @@ class NamelessMusicNode:
         self.port = port
         self.password = password
         self.secure = secure
-
-
-class NamelessMusicSpotifyClient:
-    # Get it here: https://developer.spotify.com/dashboard/
-    CLIENT_ID: LiteralString = ""
-    CLIENT_SECRET: LiteralString = ""
-
-
-class NamelessMusicSoundcloudClient:
-    # Get it here: https://developers.soundcloud.com/
-    USER_ID: LiteralString = ""
-    CLIENT_ID: LiteralString = ""
-
-
-class NamelessMusic:
-    NODES: list[NamelessMusicNode] = [NamelessMusicNode(host="0.0.0.0", port=2333, password="youshallnotpass")]
-
-    SPOTIFY: NamelessMusicSpotifyClient = NamelessMusicSpotifyClient()
-
-    SOUNDCLOUD: NamelessMusicSoundcloudClient = NamelessMusicSoundcloudClient()
-
-    AUTOLEAVE_TIME: int = 300  # In seconds
 
 
 class NamelessIntent:
@@ -129,18 +110,19 @@ class NamelessConfig:
 
     # Choose which cog(s) to load
     # Available options:    General,
-    #                       Music - requires Lavalink server(s) and NAMELESS.MUSIC.NODES are available,
-    #                       Owner
-    #                       VoiceMaster
+    #                       Music - requires Lavalink server(s),
+    #                       Owner,
+    #                       VoiceMaster,
     #                       Greeter - requires GUILD_MEMBERS gateway intent.
     COGS: list[LiteralString] = ["VoiceMaster", "Owner", "General", "Greeter"]
 
     # Bot status
     STATUS: NamelessStatus = NamelessStatus()
 
-    # Music configuration
-    # Has both Lavalink & Native configuration fields
-    MUSIC: NamelessMusic = NamelessMusic()
+    # Lavalink configuration
+    # If you are unable to host your own Lavalink server,
+    # consider picking one(s) here: https://lavalink.darrennathanael.com
+    LAVALINK_NODES: list[Node] = []
 
     # Configurations for osu! commands
     OSU: NamelessOsu = NamelessOsu()

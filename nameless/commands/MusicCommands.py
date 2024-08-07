@@ -37,12 +37,11 @@ class MusicCommands(commands.GroupCog, name="music"):
 
         self.nodes = [
             wavelink.Node(
-                uri=f"{'https' if node.secure else 'http'}://{node.host}:{node.port}",
+                uri=node.uri,
                 password=node.password,
-                inactive_player_timeout=NamelessConfig.MUSIC.AUTOLEAVE_TIME,
                 client=self.bot,
             )
-            for node in NamelessConfig.MUSIC.NODES
+            for node in NamelessConfig.LAVALINK_NODES
         ]
 
         self.bot.loop.create_task(self.connect_nodes())
@@ -800,7 +799,7 @@ class MusicCommands(commands.GroupCog, name="music"):
 
 
 async def setup(bot: Nameless):
-    if NamelessConfig.MUSIC.NODES:
+    if NamelessConfig.LAVALINK_NODES:
         await bot.add_cog(MusicCommands(bot))
         logging.info("%s cog added!", __name__)
     else:

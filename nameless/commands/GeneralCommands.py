@@ -8,7 +8,7 @@ from discord import NotFound, app_commands
 from discord.ext import commands
 
 from nameless import Nameless
-from nameless.customs import NamelessSharedVariables
+import nameless.runtime_config as runtime_config
 from NamelessConfig import NamelessConfig
 
 __all__ = ["GeneralCommands"]
@@ -96,7 +96,7 @@ class GeneralCommands(commands.Cog):
 
         servers_count = len(interaction.client.guilds)
         total_members_count = sum(len(guild.members) for guild in interaction.client.guilds)
-        uptime = int(NamelessSharedVariables.nameless_start_time.timestamp())
+        uptime = int(runtime_config.launch_time.timestamp())
         bot_inv = discord.utils.oauth_url(
             interaction.client.user.id, permissions=self.bot.needed_permissions, scopes=["bot", "applications.commands"]
         )

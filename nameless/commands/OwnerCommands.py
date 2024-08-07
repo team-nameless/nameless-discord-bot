@@ -15,7 +15,7 @@ from discord.utils import escape_markdown
 
 from nameless import Nameless
 from nameless.commands.checks import BaseCheck
-from nameless.customs import shared_variables
+import nameless.runtime_config as runtime_config
 from nameless.customs.ui_kit import NamelessModal
 
 __all__ = ["OwnerCommands"]
@@ -27,7 +27,7 @@ class OwnerCommands(commands.Cog):
 
     async def pending_module_autocomplete(self, _: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         """An autocomplete for pending (not loaded) modules."""
-        choices = shared_variables.rejected_modules
+        choices = runtime_config.rejected_modules
         return [
             app_commands.Choice(name=choice, value=choice) for choice in choices if current.lower() in choice.lower()
         ]
@@ -36,7 +36,7 @@ class OwnerCommands(commands.Cog):
         self, _: discord.Interaction, current: str
     ) -> list[app_commands.Choice[str]]:
         """An autocomplete for available (loaded) modules."""
-        choices = shared_variables.loaded_modules
+        choices = runtime_config.loaded_modules
         return [
             app_commands.Choice(name=choice, value=choice) for choice in choices if current.lower() in choice.lower()
         ]
@@ -73,8 +73,8 @@ class OwnerCommands(commands.Cog):
         await interaction.response.defer()
 
         await self.bot.load_extension(module_name)
-        shared_variables.loaded_modules.append(module_name)
-        shared_variables.rejected_modules.remove(module_name)
+        runtime_config.loaded_modules.append(module_name)
+        runtime_config.rejected_modules.remove(module_name)
 
         await interaction.followup.send(f"Done loading {module_name}")
 
@@ -88,8 +88,8 @@ class OwnerCommands(commands.Cog):
         await interaction.response.defer()
 
         await self.bot.unload_extension(module_name)
-        shared_variables.loaded_modules.remove(module_name)
-        shared_variables.rejected_modules.append(module_name)
+        runtime_config.loaded_modules.remove(module_name)
+        runtime_config.rejected_modules.append(module_name)
 
         await interaction.followup.send(f"Done unloading {module_name}")
 

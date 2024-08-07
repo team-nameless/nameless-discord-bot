@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import sessionmaker
 
-from nameless.customs import shared_variables
+import nameless.runtime_config as runtime_config
 
 from nameless.database.models import DbGuild, DbUser
 from nameless.database.models.base import Base
@@ -22,7 +22,7 @@ class CRUD:
     engine = create_engine(
         "sqlite:///nameless.db",
         logging_name="nameless",
-        hide_parameters=not shared_variables.nameless_debug_mode,
+        hide_parameters=not runtime_config.is_debug,
         isolation_level="AUTOCOMMIT",
     )
 

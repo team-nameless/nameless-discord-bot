@@ -1,7 +1,6 @@
 import logging
 import os
 import re
-from datetime import datetime
 
 import discord
 from discord import Permissions
@@ -9,8 +8,7 @@ from discord.ext import commands
 from sqlalchemy.orm import close_all_sessions
 
 from NamelessConfig import NamelessConfig
-
-from .customs import shared_variables
+import nameless.runtime_config as runtime_config
 
 __all__ = ["Nameless"]
 
@@ -50,6 +48,8 @@ class Nameless(commands.AutoShardedBot):
             use_voice_activation=True,
         )
 
+        runtime_config.is_debug = self.is_debug
+
     async def register_all_commands(self):
         """Registers all commands in the `commands` directory."""
         current_path = os.path.dirname(__file__)
@@ -64,7 +64,7 @@ class Nameless(commands.AutoShardedBot):
             if cog_name + "Commands.py" in allowed_cogs:
                 try:
                     await self.load_extension(full_qualified_name)
-                    shared_variables.loaded_modules.append(full_qualified_name)
+                    runtime_config.loaded_modules.append(full_qualified_name)
                 except commands.ExtensionError as ex:
                     fail_reason = str(ex)
             else:
@@ -72,7 +72,7 @@ class Nameless(commands.AutoShardedBot):
 
             if fail_reason != "":
                 logging.error("Unable to load %s! %s", cog_name, fail_reason, stack_info=False)
-                shared_variables.rejected_modules.append(full_qualified_name)
+                runtime_config.rejected_modules.append(full_qualified_name)
 
         # Convert .py files to valid module names
         loaded_cog_modules = [f"nameless.commands.{cog.replace('.py', '')}Commands" for cog in cogs]
@@ -80,22 +80,16 @@ class Nameless(commands.AutoShardedBot):
 
         # Get the commands that are not loaded at will (not specified in NamelessConfig
         excluded_cogs = list(set(set(allowed_cog_modules) - set(loaded_cog_modules)))
-        shared_variables.rejected_modules.extend(excluded_cogs)
+        runtime_config.rejected_modules.extend(excluded_cogs)
 
         # An extra set() to exclude dupes.
-        shared_variables.loaded_modules = list(set(shared_variables.loaded_modules))
-        shared_variables.rejected_modules = list(set(shared_variables.rejected_modules))
+        runtime_config.loaded_modules = list(set(runtime_config.loaded_modules))
+        runtime_config.rejected_modules = list(set(runtime_config.rejected_modules))
 
-        logging.debug("Loaded modules: [ %s ]", ", ".join(shared_variables.loaded_modules))
-        logging.debug("Excluded modules: [ %s ]", ", ".join(shared_variables.rejected_modules))
-
-    async def on_shard_ready(self, shard_id: int):
-        logging.info("Shard #%s is ready", shard_id)
+        logging.debug("Loaded modules: [ %s ]", ", ".join(runtime_config.loaded_modules))
+        logging.debug("Excluded modules: [ %s ]", ", ".join(runtime_config.rejected_modules))
 
     async def setup_hook(self) -> None:
-        logging.info("Constructing internal variables.")
-        await self.construct_internals()
-
         logging.info("Initiating database.")
         from .database import CRUD
 
@@ -120,23 +114,27 @@ class Nameless(commands.AutoShardedBot):
         logging.info("Setting presence")
         status = NamelessConfig.STATUS
 
-        await self.change_presence(
-            status=status.STATUS,
-            activity=discord.Activity(
-                type=status.DISCORD_ACTIVITY.TYPE, name=status.DISCORD_ACTIVITY.NAME, url=status.DISCORD_ACTIVITY.URL
-            ),
-        )
+        try:
+            logging.info("Trying to set custom activity.")
+            await self.change_presence(
+                status=status.STATUS,
+                activity=discord.CustomActivity(
+                    name=status.CUSTOM_ACTIVITY.CONTENT,
+                    emoji=discord.PartialEmoji(name=status.CUSTOM_ACTIVITY.EMOJI),
+                )
+            )
+        except TypeError:
+            logging.error("Failed to set custom activity. Falling back to basic activity.")
+            await self.change_presence(
+                status=status.STATUS,
+                activity=discord.Activity(
+                    type=status.DISCORD_ACTIVITY.TYPE,
+                    name=status.DISCORD_ACTIVITY.NAME,
+                    url=status.DISCORD_ACTIVITY.URL
+                ),
+            )
 
         logging.info("Logged in as %s (ID: %s)", str(self.user), self.user.id)
-
-    async def construct_internals(self):
-        """
-        Constructs internal variables to internals.json
-        """
-        logging.info("Populating internals.json")
-
-        shared_variables.nameless_debug_mode = self.is_debug
-        shared_variables.nameless_start_time = datetime.utcnow()
 
     def start_bot(self) -> None:
         """Starts the bot."""

@@ -50,11 +50,6 @@ jobs:
         run: |
           pyright
 
-      - name: Update nameless version file with the --version flag
-        run: |
-          python -m main --version
-          python -m main -v
-
       - name: Delete the dummy config file
         run: |
           rm NamelessConfig.py

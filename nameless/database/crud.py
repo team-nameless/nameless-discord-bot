@@ -7,7 +7,6 @@ from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import sessionmaker
 
 import nameless.runtime_config as runtime_config
-
 from nameless.database.models import DbGuild, DbUser
 from nameless.database.models.base import Base
 

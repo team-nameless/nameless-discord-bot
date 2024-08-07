@@ -7,8 +7,8 @@ import discord
 from discord import NotFound, app_commands
 from discord.ext import commands
 
-from nameless import Nameless
 import nameless.runtime_config as runtime_config
+from nameless import Nameless
 from NamelessConfig import NamelessConfig
 
 __all__ = ["GeneralCommands"]

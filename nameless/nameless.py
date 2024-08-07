@@ -7,8 +7,8 @@ from discord import Permissions
 from discord.ext import commands
 from sqlalchemy.orm import close_all_sessions
 
-from NamelessConfig import NamelessConfig
 import nameless.runtime_config as runtime_config
+from NamelessConfig import NamelessConfig
 
 __all__ = ["Nameless"]
 

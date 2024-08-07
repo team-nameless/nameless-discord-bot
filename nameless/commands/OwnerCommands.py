@@ -13,9 +13,9 @@ from discord import app_commands
 from discord.ext import commands
 from discord.utils import escape_markdown
 
+import nameless.runtime_config as runtime_config
 from nameless import Nameless
 from nameless.commands.checks import BaseCheck
-import nameless.runtime_config as runtime_config
 from nameless.customs.ui_kit import NamelessModal
 
 __all__ = ["OwnerCommands"]

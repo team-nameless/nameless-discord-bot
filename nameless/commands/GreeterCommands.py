@@ -236,6 +236,9 @@ class GreeterCommands(commands.Cog, name="greeter"):
 
 
 async def setup(bot: Nameless):
+    if not bot.intents.members:
+        raise commands.ExtensionFailed(__name__, ValueError("Greeter requires GUILD_MEMBERS gateway intent."))
+
     await bot.add_cog(GreeterCommands(bot))
     logging.info("%s cog added!", __name__)
 

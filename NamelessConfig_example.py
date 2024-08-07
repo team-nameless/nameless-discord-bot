@@ -132,7 +132,7 @@ class NamelessConfig:
     #                       Music - requires Lavalink server(s) and NAMELESS.MUSIC.NODES are available,
     #                       Owner
     #                       VoiceMaster
-    #                       Greeter
+    #                       Greeter - requires GUILD_MEMBERS gateway intent.
     COGS: list[LiteralString] = ["VoiceMaster", "Owner", "General", "Greeter"]
 
     # Bot status

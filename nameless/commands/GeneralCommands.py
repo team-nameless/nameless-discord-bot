@@ -130,7 +130,7 @@ class GeneralCommands(commands.Cog):
                 value=f"Serving {servers_count} servers for a total of {total_members_count} users.",
                 inline=False,
             )
-            .add_field(name="👋 Online since", value=f"<t:{uptime}:F> (UTC+0)", inline=False)
+            .add_field(name="👋 Online since", value=f"<t:{uptime}:F>", inline=False)
             .add_field(name="ℹ️ Version", value=NamelessConfig.__version__)
             .add_field(
                 name="💻 Runtime",

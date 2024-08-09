@@ -116,8 +116,8 @@ class Nameless(commands.AutoShardedBot):
         logging.info("Setting presence")
         status = NamelessConfig.STATUS
 
-        try:
-            logging.info("Trying to set custom activity.")
+        if status.CUSTOM_ACTIVITY.CONTENT != "":
+            logging.info("Setting custom activity.")
             await self.change_presence(
                 status=status.STATUS,
                 activity=discord.CustomActivity(
@@ -125,8 +125,8 @@ class Nameless(commands.AutoShardedBot):
                     emoji=discord.PartialEmoji(name=status.CUSTOM_ACTIVITY.EMOJI),
                 ),
             )
-        except TypeError:
-            logging.error("Failed to set custom activity. Falling back to basic activity.")
+        else:
+            logging.error("Setting activity.")
             await self.change_presence(
                 status=status.STATUS,
                 activity=discord.Activity(

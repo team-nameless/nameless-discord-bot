@@ -16,7 +16,7 @@ __all__ = ["Nameless"]
 class Nameless(commands.AutoShardedBot):
     """Customized Discord sharded bot"""
 
-    __version__ = "2.22.2"
+    __version__ = "2.22.3"
 
     def __init__(self, is_debug: bool = False, *args, **kwargs):
         super().__init__([], *args, **kwargs)

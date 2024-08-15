@@ -44,7 +44,9 @@ try:
     with lock.acquire():
         nameless.start_bot()
 except Timeout as timeout:
-    raise RuntimeError("Another 'nameless*' instance is running.") from timeout
+    raise RuntimeError("Another nameless* instance is running.") from timeout
+except (KeyboardInterrupt, RuntimeError):
+    lock.release()
 finally:
     logging.warning("Releasing lock...")
     lock.release()

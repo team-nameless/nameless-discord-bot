@@ -95,25 +95,18 @@ class MusicCommands(commands.GroupCog, name="music"):
                 "Player is not connected. Or we have been banned from the guild!"
             )
             return
-
-        chn = player.guild.get_channel(player.trigger_channel_id)
-        if not isinstance(chn, discord.abc.Messageable):
-            return
-
-        can_send = (
-            player.play_now_allowed and player.queue.mode is not wavelink.QueueMode.loop
-        )
-
-        if not can_send:
+        if (
+            not player.play_now_allowed
+            and player.queue.mode is not wavelink.QueueMode.loop
+        ):
             return
 
         embed = self.generate_embed_from_track(player, track, self.bot.user)
-
-        await chn.send(embed=embed)
+        await player.trigger_channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_wavelink_inactive_player(self, player: CustomPlayer):
-        await player.channel.send("I have been inactive for a while. Goodbye!")
+        await player.trigger_channel.send("I have been inactive for a while. Goodbye!")
         await player.disconnect()
 
     @commands.Cog.listener()
@@ -287,7 +280,7 @@ class MusicCommands(commands.GroupCog, name="music"):
 
         if not ctx.guild.voice_client:
             if auto_connect:
-                await self.connect.invoke(ctx)
+                await self.connect(ctx)
             else:
                 await ctx.send("I'm not connected to a voice channel.")
                 return None
@@ -319,7 +312,7 @@ class MusicCommands(commands.GroupCog, name="music"):
             if channel is not None:
                 await channel.connect(self_deaf=True, cls=CustomPlayer)
                 voice_client = cast(CustomPlayer, ctx.guild.voice_client)  # pyright: ignore[reportOptionalMemberAccess]
-                voice_client.trigger_channel_id = ctx.channel.id  # type: ignore
+                voice_client.trigger_channel = ctx.channel
                 # voice_client.sponsorblock_settings = (  # type: ignore
                 #     await SponsorBlockSettings.get_from_database(ctx.guild)
                 # )
@@ -446,6 +439,9 @@ class MusicCommands(commands.GroupCog, name="music"):
             return
 
         await player.pause(True)
+        await ctx.send(
+            embed=self.generate_embed_from_track(player, player.current, ctx.author)
+        )
 
     @commands.hybrid_command()
     @app_commands.guild_only()
@@ -458,6 +454,9 @@ class MusicCommands(commands.GroupCog, name="music"):
             return
 
         await player.pause(False)
+        await ctx.send(
+            embed=self.generate_embed_from_track(player, player.current, ctx.author)
+        )
 
     @commands.hybrid_command()
     @app_commands.guild_only()
@@ -483,7 +482,6 @@ class MusicCommands(commands.GroupCog, name="music"):
             return
 
         await player.skip()
-        await ctx.send("Skipped.")
 
     @commands.hybrid_command()
     @app_commands.guild_only()

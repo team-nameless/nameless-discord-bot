@@ -7,9 +7,8 @@ from discord.ext import commands
 from prisma.models import PlayerSettings
 
 from nameless import Nameless
-from nameless.custom.ui.dropdown import CustomDropdown
-
-from .base import BaseSettingsView
+from nameless.custom.player.settings.base import BaseSettingsView
+from nameless.custom.ui.dropdown import NamelessDropdown
 
 
 @final
@@ -21,7 +20,7 @@ class SponsorBlockFlags:
 
 
 @final
-class SettingsDropdown(CustomDropdown):
+class SettingsDropdown(NamelessDropdown):
     def __init__(self):
         super().__init__(custom_id="settings_dropdown", placeholder="Select a setting")
 

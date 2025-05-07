@@ -2,7 +2,7 @@ from typing import cast, override
 
 import discord
 
-from nameless.custom.ui import CustomDropdown
+from nameless.custom.ui import NamelessDropdown
 
 
 class BaseSettingsView(discord.ui.View):
@@ -17,5 +17,5 @@ class BaseSettingsView(discord.ui.View):
     ) -> bool:
         return interaction.user == self.author
 
-    def get_dropdown(self) -> CustomDropdown:
-        return cast(CustomDropdown, self.children[0])
+    def get_dropdown(self) -> NamelessDropdown:
+        return cast(NamelessDropdown, self.children[0])

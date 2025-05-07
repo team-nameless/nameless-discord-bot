@@ -1,7 +1,7 @@
 import asyncio
 import datetime
 import logging
-from typing import cast, final
+from typing import Literal, cast, final, overload
 
 import discord
 import wavelink
@@ -260,14 +260,42 @@ class MusicCommands(commands.GroupCog, name="music"):
     async def show_paginated_tracks(
         ctx: commands.Context[Nameless], embeds: list[discord.Embed]
     ):
-        view_menu = ViewMenu(ctx, timeout=60)
+        view_menu = NamelessPaginatedView(ctx, timeout=60)
         view_menu.add_pages(embeds)
-
-        view_menu.add_button(ViewButton.back())  # pyright: ignore[reportUnknownMemberType]
-        view_menu.add_button(ViewButton.end())  # pyright: ignore[reportUnknownMemberType]
-        view_menu.add_button(ViewButton.next())  # pyright: ignore[reportUnknownMemberType]
-
+        view_menu.add_predefined_buttons()
         await view_menu.start()
+
+    @overload
+    async def ensure_guild_voice_client(
+        self, ctx: commands.Context[Nameless]
+    ) -> CustomPlayer: ...
+    @overload
+    async def ensure_guild_voice_client(
+        self, ctx: commands.Context[Nameless], *, auto_connect: Literal[False]
+    ) -> CustomPlayer | None: ...
+    @overload
+    async def ensure_guild_voice_client(
+        self, ctx: commands.Context[Nameless], *, auto_connect: Literal[True]
+    ) -> CustomPlayer: ...
+
+    async def ensure_guild_voice_client(
+        self, ctx: commands.Context[Nameless], *, auto_connect: bool = True
+    ) -> CustomPlayer | None:
+        if not ctx.guild:
+            await ctx.send("This command can only be used in a guild.")
+            raise
+
+        if not ctx.guild.voice_client:
+            if auto_connect:
+                await self.connect.invoke(ctx)
+            else:
+                await ctx.send("I'm not connected to a voice channel.")
+                return None
+
+        if not isinstance(ctx.guild.voice_client, CustomPlayer):
+            raise ValueError("The voice client is not a CustomPlayer instance.")
+
+        return ctx.guild.voice_client
 
     @commands.hybrid_command()
     @app_commands.describe(channel="Which channel to connect to.")
@@ -303,10 +331,9 @@ class MusicCommands(commands.GroupCog, name="music"):
 
     @commands.hybrid_command(aliases=["dc", "leave"])
     @app_commands.guild_only()
-    @bot_in_voice()
     async def disconnect(self, ctx: commands.Context[Nameless]) -> None:
         """Disconnect from the voice channel."""
-        player: CustomPlayer = cast(CustomPlayer, ctx.guild.voice_client)  # pyright: ignore[reportOptionalMemberAccess]
+        player = await self.ensure_guild_voice_client(ctx, auto_connect=True)
 
         await player.disconnect()
         await ctx.send("Disconnected.")
@@ -369,7 +396,7 @@ class MusicCommands(commands.GroupCog, name="music"):
         """Play a song."""
         await ctx.defer()
 
-        player: CustomPlayer = cast(CustomPlayer, ctx.guild.voice_client)  # pyright: ignore[reportOptionalMemberAccess]
+        player = await self.ensure_guild_voice_client(ctx, auto_connect=True)
         msg: str = ""
 
         tracks: wavelink.Search = await wavelink.Playable.search(
@@ -382,10 +409,7 @@ class MusicCommands(commands.GroupCog, name="music"):
 
         if isinstance(tracks, wavelink.Playlist):
             soon_added = tracks.tracks
-            msg = ("Added the playlist **`%s`** (%i songs) to the queue.") % (
-                tracks.name,
-                len(tracks.tracks),
-            )
+            msg = f"Added the playlist **`{tracks.name}`** ({len(tracks.tracks)} songs) to the queue."
         else:
             soon_added = await self.pick_track_from_results(ctx, tracks)
             if not soon_added:
@@ -413,10 +437,9 @@ class MusicCommands(commands.GroupCog, name="music"):
 
     @commands.hybrid_command()
     @app_commands.guild_only()
-    @bot_in_voice()
     async def pause(self, ctx: commands.Context[Nameless]) -> None:
         """Pause the current song."""
-        player: CustomPlayer = cast(CustomPlayer, ctx.guild.voice_client)  # pyright: ignore[reportOptionalMemberAccess]
+        player = await self.ensure_guild_voice_client(ctx, auto_connect=True)
 
         if player.paused:
             await ctx.send("The player is already paused.")
@@ -426,10 +449,9 @@ class MusicCommands(commands.GroupCog, name="music"):
 
     @commands.hybrid_command()
     @app_commands.guild_only()
-    @bot_in_voice()
     async def resume(self, ctx: commands.Context[Nameless]) -> None:
         """Resume the current song."""
-        player: CustomPlayer = cast(CustomPlayer, ctx.guild.voice_client)  # pyright: ignore[reportOptionalMemberAccess]
+        player = await self.ensure_guild_voice_client(ctx, auto_connect=True)
 
         if not player.paused:
             await ctx.send("The player is already playing.")
@@ -439,10 +461,9 @@ class MusicCommands(commands.GroupCog, name="music"):
 
     @commands.hybrid_command()
     @app_commands.guild_only()
-    @bot_in_voice()
     async def stop(self, ctx: commands.Context[Nameless]) -> None:
         """Stop and pause the current song."""
-        player: CustomPlayer = cast(CustomPlayer, ctx.guild.voice_client)  # pyright: ignore[reportOptionalMemberAccess]
+        player = await self.ensure_guild_voice_client(ctx, auto_connect=True)
 
         if not player.playing:
             await ctx.send("The player is already stopped.")
@@ -453,10 +474,9 @@ class MusicCommands(commands.GroupCog, name="music"):
 
     @commands.hybrid_command()
     @app_commands.guild_only()
-    @bot_in_voice()
     async def skip(self, ctx: commands.Context[Nameless]) -> None:
         """Skip the current song."""
-        player: CustomPlayer = cast(CustomPlayer, ctx.guild.voice_client)  # pyright: ignore[reportOptionalMemberAccess]
+        player = await self.ensure_guild_voice_client(ctx, auto_connect=True)
 
         if not player.playing:
             await ctx.send("The player is not playing.")
@@ -467,10 +487,9 @@ class MusicCommands(commands.GroupCog, name="music"):
 
     @commands.hybrid_command()
     @app_commands.guild_only()
-    @bot_in_voice()
     async def queue(self, ctx: commands.Context[Nameless]) -> None:
         """Show the current queue."""
-        player: CustomPlayer = cast(CustomPlayer, ctx.guild.voice_client)  # pyright: ignore[reportOptionalMemberAccess]
+        player = await self.ensure_guild_voice_client(ctx, auto_connect=True)
 
         if not player.queue and not player.auto_queue:
             await ctx.send("The queue is empty.")
@@ -486,10 +505,9 @@ class MusicCommands(commands.GroupCog, name="music"):
 
     @commands.hybrid_command(aliases=["np", "nowplaying", "playing"])
     @app_commands.guild_only()
-    @bot_in_voice()
     async def current(self, ctx: commands.Context[Nameless]) -> None:
         """Show the current song."""
-        player: CustomPlayer = cast(CustomPlayer, ctx.guild.voice_client)  # pyright: ignore[reportOptionalMemberAccess]
+        player = await self.ensure_guild_voice_client(ctx, auto_connect=True)
         track: wavelink.Playable | None = player.current  # type: ignore
 
         if not track:
@@ -500,10 +518,9 @@ class MusicCommands(commands.GroupCog, name="music"):
 
     @commands.hybrid_command(aliases=["random"])
     @app_commands.guild_only()
-    @bot_in_voice()
     async def shuffle(self, ctx: commands.Context[Nameless]) -> None:
         """Shuffle the current queue."""
-        player: CustomPlayer = cast(CustomPlayer, ctx.guild.voice_client)  # pyright: ignore[reportOptionalMemberAccess]
+        player = await self.ensure_guild_voice_client(ctx, auto_connect=True)
 
         if not player.queue:
             await ctx.send("The queue is empty.")
@@ -513,10 +530,9 @@ class MusicCommands(commands.GroupCog, name="music"):
 
     @commands.hybrid_command()
     @app_commands.guild_only()
-    @bot_in_voice()
     async def remove(self, ctx: commands.Context[Nameless], index: int) -> None:
         """Remove a song from the queue."""
-        player: CustomPlayer = cast(CustomPlayer, ctx.guild.voice_client)  # pyright: ignore[reportOptionalMemberAccess]
+        player = await self.ensure_guild_voice_client(ctx, auto_connect=True)
 
         if not player.queue:
             await ctx.send("The queue is empty.")
@@ -530,10 +546,9 @@ class MusicCommands(commands.GroupCog, name="music"):
 
     @commands.hybrid_command()
     @app_commands.guild_only()
-    @bot_in_voice()
     async def clear(self, ctx: commands.Context[Nameless]) -> None:
         """Clear the queue."""
-        player: CustomPlayer = cast(CustomPlayer, ctx.guild.voice_client)  # pyright: ignore[reportOptionalMemberAccess]
+        player = await self.ensure_guild_voice_client(ctx, auto_connect=True)
 
         if not player.queue:
             await ctx.send("The queue is empty.")
@@ -544,10 +559,9 @@ class MusicCommands(commands.GroupCog, name="music"):
     @commands.hybrid_command(aliases=["vol"])
     @app_commands.guild_only()
     @app_commands.describe(volume="Volume to set, between 0 and 200.")
-    @bot_in_voice()
     async def volume(self, ctx: commands.Context[Nameless], volume: int) -> None:
         """Change the volume."""
-        player: CustomPlayer = cast(CustomPlayer, ctx.guild.voice_client)  # pyright: ignore[reportOptionalMemberAccess]
+        player = await self.ensure_guild_voice_client(ctx, auto_connect=True)
 
         if volume < 0 or volume > 200:
             await ctx.send("Invalid volume.")
@@ -579,10 +593,9 @@ class MusicCommands(commands.GroupCog, name="music"):
 
     @commands.hybrid_command()
     @app_commands.guild_only()
-    @bot_in_voice()
     async def seek(self, ctx: commands.Context[Nameless], *, flags: SeekFlags) -> None:
         """Seek to a position in the current song."""
-        player: CustomPlayer = cast(CustomPlayer, ctx.guild.voice_client)  # pyright: ignore[reportOptionalMemberAccess]
+        player = await self.ensure_guild_voice_client(ctx, auto_connect=True)
         track: wavelink.Playable | None = player.current  # type: ignore
 
         if not player or not track:
@@ -612,12 +625,11 @@ class MusicCommands(commands.GroupCog, name="music"):
 
     @commands.hybrid_command()
     @app_commands.guild_only()
-    @bot_in_voice()
     async def repopulate_autoqueue(self, ctx: commands.Context[Nameless]):
         """Repopulate autoplay queue based on current song(s)."""
         await ctx.defer()
 
-        player: CustomPlayer = cast(CustomPlayer, ctx.guild.voice_client)  # pyright: ignore[reportOptionalMemberAccess]
+        player = await self.ensure_guild_voice_client(ctx, auto_connect=True)
 
         if player.autoplay != wavelink.AutoPlayMode.enabled:
             await ctx.send("Seems like autoplay is disabled.")
@@ -636,12 +648,11 @@ class MusicCommands(commands.GroupCog, name="music"):
             for k in wavelink.AutoPlayMode
         ]
     )
-    @bot_in_voice()
     async def autoplay(
         self, ctx: commands.Context[Nameless], mode: wavelink.AutoPlayMode | None = None
     ):
         """Change autoplay mode."""
-        player: CustomPlayer = cast(CustomPlayer, ctx.guild.voice_client)  # pyright: ignore[reportOptionalMemberAccess]
+        player = await self.ensure_guild_voice_client(ctx, auto_connect=True)
 
         if mode is None:
             await ctx.send(f"Autoplay mode is currently set to {player.autoplay.name}.")

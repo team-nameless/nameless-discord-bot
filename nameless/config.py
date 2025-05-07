@@ -14,6 +14,10 @@ class NamelessInfo(TypedDict):
     is_shutting_down: bool
 
 
+class NamelessCommand(TypedDict):
+    prefixes: list[str]
+
+
 class NamelessBlacklist(TypedDict):
     users: list[int]
     guilds: list[int]
@@ -29,6 +33,7 @@ class WavelinkNode(TypedDict):
 
 class NamelessConfig(TypedDict):
     nameless: NamelessInfo
+    command: NamelessCommand
     blacklist: NamelessBlacklist
     wavelinks: list[WavelinkNode]
 

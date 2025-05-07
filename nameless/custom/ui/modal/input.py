@@ -9,7 +9,7 @@ V = TypeVar("V", bound=str | int | float | None)
 __all__ = ["NamelessModalInput"]
 
 
-class NamelessModalInput(ui.TextInput[ui.Modal], Generic[V]):
+class NamelessModalInput(Generic[V], ui.TextInput[ui.Modal]):
     def __init__(
         self,
         label: str,

@@ -4,12 +4,12 @@ import discord
 
 from nameless.custom.ui.modal.input import NamelessModalInput
 
-V = TypeVar("V", bound=str | int | float | None, covariant=True)
+V = TypeVar("V", bound=str | int | float | None)
 
 __all__ = ["NamelessModal"]
 
 
-class NamelessModal(discord.ui.Modal, Generic[V]):
+class NamelessModal(Generic[V], discord.ui.Modal):
     def __init__(self, title: str) -> None:
         super().__init__(timeout=30, title=title)
 

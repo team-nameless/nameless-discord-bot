@@ -97,6 +97,15 @@ wheels = [
 ]
 
 [[package]]
+name = "async-timeout"
+version = "5.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a5/ae/136395dfbfe00dfc94da3f3e136d0b13f394cba8f4841120e34226265780/async_timeout-5.0.1.tar.gz", hash = "sha256:d9321a7a3d5a6a5e187e824d2fa0793ce379a202935782d555d6e9d2735677d3", size = 9274 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fe/ba/e2081de779ca30d473f21f5b30e0e737c438205440784c7dfc81efc2b029/async_timeout-5.0.1-py3-none-any.whl", hash = "sha256:39e3809566ff85354557ec2398b55e096c8364bacac9405a7a1fa429e77fe76c", size = 6233 },
+]
+
+[[package]]
 name = "attrs"
 version = "24.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -468,6 +477,7 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "requests" },
     { name = "uv" },
+    { name = "wavelink" },
 ]
 
 [package.dev-dependencies]
@@ -486,6 +496,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = "==1.0.1" },
     { name = "requests", specifier = "==2.32.3" },
     { name = "uv", specifier = "==0.5.24" },
+    { name = "wavelink", specifier = ">=3.4.1" },
 ]
 
 [package.metadata.requires-dev]
@@ -757,6 +768,22 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/bd/9f/8260e02540d8982e5ecc5e6174f030e8e25ea845e43d25dbe566ceee6af3/uv-0.5.24-py3-none-musllinux_1_1_x86_64.whl", hash = "sha256:6640a2cb919cc04c0fb599d5630a579bacfa8166b928b7e49e3b71280f30f5d9", size = 16296687 },
     { url = "https://files.pythonhosted.org/packages/24/ca/c638ff0f49f0d971a1fa459f500abd5ac8d7472491ba1b1b6da95c5c7ea5/uv-0.5.24-py3-none-win32.whl", hash = "sha256:ecb71bcada372274db34bd32f6a9214974b26b6cdc3145a26d07a710f2ea7f18", size = 15430745 },
     { url = "https://files.pythonhosted.org/packages/fc/0e/5a2cd5519e78528c99f7fe80514f03bf4bfbd51966bf8b55bd746c6e8675/uv-0.5.24-py3-none-win_amd64.whl", hash = "sha256:9059775b0c74a68799f3e665a08c429f527d3cdf61c15227992cfff75e31c327", size = 16826614 },
+]
+
+[[package]]
+name = "wavelink"
+version = "3.4.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "async-timeout" },
+    { name = "discord-py" },
+    { name = "typing-extensions" },
+    { name = "yarl" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f7/4d/fc59d7be75d35892e124d19a1cd3dc2fa7346e37224e9f5680f7fbec3fe4/wavelink-3.4.1.tar.gz", hash = "sha256:0aa2db5e4e7d6b0702a69e4cdb7161b447b7a5735955bce5bbadb28235c5478e", size = 48734 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fb/e4/4b02900a3b16a679b44481d4a226dba097a4fc51bcc899098a79d642e050/wavelink-3.4.1-py3-none-any.whl", hash = "sha256:90f7e29b262b726417ce8f02d2725935a018e4938825289683a9548609206a2b", size = 64811 },
 ]
 
 [[package]]

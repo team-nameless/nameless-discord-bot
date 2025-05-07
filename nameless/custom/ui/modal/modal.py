@@ -17,7 +17,7 @@ class NamelessModal(discord.ui.Modal, Generic[V]):
     async def on_submit(self, interaction: discord.Interaction[discord.Client]) -> None:
         await interaction.response.defer()
         for child in self.children:
-            if isinstance(child, CustomInput):
+            if isinstance(child, NamelessModalInput):
                 await child.callback(interaction)
         self.stop()
 

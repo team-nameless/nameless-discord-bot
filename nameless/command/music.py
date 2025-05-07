@@ -9,15 +9,14 @@ from discord import app_commands
 from discord.ext import commands
 from discord.utils import escape_markdown
 
-from ..config import nameless_config
-from ..custom.player import CustomPlayer, TrackDropdown
-from ..custom.player.settings import sponsorblock_make
-from ..custom.player.settings.filters import filter_make
+from nameless.config import nameless_config
+from nameless.custom.player import CustomPlayer, TrackDropdown
+from nameless.custom.player.settings import sponsorblock_make
+from nameless.custom.player.settings.filters import filter_make
 
 # from ..custom.player.settings.sponsorblock_settings import SponsorBlockSettings
-from ..custom.ui import ViewButton, ViewMenu
-from ..nameless import Nameless
-from .check import bot_in_voice
+from nameless.custom.ui import NamelessPaginatedView
+from nameless.nameless import Nameless
 
 __all__ = ["MusicCommands"]
 
@@ -60,7 +59,7 @@ class MusicCommands(commands.GroupCog, name="music"):
     async def on_command_error(
         self, ctx: commands.Context[Nameless], error: commands.CommandError
     ):
-        if isinstance(error, (commands.CheckFailure, commands.UserInputError)):
+        if isinstance(error, commands.CheckFailure | commands.UserInputError):
             logging.warning(
                 '%s: command_name=%s args=%s kwargs=%s author=%s error="%s"',
                 error.__class__.__name__,
@@ -149,7 +148,7 @@ class MusicCommands(commands.GroupCog, name="music"):
         embeds: list[discord.Embed] = []
         track_list: list[wavelink.Playable] = []
 
-        if isinstance(tracks, (wavelink.Queue, wavelink.Playlist)):
+        if isinstance(tracks, wavelink.Queue | wavelink.Playlist):
             track_list = list(tracks)
         elif isinstance(tracks, list):
             track_list = tracks
@@ -666,14 +665,14 @@ class MusicCommands(commands.GroupCog, name="music"):
     @commands.hybrid_command()
     @app_commands.guild_only()
     async def sponsorblock(self, ctx: commands.Context[Nameless]):
-        """Settings for sponsorblock."""
+        """Sponsorblock setting."""
         # Making a menu to control sponsorblock settings.
         await sponsorblock_make(ctx)
 
     @commands.hybrid_command()
     @app_commands.guild_only()
     async def filter(self, ctx: commands.Context[Nameless]):
-        """Settings for filters."""
+        """Audio filters setting."""
         # Making a menu to control filter settings.
         await filter_make(ctx)
 
@@ -702,7 +701,7 @@ async def setup(bot: Nameless):
         autoupdate_lavalink = True
 
     if autostart_lavalink:
-        from ..custom.player.lavalink import main as lavalink_main
+        from nameless.custom.player.lavalink import main as lavalink_main
 
         await lavalink_main(bot.loop, autoupdate_lavalink)
 
@@ -713,7 +712,7 @@ async def setup(bot: Nameless):
 async def teardown(bot: Nameless):
     for node in nameless_config.get("wavelinks", {}):
         if node.get("auto_start", False) is True:
-            from ..custom.player.lavalink import stop as lavalink_stop
+            from nameless.custom.player.lavalink import stop as lavalink_stop
 
             logging.warning("Stop default Lavalink node...")
             await lavalink_stop()

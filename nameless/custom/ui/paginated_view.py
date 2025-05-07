@@ -47,40 +47,48 @@ class NamelessPaginatedView(discord.ui.View):
         return self._current_message
 
     @message.setter
-    def message(self, value: discord.Message):
+    def message(self, value: discord.Message) -> None:
         self._current_message = value
 
     def add_pages(self, pages: Iterable[discord.Embed]) -> None:
         self.pages.extend(pages)
 
-    def add_button(self, button: Button[Self]):
+    def add_predefined_buttons(self) -> None:
+        self.add_item(NavigationButton.back())
+        self.add_item(NavigationButton.next())
+        self.add_item(NavigationButton.go_to_first_page())
+        self.add_item(NavigationButton.go_to_last_page())
+        self.add_item(NavigationButton.go_to_page())
+        self.add_item(NavigationButton.end())
+
+    def add_button(self, button: Button[Self]) -> None:
         self.add_item(button)
 
-    async def next_page(self):
+    async def next_page(self) -> None:
         if self.current_page + 1 >= len(self.pages):
             self.current_page = 0
         else:
             self.current_page += 1
         await self.message.edit(embed=self.pages[self.current_page], view=self)
 
-    async def previous_page(self):
+    async def previous_page(self) -> None:
         if self.current_page - 1 < 0:
             self.current_page = len(self.pages) - 1
         else:
             self.current_page -= 1
         await self.message.edit(embed=self.pages[self.current_page], view=self)
 
-    async def go_to_first_page(self):
+    async def go_to_first_page(self) -> None:
         await self.message.edit(embed=self.pages[0], view=self)
 
-    async def go_to_last_page(self):
+    async def go_to_last_page(self) -> None:
         await self.message.edit(embed=self.pages[-1], view=self)
 
-    async def go_to_page(self, page: int):
+    async def go_to_page(self, page: int) -> None:
         self.current_page = page
         await self.ctx.send(embed=self.pages[self.current_page], view=self)
 
-    async def start(self):
+    async def start(self) -> bool:
         self.message = await self.ctx.send(embed=self.pages[0], view=self)
         return await self.wait()
 

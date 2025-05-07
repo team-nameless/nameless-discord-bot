@@ -3,14 +3,13 @@ import logging
 import discord
 import wavelink
 
-from nameless.custom.ui.modal import BaseCustomModal
-
-from ..base import BaseSettingsView
+from nameless.custom.player.settings.base import BaseSettingsView
+from nameless.custom.ui.modal import NamelessModal
 
 __all__ = ["FilterModal", "FilterView"]
 
 
-class FilterModal(BaseCustomModal[int]):
+class FilterModal(NamelessModal[int]):
     def __init__(self, title: str, filters: wavelink.Filters) -> None:
         super().__init__(title)
 

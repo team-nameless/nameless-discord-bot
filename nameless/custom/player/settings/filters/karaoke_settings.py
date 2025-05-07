@@ -9,10 +9,9 @@ from discord.ext import commands
 from wavelink.types.filters import Karaoke as KaraokePayload
 
 from nameless import Nameless
-from nameless.custom.ui import CustomDropdown
-from nameless.custom.ui.modal import CustomInput
-
-from .base import FilterModal, FilterView
+from nameless.custom.player.settings.filters.base import FilterModal, FilterView
+from nameless.custom.ui import NamelessDropdown
+from nameless.custom.ui.modal import NamelessModalInput
 
 
 class KaraokeFlags(Enum):
@@ -28,7 +27,7 @@ class LevelView(FilterModal):
     @override
     def on_create(self):
         self.add_item(
-            CustomInput(
+            NamelessModalInput(
                 label="Level", custom_id="level_input", default="0", convert=int
             )
         )
@@ -38,7 +37,7 @@ class MonoLevelView(FilterModal):
     @override
     def on_create(self):
         self.add_item(
-            CustomInput(
+            NamelessModalInput(
                 label="Mono Level",
                 custom_id="mono_level_input",
                 default="0",
@@ -51,7 +50,7 @@ class FilterBandView(FilterModal):
     @override
     def on_create(self):
         self.add_item(
-            CustomInput(
+            NamelessModalInput(
                 label="Filter Band",
                 custom_id="filter_band_input",
                 default="0",
@@ -64,7 +63,7 @@ class FilterWidthView(FilterModal):
     @override
     def on_create(self):
         self.add_item(
-            CustomInput(
+            NamelessModalInput(
                 label="Filter Width",
                 custom_id="filter_width_input",
                 default="0",
@@ -109,7 +108,7 @@ OPTION_MAPPING: dict[KaraokeFlags, OptionsType] = {
 
 
 @final
-class KaraokeSettingDropdown(CustomDropdown):
+class KaraokeSettingDropdown(NamelessDropdown):
     def __init__(self, filters: wavelink.Filters):
         super().__init__(custom_id="karaoke_dropdown", placeholder="Select a setting")
 

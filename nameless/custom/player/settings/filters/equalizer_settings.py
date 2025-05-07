@@ -9,11 +9,9 @@ from discord.ext import commands
 from wavelink.types.filters import Equalizer as EqualizerPayload
 
 from nameless import Nameless
-from nameless.custom.ui import CustomDropdown
-from nameless.custom.ui.modal import CustomInput
-from nameless.custom.ui.modal.custom_modal import BaseCustomModal
-
-from .base import FilterView
+from nameless.custom.player.settings.filters.base import FilterView
+from nameless.custom.ui import NamelessDropdown
+from nameless.custom.ui.modal import NamelessModal, NamelessModalInput
 
 
 def plot_eq(
@@ -24,21 +22,23 @@ def plot_eq(
     return "\n".join(cells)
 
 
-class EqualizerInput(CustomInput[float]):
+class EqualizerInput(NamelessModalInput[float]):
     @override
     async def callback(self, interaction: discord.Interaction): ...
 
 
-class EqualizerModal(BaseCustomModal[float]):
+class EqualizerModal(NamelessModal[float]):
     def __init__(self, title: str, filters: wavelink.Filters) -> None:
         super().__init__(title)
         self.add_item(
-            CustomInput(label="Gain", custom_id="gain_eq", default="0", convert=float)
+            NamelessModalInput(
+                label="Gain", custom_id="gain_eq", default="0", convert=float
+            )
         )
 
 
 @final
-class EqualizerSettingDropdown(CustomDropdown):
+class EqualizerSettingDropdown(NamelessDropdown):
     def __init__(self, filters: wavelink.Filters):
         super().__init__(custom_id="equalizer_dropdown", placeholder="Select a band")
 
@@ -48,9 +48,8 @@ class EqualizerSettingDropdown(CustomDropdown):
                 value=str(eq["band"]),
                 description=f"{'+' if eq['gain'] >= 0 else ''}{eq['gain']}",
             )
-        self.self_add_option(label="Exit", value="-1").self_add_option(
-            label="Save", value="-2"
-        )
+        self.add_option(label="Exit", value="-1")
+        self.add_option(label="Save", value="-2")
 
         self._modal: EqualizerModal | None = None
         self._output_message: str | None = None

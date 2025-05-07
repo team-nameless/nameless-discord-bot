@@ -6,10 +6,11 @@ import wavelink
 from discord.ext import commands
 
 from nameless import Nameless
-from nameless.custom.ui import CustomDropdown
-
-from ..base import BaseSettingsView
-from .karaoke_settings import make as karaoke_make
+from nameless.custom.player.settings.base import BaseSettingsView
+from nameless.custom.player.settings.filters.karaoke_settings import (
+    make as karaoke_make,
+)
+from nameless.custom.ui import NamelessDropdown
 
 __all__ = ["make"]
 
@@ -25,7 +26,7 @@ class FilterFlags(Enum):
     ROTATION = "6"
 
 
-class FilterDropdown(CustomDropdown):
+class FilterDropdown(NamelessDropdown):
     def __init__(self, custom_id: str = "filter_dropdown"):
         super().__init__(custom_id=custom_id, placeholder="Select a setting")
 

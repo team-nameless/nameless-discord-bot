@@ -1,0 +1,50 @@
+datasource nameless {
+  provider = "sqlite"
+  url      = "file:../nameless.sqlite"
+}
+
+generator client {
+  provider             = "prisma-client-py"
+  recursive_type_depth = -1
+}
+
+model User {
+  Id               BigInt @id
+  MaimaiFriendCode BigInt
+}
+
+model Guild {
+  Id                BigInt                @id
+  HoneypotChannelId BigInt
+  HostedChats       CrossChatRoom[]
+  ConnectedChats    CrossChatConnection[]
+}
+
+model CrossChatRoom {
+  Id                  String                @id @default(cuid())
+  Guild               Guild?                @relation(fields: [GuildId], references: [Id])
+  GuildId             BigInt
+  ChannelId           BigInt
+  IsPublic            Boolean               @default(true)
+  CrossChatConnection CrossChatConnection[]
+}
+
+model CrossChatConnection {
+  Id              String             @id @default(cuid())
+  Guild           Guild?             @relation(fields: [SourceGuildId], references: [Id])
+  SourceGuildId   BigInt?
+  SourceChannelId BigInt
+  TargetGuildId   BigInt
+  TargetChannelId BigInt
+  Room            CrossChatRoom      @relation(fields: [RoomId], references: [Id])
+  RoomId          String
+  Messages        CrossChatMessage[]
+}
+
+model CrossChatMessage {
+  Id              String               @id @default(cuid())
+  Connection      CrossChatConnection? @relation(fields: [ConnectionId], references: [Id])
+  ConnectionId    String?
+  OriginMessageId BigInt
+  ClonedMessageId BigInt
+}

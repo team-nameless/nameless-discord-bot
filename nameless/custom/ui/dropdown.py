@@ -1,30 +1,32 @@
 import os
-from typing import Callable
+from collections.abc import Callable
+from typing import Self, override
 
 import discord
 from discord import ui
-from typing_extensions import override
 
-__all__ = ["CustomDropdown"]
+__all__ = ["NamelessDropdown"]
 
 
-DropdownCallback = Callable[[discord.Interaction], str | None]
+_DropdownCallback = Callable[[discord.Interaction], str | None]
 """
 A callback for a dropdown.
 
 Parameters:
 -----------
-interaction: discord.Interaction
+interaction: `discord.Interaction`
     The interaction object.
 
 Returns:
 --------
-``str`` | ``None``
+`str` | `None`
     Return with a string to mark it as an error message, otherwise None.
 """
 
 
-class CustomDropdown(ui.Select[ui.View]):
+class NamelessDropdown(ui.Select[ui.View]):
+    """nameless* custom dropdown."""
+
     def __init__(
         self,
         custom_id: str | None = None,
@@ -33,7 +35,12 @@ class CustomDropdown(ui.Select[ui.View]):
         max_values: int = 1,
         disabled: bool = False,
     ):
-        self._callback: list[DropdownCallback] = []
+        assert min_values >= 1
+        assert max_values >= 1
+        assert min_values <= max_values
+
+        self._callback: list[_DropdownCallback] = []
+
         if custom_id is None:
             custom_id = "nameless-dropdown-" + os.urandom(16).hex()
 
@@ -46,7 +53,7 @@ class CustomDropdown(ui.Select[ui.View]):
             options=[],
         )
 
-    def add_callback(self, callback: DropdownCallback):
+    def push_callback(self, callback: _DropdownCallback) -> Self:
         self._callback.append(callback)
         return self
 
@@ -62,7 +69,7 @@ class CustomDropdown(ui.Select[ui.View]):
         if self.view is not None:
             self.view.stop()
 
-    def self_add_option(
+    def push_option(
         self,
         *,
         label: str,
@@ -70,7 +77,7 @@ class CustomDropdown(ui.Select[ui.View]):
         description: str | None = None,
         emoji: str | discord.Emoji | discord.PartialEmoji | None = None,
         default: bool = False,
-    ):
+    ) -> Self:
         self.add_option(
             label=label,
             value=value,

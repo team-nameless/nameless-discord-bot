@@ -2,9 +2,11 @@
     "recommendations": [
         "detachhead.basedpyright",
         "ms-python.python",
+        "KevinRose.vsc-python-indent",
         "Prisma.prisma",
         "tamasfe.even-better-toml",
-        "charliermarsh.ruff"
+        "charliermarsh.ruff",
+        "github.vscode-github-actions"
     ],
     "unwantedRecommendations": [
         "ms-python.vscode-pylance"

@@ -1,0 +1,75 @@
+name: Validate pushes to official nameless* branch(es)
+
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+    branches:
+      - "main"
+      - "feat/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          version: "0.5.24"
+          cache-dependency-glob: "uv.lock"
+
+      - name: Pin Python version for uv
+        run: |
+          uv python pin ${{ matrix.python-version }}
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: |
+          uv python install
+
+      - name: Activate virtualenv
+        run: |
+          # https://stackoverflow.com/a/74669486
+          uv venv
+          source .venv/bin/activate
+          echo PATH=$PATH >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: |
+          uv sync --all-extras
+
+      - name: Create Prisma client
+        run: |
+          uv run prisma db push
+
+      - name: Fix the code with ruff
+        run: |
+          uv run ruff check --exit-zero .
+          uv run ruff format .
+
+      - name: Type checking with BasedPyright
+        run: |
+          uv run basedpyright
+
+      - name: Push the formatted code if needed.
+        uses: stefanzweifel/git-auto-commit-action@v5
+        if: ${{ matrix.python-version == '3.13' }}
+        with:
+          commit_message: "[ci skip] Automated code format commit."
+
+      - name: Minimize uv cache
+        run: |
+          uv cache prune --ci

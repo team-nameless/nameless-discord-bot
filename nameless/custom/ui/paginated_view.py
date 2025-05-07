@@ -1,26 +1,96 @@
-# pyright: reportUnknownParameterType=false, reportMissingParameterType=false, reportUnknownArgumentType=false, reportUnknownMemberType=false
+from collections.abc import Iterable
+from typing import Self, override
+
 import discord
-from discord import ui
-from discord.ui import Button
-from typing_extensions import override
+from discord.ext.commands import Bot, Context
+from discord.ui import Button, Modal, TextInput
 
-from .base import BaseView
-
-__all__ = ["ViewButton"]
+__all__ = ["NamelessPaginatedView"]
 
 
-class ToPageModal(discord.ui.Modal):
-    page: ui.TextInput[BaseView] = ui.TextInput(label="Page")
+class JumpToPageModal(Modal):
+    """Modal to ask for specific page."""
+
+    page: TextInput[Self] = TextInput(
+        label="Page number",
+        default="0",
+        placeholder="Any page number, will failsafe to '0' (zero).",
+    )
 
     @override
     async def on_submit(self, interaction: discord.Interaction) -> None:
         self.stop()
 
-    def get_values(self):
-        return self.page.value
+    def get_value(self) -> int:
+        """Get parsed page value. Will failsafe to 0."""
+        try:
+            return int(self.page.value)
+        except ValueError:
+            return 0
 
 
-class ViewButton(Button[BaseView]):
+class NamelessPaginatedView(discord.ui.View):
+    """nameless* custom paginated view."""
+
+    def __init__(self, ctx: Context[Bot], timeout: int = 60):
+        super().__init__(timeout=timeout)
+        self.ctx: Context[Bot] = ctx
+        self.pages: list[discord.Embed] = []
+        self.current_page: int = 0
+        self._current_message: discord.Message | None = None
+
+    @property
+    def message(self):
+        if not self._current_message:
+            return self.ctx.message
+
+        return self._current_message
+
+    @message.setter
+    def message(self, value: discord.Message):
+        self._current_message = value
+
+    def add_pages(self, pages: Iterable[discord.Embed]) -> None:
+        self.pages.extend(pages)
+
+    def add_button(self, button: Button[Self]):
+        self.add_item(button)
+
+    async def next_page(self):
+        if self.current_page + 1 >= len(self.pages):
+            self.current_page = 0
+        else:
+            self.current_page += 1
+        await self.message.edit(embed=self.pages[self.current_page], view=self)
+
+    async def previous_page(self):
+        if self.current_page - 1 < 0:
+            self.current_page = len(self.pages) - 1
+        else:
+            self.current_page -= 1
+        await self.message.edit(embed=self.pages[self.current_page], view=self)
+
+    async def go_to_first_page(self):
+        await self.message.edit(embed=self.pages[0], view=self)
+
+    async def go_to_last_page(self):
+        await self.message.edit(embed=self.pages[-1], view=self)
+
+    async def go_to_page(self, page: int):
+        self.current_page = page
+        await self.ctx.send(embed=self.pages[self.current_page], view=self)
+
+    async def start(self):
+        self.message = await self.ctx.send(embed=self.pages[0], view=self)
+        return await self.wait()
+
+    async def end(self):
+        self.stop()
+        # await self.__current_message.delete()
+        await self.message.edit(view=None)
+
+
+class NavigationButton(Button[NamelessPaginatedView]):
     NEXT_PAGE_ID: str = "0"
     PREVIOUS_PAGE_ID: str = "1"
     GO_TO_FIRST_PAGE_ID: str = "2"
@@ -28,9 +98,9 @@ class ViewButton(Button[BaseView]):
     GO_TO_PAGE_ID: str = "4"
     END_ID: str = "5"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: object, **kwargs: object):
         super().__init__(*args, **kwargs)
-        self._view: BaseView | None = None
+        self._view: NamelessPaginatedView | None = None
 
     @override
     async def callback(self, interaction: discord.Interaction):
@@ -48,7 +118,7 @@ class ViewButton(Button[BaseView]):
             case self.GO_TO_LAST_PAGE_ID:
                 await self.view.go_to_last_page()
             case self.GO_TO_PAGE_ID:
-                modal = ToPageModal()
+                modal = JumpToPageModal()
                 await interaction.response.send_modal(modal)
                 if await modal.wait():
                     return
@@ -70,7 +140,7 @@ class ViewButton(Button[BaseView]):
         with_label: bool,
         with_emote: bool,
         with_disabled: bool,
-        **kwargs,
+        **kwargs: object,
     ):
         return cls(
             style=discord.ButtonStyle.gray,
@@ -87,7 +157,7 @@ class ViewButton(Button[BaseView]):
         with_label: bool = False,
         with_emote: bool = True,
         with_disabled: bool = False,
-        **kwargs,
+        **kwargs: object,
     ):
         return cls.create_button(
             "Back",
@@ -105,7 +175,7 @@ class ViewButton(Button[BaseView]):
         with_label: bool = False,
         with_emote: bool = True,
         with_disabled: bool = False,
-        **kwargs,
+        **kwargs: object,
     ):
         return cls.create_button(
             "Next",
@@ -123,7 +193,7 @@ class ViewButton(Button[BaseView]):
         with_label: bool = False,
         with_emote: bool = True,
         with_disabled: bool = False,
-        **kwargs,
+        **kwargs: object,
     ):
         return cls.create_button(
             "First Page",
@@ -141,7 +211,7 @@ class ViewButton(Button[BaseView]):
         with_label: bool = False,
         with_emote: bool = True,
         with_disabled: bool = False,
-        **kwargs,
+        **kwargs: object,
     ):
         return cls.create_button(
             "Last Page",
@@ -159,7 +229,7 @@ class ViewButton(Button[BaseView]):
         with_label: bool = False,
         with_emote: bool = True,
         with_disabled: bool = False,
-        **kwargs,
+        **kwargs: object,
     ):
         return cls.create_button(
             "Page Selection",
@@ -177,7 +247,7 @@ class ViewButton(Button[BaseView]):
         with_label: bool = False,
         with_emote: bool = True,
         with_disabled: bool = False,
-        **kwargs,
+        **kwargs: object,
     ):
         return cls.create_button(
             "End", cls.END_ID, "⏹️", with_label, with_emote, with_disabled, **kwargs

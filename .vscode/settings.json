@@ -1,13 +1,16 @@
 {
+    "python.languageServer": "None",
     "basedpyright.analysis.diagnosticMode": "workspace",
-    "basedpyright.analysis.inlayHints.functionReturnTypes": false,
+    "basedpyright.disableOrganizeImports": true,
     "files.exclude": {
         "**/.venv/": true,
         "**/venv/": true,
         "**/__pycache__/": true,
         "**/.ruff_cache/": true,
-        ".ruff_cache/**/*": true,
-        ".venv/**/*": true,
-        "nameless.sqlite": true
+        "nameless.sqlite": true,
+        "nameless.cache": true,
+        "nameless/command/__init__.py": true,
+        ".python-version": true,
+        "uv.lock": true
     }
 }

@@ -1,8 +1,7 @@
 from datetime import datetime
 from pathlib import Path
-from typing import NotRequired, TypedDict
-
 from tomllib import loads
+from typing import NotRequired, TypedDict
 
 __all__ = ["nameless_config"]
 

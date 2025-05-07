@@ -1,27 +1,52 @@
+[project]
+name = "nameless"
+version = "6.6.6"
+description = "A Discord BOT, written with batteries in mind."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "audioop-lts==0.2.1 ; python_full_version >= '3.13'",
+    "beautifulsoup4==4.12.3",
+    "discord-py==2.4.0",
+    "jishaku==2.6.0",
+    "prisma==0.15.0",
+    "python-dotenv==1.0.1",
+    "requests==2.32.3",
+    "uv==0.5.24",
+]
+
+[dependency-groups]
+dev = ["basedpyright==1.24.0", "ruff==0.9.3"]
+
 [tool.basedpyright]
 exclude = ["venv", ".venv", "**/__pycache__"]
 reportUnnecessaryTypeIgnoreComment = "error"
-reportMissingImports = "error"
+reportPrivateLocalImportUsage = "error"
+reportPrivateImportUsage = "error"
+reportPrivateUsage = "error"
+reportUnusedCallResult = "none"
 reportMissingTypeStubs = "none"
-reportImportCycles = true
-reportUnusedCallResult = false
 typeCheckingMode = "recommended"
 
 [tool.ruff]
 line-length = 88
 indent-width = 4
 fix = true
+src = ["nameless"]
 
 [tool.ruff.format]
 indent-style = "space"
-skip-magic-trailing-comma = true
 
 [tool.ruff.lint]
-select = ["E", "F", "UP", "B", "SIM", "I", "Q"]
+select = ["E", "F", "UP", "B", "SIM", "I", "Q", "TID", "D"]
+ignore = ["B018", "D1", "D417"]
 
 [tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["F403"]
-"*" = ["F401", "F841"]
+"__init__.py" = ["F403", "TID252"]
+"*" = ["B008", "F401", "F821", "F841"]
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"

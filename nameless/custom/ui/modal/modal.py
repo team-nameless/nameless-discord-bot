@@ -1,13 +1,15 @@
-from typing import Generic, TypeVar, override
+from typing import Generic, TypeVar, cast, override
 
 import discord
 
-from .custom_input import CustomInput
+from nameless.custom.ui.modal.input import NamelessModalInput
 
 V = TypeVar("V", bound=str | int | float | None, covariant=True)
 
+__all__ = ["NamelessModal"]
 
-class BaseCustomModal(Generic[V], discord.ui.Modal):
+
+class NamelessModal(discord.ui.Modal, Generic[V]):
     def __init__(self, title: str) -> None:
         super().__init__(timeout=30, title=title)
 
@@ -19,8 +21,8 @@ class BaseCustomModal(Generic[V], discord.ui.Modal):
                 await child.callback(interaction)
         self.stop()
 
-    def get_input(self) -> CustomInput[V]:
-        return self.children[0]  # pyright: ignore[reportReturnType]
+    def get_input(self) -> NamelessModalInput[V]:
+        return cast(NamelessModalInput[V], self.children[0])
 
     @property
     def value(self) -> V:

@@ -1,19 +1,18 @@
-from typing import Callable, Generic, TypeVar, override
+from collections.abc import Callable
+from typing import Generic, TypeVar, override
 
 import discord
 from discord import ui
 
 V = TypeVar("V", bound=str | int | float | None, covariant=True)
 
+__all__ = ["NamelessModalInput"]
 
-class CustomInput(Generic[V], ui.TextInput[ui.Modal]):
+
+class NamelessModalInput(ui.TextInput[ui.Modal], Generic[V]):
     def __init__(
-        self,
-        label: str,
-        custom_id: str,
-        default: str = "0",
-        convert: Callable[[str], V] = int,
-    ) -> None:
+        self, label: str, custom_id: str, default: str = "0", convert: V = str
+    ):
         super().__init__(
             label=label, custom_id=custom_id, placeholder=default, default=default
         )

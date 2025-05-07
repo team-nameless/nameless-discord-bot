@@ -3,13 +3,13 @@ from typing import final
 import discord
 import wavelink
 
-from ..ui import CustomDropdown
+from nameless.custom.ui import NamelessDropdown
 
 __all__ = ["TrackDropdown"]
 
 
 @final
-class TrackDropdown(CustomDropdown):
+class TrackDropdown(NamelessDropdown):
     def __init__(self, tracks: list[wavelink.Playable]):
         super().__init__(
             custom_id="music-pick-select",

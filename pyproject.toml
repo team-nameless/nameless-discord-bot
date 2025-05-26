@@ -3,9 +3,9 @@ name = "nameless"
 version = "6.6.6"
 description = "A Discord BOT, written with batteries in mind."
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
-    "audioop-lts==0.2.1 ; python_full_version >= '3.13'",
+    "audioop-lts==0.2.1",
     "beautifulsoup4==4.12.3",
     "discord-py==2.4.0",
     "jishaku==2.6.0",

@@ -11,7 +11,7 @@ dependencies = [
     "jishaku==2.6.0",
     "prisma==0.15.0",
     "python-dotenv==1.0.1",
-    "requests==2.32.3",
+    "requests==2.32.4",
     "uv==0.5.24",
 ]
 

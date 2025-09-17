@@ -19,7 +19,10 @@ class NamelessModalInput(Generic[V], ui.TextInput[ui.Modal]):
         convert: Callable[[str], V] = str,
     ):
         super().__init__(
-            label=label, custom_id=custom_id, placeholder=default, default=default
+            label=label,
+            custom_id=custom_id,
+            placeholder=default,
+            default=default,
         )
         self.convert: Callable[[str], V] = convert
         self.input: V = self.convert(default)

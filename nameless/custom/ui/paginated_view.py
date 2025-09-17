@@ -54,11 +54,11 @@ class NamelessPaginatedView(discord.ui.View):
         self.pages.extend(pages)
 
     def add_predefined_buttons(self) -> None:
-        self.add_item(NavigationButton.back())
-        self.add_item(NavigationButton.next())
         self.add_item(NavigationButton.go_to_first_page())
-        self.add_item(NavigationButton.go_to_last_page())
+        self.add_item(NavigationButton.back())
         self.add_item(NavigationButton.go_to_page())
+        self.add_item(NavigationButton.next())
+        self.add_item(NavigationButton.go_to_last_page())
         self.add_item(NavigationButton.end())
 
     def add_button(self, button: Button[Self]) -> None:
@@ -94,7 +94,6 @@ class NamelessPaginatedView(discord.ui.View):
 
     async def end(self):
         self.stop()
-        # await self.__current_message.delete()
         await self.message.edit(view=None)
 
 

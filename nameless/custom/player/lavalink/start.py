@@ -6,12 +6,14 @@ from pathlib import Path
 import aiohttp
 
 if __name__ == "__main__":
-    nameless_config = {"nameless": {"is_shutting_down": False}}
+    nameless_config = {"runtime": {"is_shutting_down": False}}
 else:
     from nameless.config import nameless_config
 
 CWD = Path(__file__).parent
-LAVALINK_URL = "https://github.com/lavalink-devs/Lavalink/releases/latest/download/Lavalink.jar"
+LAVALINK_URL = (
+    "https://github.com/lavalink-devs/Lavalink/releases/latest/download/Lavalink.jar"
+)
 LAVALINK_BIN = CWD / "bin" / "Lavalink.jar"
 LAVALINK_CONFIG = CWD / "bin" / "application.yml"
 
@@ -39,7 +41,9 @@ async def check_plugin_version(auto_update: bool = False) -> bool:
             return False
 
         async with aiohttp.ClientSession() as session:
-            git_req = await session.get("https://api.github.com/repos/lavalink-devs/youtube-source/releases/latest")
+            git_req = await session.get(
+                "https://api.github.com/repos/lavalink-devs/youtube-source/releases/latest"
+            )
         if git_req.status != 200:
             logging.error("Failed to check Lavalink plugin version. Request failed.")
             return False
@@ -96,7 +100,9 @@ async def check_lavalink_version() -> bool:
             logging.error("Failed to check Lavalink version. Version not found.")
             return False
         async with aiohttp.ClientSession() as session:
-            git_req = await session.get("https://api.github.com/repos/lavalink-devs/Lavalink/releases/latest")
+            git_req = await session.get(
+                "https://api.github.com/repos/lavalink-devs/Lavalink/releases/latest"
+            )
         latest_version: str = (await git_req.json()).get("tag_name", "0.0.0")  # pyright: ignore[reportAny]
         if git_req.status != 200:
             logging.error("Failed to check Lavalink plugin version. Request failed.")
@@ -128,9 +134,11 @@ async def start():
     """Start the Lavalink server from /bin folder."""
     global proc, stop_event
     while True:
-        proc = await asyncio.create_subprocess_exec("java", "-jar", "Lavalink.jar", cwd=CWD / "bin", stdout=-3)
+        proc = await asyncio.create_subprocess_exec(
+            "java", "-jar", "Lavalink.jar", cwd=CWD / "bin", stdout=-3
+        )
         await proc.wait()
-        if nameless_config["nameless"]["is_shutting_down"]:
+        if nameless_config["runtime"]["is_shutting_down"]:
             stop_event.set()
             break
 

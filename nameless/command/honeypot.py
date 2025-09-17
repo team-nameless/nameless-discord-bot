@@ -38,9 +38,7 @@ class HoneypotCommand(commands.Cog):
 
         assert isinstance(message.author, discord.Member)
 
-        db_guild = await Guild.prisma().find_unique_or_raise(
-            where={"Id": message.guild.id}
-        )
+        db_guild = await Guild.prisma().find_unique_or_raise(where={"Id": message.guild.id})
 
         if message.channel.id == db_guild.HoneypotChannelId:
             with contextlib.suppress(discord.errors.Forbidden):
@@ -65,15 +63,11 @@ class HoneypotCommand(commands.Cog):
             await ctx.send("You already activated the honeypot.")
             return
 
-        created_channel = await ctx.guild.create_text_channel(
-            "spam-goes-here", reason="Spam-bait activation."
-        )
+        created_channel = await ctx.guild.create_text_channel("spam-goes-here", reason="Spam-bait activation.")
 
         await created_channel.send("# DO NOT TEXT IN HERE, YOU WILL BE BANNED.")
 
-        await Guild.prisma().update_many(
-            data={"HoneypotChannelId": created_channel.id}, where={"Id": ctx.guild.id}
-        )
+        await Guild.prisma().update_many(data={"HoneypotChannelId": created_channel.id}, where={"Id": ctx.guild.id})
 
         nameless_cache.set_key(self._create_honeypot_cache_key(ctx.guild))
 

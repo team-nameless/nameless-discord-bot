@@ -3,7 +3,7 @@ name = "nameless"
 version = "1.0.0"
 description = "A Discord BOT, written with batteries in mind."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "beautifulsoup4>=4.12.3",
     "discord-py>=2.4.0",
@@ -13,11 +13,10 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "requests>=2.32.3",
     "uv>=0.5.24",
+]
 
 [dependency-groups]
-dev = [
-    "ruff==0.9.3",
-]
+dev = ["ruff>=0.9.3"]
 
 [tool.basedpyright]
 reportUnnecessaryTypeIgnoreComment = "error"

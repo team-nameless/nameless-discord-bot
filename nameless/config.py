@@ -11,6 +11,9 @@ class NamelessMetadata(TypedDict):
     description: str
     support_server: str
     start_time: datetime
+
+
+class NamelessRuntime(TypedDict):
     is_shutting_down: bool
 
 
@@ -34,8 +37,9 @@ class WavelinkNode(TypedDict):
 
 
 class NamelessConfig(TypedDict):
-    nameless: NamelessInfo
-    command: NamelessCommand
+    nameless: NamelessMetadata
+    command: NamelessCommands
+    runtime: NamelessRuntime
     blacklist: NamelessBlacklist
     wavelinks: list[WavelinkNode]
 
@@ -46,4 +50,4 @@ with open(_cfg_path, encoding="utf-8") as f:
     _content: str = f.read()
 
 # Maybe add a type checker here, using the annotation from the TypedDict
-nameless_config: NamelessConfig = NamelessConfig(**loads(_content))  # pyright: ignore[reportAny]
+nameless_config: NamelessConfig = NamelessConfig(**loads(_content))

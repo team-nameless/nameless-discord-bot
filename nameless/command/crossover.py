@@ -2,7 +2,6 @@ import contextlib
 import logging
 
 import discord
-import discord.ui
 from discord.ext import commands
 from prisma.models import CrossChatConnection, CrossChatMessage, CrossChatRoom
 
@@ -19,9 +18,7 @@ class CrossOverCommand(commands.Cog):
     def __init__(self, bot: Nameless):
         self.bot: Nameless = bot
 
-    def _create_guild_channel_cache_key(
-        self, this_guild: discord.Guild, this_channel: NamelessTextable
-    ) -> str:
+    def _create_guild_channel_cache_key(self, this_guild: discord.Guild, this_channel: NamelessTextable) -> str:
         """Create (guild,channel) cache key."""
         return create_cache_key("crossover", str(this_guild.id), str(this_channel.id))
 
@@ -85,11 +82,7 @@ class CrossOverCommand(commands.Cog):
 
             assert conn.Messages is not None
 
-            the_true_id: int = [
-                x.ClonedMessageId
-                for x in conn.Messages
-                if x.OriginMessageId == this_message.id
-            ][0]
+            the_true_id: int = [x.ClonedMessageId for x in conn.Messages if x.OriginMessageId == this_message.id][0]
 
             the_true_message = await channel.fetch_message(the_true_id)
 
@@ -155,22 +148,16 @@ class CrossOverCommand(commands.Cog):
         ):
             return
 
-        for conn, channel in await self._get_subscribed_channels(
-            message.guild, message.channel
-        ):
+        for conn, channel in await self._get_subscribed_channels(message.guild, message.channel):
             # Fail-safe
             nameless_cache.set_key(cache_key)
 
-            embed = discord.Embed(
-                description=message.content, color=discord.Colour.orange()
-            )
+            embed = discord.Embed(description=message.content, color=discord.Colour.orange())
 
             avatar_url = message.author.avatar.url if message.author.avatar else ""
             guild_icon = message.guild.icon.url if message.guild.icon else ""
 
-            embed.set_author(
-                name=f"@{message.author.global_name} wrote:", icon_url=avatar_url
-            )
+            embed.set_author(name=f"@{message.author.global_name} wrote:", icon_url=avatar_url)
             embed.set_footer(
                 text=f"{message.guild.name} at #{message.channel.name}",
                 icon_url=guild_icon,
@@ -202,9 +189,7 @@ class CrossOverCommand(commands.Cog):
         if not isinstance(message.channel, NamelessTextable):
             return
 
-        for _conn, the_message in await self._get_subscribed_messages(
-            message.guild, message.channel, message
-        ):
+        for _conn, the_message in await self._get_subscribed_messages(message.guild, message.channel, message):
             the_embed = the_message.embeds[0]
             the_embed.description = message.content
 
@@ -222,9 +207,7 @@ class CrossOverCommand(commands.Cog):
         if not isinstance(message.channel, NamelessTextable):
             return
 
-        for _conn, the_message in await self._get_subscribed_messages(
-            message.guild, message.channel, message
-        ):
+        for _conn, the_message in await self._get_subscribed_messages(message.guild, message.channel, message):
             with contextlib.suppress(discord.NotFound):
                 await the_message.delete()
 
@@ -244,9 +227,7 @@ class CrossOverCommand(commands.Cog):
         assert ctx.channel is not None
 
         if not isinstance(ctx.channel, NamelessTextable):
-            await ctx.send(
-                "You are not inside our accepted channel type (Text/Thread)."
-            )
+            await ctx.send("You are not inside our accepted channel type (Text/Thread).")
             return
 
         await NamelessPrisma.get_guild_entry(ctx.guild)
@@ -256,9 +237,7 @@ class CrossOverCommand(commands.Cog):
         )
 
         if room_data is None:
-            room_data = await CrossChatRoom.prisma().create(
-                data={"GuildId": ctx.guild.id, "ChannelId": ctx.channel.id}
-            )
+            room_data = await CrossChatRoom.prisma().create(data={"GuildId": ctx.guild.id, "ChannelId": ctx.channel.id})
 
         await ctx.send(f"Your cross-chat room code is: `{room_data.Id}`")
 
@@ -280,9 +259,7 @@ class CrossOverCommand(commands.Cog):
         """
         await ctx.defer()
 
-        room_data: CrossChatRoom | None = await CrossChatRoom.prisma().find_first(
-            where={"Id": room_code}
-        )
+        room_data: CrossChatRoom | None = await CrossChatRoom.prisma().find_first(where={"Id": room_code})
 
         if room_data is None:
             await ctx.send("Room code does not exist!")
@@ -301,17 +278,13 @@ class CrossOverCommand(commands.Cog):
         assert that_channel is not None
 
         if not isinstance(this_channel, NamelessTextable):
-            await ctx.send(
-                "You are not inside our accepted channel type (Text/Thread)."
-            )
+            await ctx.send("You are not inside our accepted channel type (Text/Thread).")
             return
 
         assert isinstance(this_channel, NamelessTextable)
         assert isinstance(that_channel, NamelessTextable)
 
-        if await self._is_connected_to_each_other(
-            this_guild, this_channel, that_guild, that_channel
-        ):
+        if await self._is_connected_to_each_other(this_guild, this_channel, that_guild, that_channel):
             await ctx.send("Already connected!")
             return
 
@@ -346,9 +319,7 @@ class CrossOverCommand(commands.Cog):
 
         assert isinstance(this_channel.name, str)
 
-        await that_channel.send(
-            f"New connection comes from `#{this_channel.name}` at `{this_guild.name}`!"
-        )
+        await that_channel.send(f"New connection comes from `#{this_channel.name}` at `{this_guild.name}`!")
 
         this_cache_key = self._create_guild_channel_cache_key(this_guild, this_channel)
         that_cache_key = self._create_guild_channel_cache_key(that_guild, that_channel)
@@ -377,9 +348,7 @@ class CrossOverCommand(commands.Cog):
         assert ctx.guild is not None
         assert ctx.channel is not None
 
-        conn_data: (
-            CrossChatConnection | None
-        ) = await CrossChatConnection.prisma().find_first(
+        conn_data: CrossChatConnection | None = await CrossChatConnection.prisma().find_first(
             where={
                 "RoomId": room_code,
                 "SourceGuildId": ctx.guild.id,
@@ -404,17 +373,13 @@ class CrossOverCommand(commands.Cog):
         assert that_channel is not None
 
         if not isinstance(this_channel, NamelessTextable):
-            await ctx.send(
-                "You are not inside our accepted channel type (Text/Thread)."
-            )
+            await ctx.send("You are not inside our accepted channel type (Text/Thread).")
             return
 
         assert isinstance(this_channel, NamelessTextable)
         assert isinstance(that_channel, NamelessTextable)
 
-        if not await self._is_connected_to_each_other(
-            this_guild, this_channel, that_guild, that_channel
-        ):
+        if not await self._is_connected_to_each_other(this_guild, this_channel, that_guild, that_channel):
             await ctx.send("You are not connected to this room!")
             return
 
@@ -431,9 +396,7 @@ class CrossOverCommand(commands.Cog):
 
         assert isinstance(this_channel.name, str)
 
-        await that_channel.send(
-            f"Disconnected from `#{this_channel.name}` at `{this_guild.name}`!"
-        )
+        await that_channel.send(f"Disconnected from `#{this_channel.name}` at `{this_guild.name}`!")
 
         this_cache_key = self._create_guild_channel_cache_key(this_guild, this_channel)
         that_cache_key = self._create_guild_channel_cache_key(that_guild, that_channel)
@@ -462,9 +425,7 @@ class CrossOverCommand(commands.Cog):
             that_guild = await ctx.bot.fetch_guild(conn.TargetGuildId)
             that_channel = await that_guild.fetch_channel(conn.TargetChannelId)
 
-            rooms.append(
-                f"`{conn.RoomId}` : `#{that_channel.name}` @ `{that_guild.name}`"
-            )
+            rooms.append(f"`{conn.RoomId}` : `#{that_channel.name}` @ `{that_guild.name}`")
 
         embed = discord.Embed(
             description="All available connections, both in/outbound!",

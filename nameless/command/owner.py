@@ -60,9 +60,7 @@ class OwnerCommand(commands.Cog):
         ctx.bot.tree.clear_commands(guild=None)
         await ctx.bot.tree.sync(guild=None)
 
-        await ctx.send(
-            "Command cleaning done, you should restart me to update the new commands."
-        )
+        await ctx.send("Command cleaning done, you should restart me to update the new commands.")
 
 
 async def setup(bot: Nameless):

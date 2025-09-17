@@ -8,7 +8,7 @@ A combination of [original nameless\*](https://github.com/FoxeiZ/nameless) and [
 
 WIKI >>> [![Wiki](https://img.shields.io/badge/Go%20to-the%20wiki-pink?style=for-the-badge&logo=github)](https://github.com/nameless-on-discord/nameless/wiki) <<< WIKI
 
-![Python](https://img.shields.io/badge/Python-3.12,%203.13-blue?style=for-the-badge&logo=python)
+![Python](https://img.shields.io/badge/Python-3.13-blue?style=for-the-badge&logo=python)
 ![Code Style](https://img.shields.io/badge/Code_Style-ruff-orange?style=for-the-badge&logo=python)
 ![License](https://img.shields.io/github/license/nameless-on-discord/nameless?style=for-the-badge&logo=github&color=white)
 

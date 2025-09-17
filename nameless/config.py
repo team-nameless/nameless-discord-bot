@@ -6,7 +6,7 @@ from typing import NotRequired, TypedDict
 __all__ = ["nameless_config"]
 
 
-class NamelessInfo(TypedDict):
+class NamelessMetadata(TypedDict):
     version: str
     description: str
     support_server: str
@@ -14,7 +14,7 @@ class NamelessInfo(TypedDict):
     is_shutting_down: bool
 
 
-class NamelessCommand(TypedDict):
+class NamelessCommands(TypedDict):
     prefixes: list[str]
 
 
@@ -45,5 +45,5 @@ _cfg_path: Path = Path(__file__).parent.parent.absolute() / "nameless.toml"
 with open(_cfg_path, encoding="utf-8") as f:
     _content: str = f.read()
 
-raw_config = loads(_content)
-nameless_config: NamelessConfig = NamelessConfig(**raw_config)  # pyright: ignore[reportAny]
+# Maybe add a type checker here, using the annotation from the TypedDict
+nameless_config: NamelessConfig = NamelessConfig(**loads(_content))  # pyright: ignore[reportAny]

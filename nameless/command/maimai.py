@@ -1,7 +1,6 @@
 import logging
 
 import discord
-import discord.ui
 from discord.ext import commands
 from prisma.models import User
 
@@ -36,9 +35,7 @@ class MaimaiCommand(commands.Cog):
 
         db_user = await NamelessPrisma.get_user_entry(ctx.author)
 
-        moi_user: MaimaiUser = self.moimoi_api.find_by_friend_code(
-            db_user.MaimaiFriendCode
-        )
+        moi_user: MaimaiUser = self.moimoi_api.find_by_friend_code(db_user.MaimaiFriendCode)
 
         embed = (
             discord.Embed(
@@ -63,9 +60,7 @@ class MaimaiCommand(commands.Cog):
             self.moimoi_api.find_by_friend_code(friend_code)
             await NamelessPrisma.get_user_entry(ctx.author)
 
-            await User.prisma().update_many(
-                where={"Id": ctx.author.id}, data={"MaimaiFriendCode": friend_code}
-            )
+            await User.prisma().update_many(where={"Id": ctx.author.id}, data={"MaimaiFriendCode": friend_code})
 
             await ctx.send("Linkage complete!")
 

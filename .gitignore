@@ -9,3 +9,7 @@
 .python-version
 nameless.sqlite
 nameless.cache
+
+# Ignore lavalink stuffs
+**/bin/*
+!application.yml

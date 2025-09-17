@@ -1,14 +1,15 @@
 {
-    "python.languageServer": "None",
+    "python.analysis.typeCheckingMode": "standard",
+    "ruff.organizeImports": true,
+    "editor.codeActionsOnSave": {
+        "source.fixAll.ruff": "always",
+        "source.organizeImports.ruff": "always"
+    },
+    "files.eol": "\n",
     "files.exclude": {
         "**/.venv/": true,
         "**/venv/": true,
         "**/__pycache__/": true,
         "**/.ruff_cache/": true,
-        "nameless.sqlite": true,
-        "nameless.cache": true,
-        "nameless/command/__init__.py": true,
-        ".python-version": true,
-        "uv.lock": true
     }
 }

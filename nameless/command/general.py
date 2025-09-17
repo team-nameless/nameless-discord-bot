@@ -17,9 +17,7 @@ class GeneralCommand(commands.Cog):
         pass
 
     @commands.hybrid_command()
-    async def user(
-        self, ctx: commands.Context[Nameless], member: discord.Member | None
-    ):
+    async def user(self, ctx: commands.Context[Nameless], member: discord.Member | None):
         """View someone's information.
 
         Parameters
@@ -37,9 +35,7 @@ class GeneralCommand(commands.Cog):
 
         assert join_date is not None
 
-        flags = [
-            flag.replace("_", " ").title() for flag, has in member.public_flags if has
-        ]
+        flags = [flag.replace("_", " ").title() for flag, has in member.public_flags if has]
         embed: discord.Embed = (
             discord.Embed(
                 description=f"Public handle: `@{member.name}`",
@@ -55,9 +51,7 @@ class GeneralCommand(commands.Cog):
                 name="📆 Account created since",
                 value=f"<t:{int(account_create_date.timestamp())}:R>",
             )
-            .add_field(
-                name="🤝 Membership since", value=f"<t:{int(join_date.timestamp())}:R>"
-            )
+            .add_field(name="🤝 Membership since", value=f"<t:{int(join_date.timestamp())}:R>")
             .add_field(
                 name="🌟 Badges",
                 value=", ".join(flags) if flags else "None",
@@ -89,11 +83,7 @@ class GeneralCommand(commands.Cog):
 
         embed = (
             discord.Embed(
-                description=(
-                    f"Owner: {guild.owner.mention}"
-                    if guild.owner
-                    else "'Guild Member' intent missing."
-                ),
+                description=(f"Owner: {guild.owner.mention}" if guild.owner else "'Guild Member' intent missing."),
                 timestamp=datetime.now(),
                 title=guild.name,
                 color=discord.Color.orange(),
@@ -110,10 +100,7 @@ class GeneralCommand(commands.Cog):
             )
             .add_field(
                 name="💬 Channels",
-                value=(
-                    f"{len(guild.channels)} channel(s) - "
-                    + f"{public_threads_count} thread(s)"
-                ),
+                value=(f"{len(guild.channels)} channel(s) - " + f"{public_threads_count} thread(s)"),
             )
             .add_field(name="⭐ Roles", value=f"{len(guild.roles)}")
             .add_field(name="📆 Events", value=f"{len(events)}")
@@ -155,10 +142,7 @@ class GeneralCommand(commands.Cog):
             .add_field(name="⭐ Biography", value=ctx.bot.description, inline=False)
             .add_field(
                 name="🫡 Service status",
-                value=(
-                    f"Serving {servers_count} servers "
-                    + f"and {total_members_count} users."
-                ),
+                value=(f"Serving {servers_count} servers " + f"and {total_members_count} users."),
                 inline=False,
             )
             .add_field(
@@ -169,10 +153,7 @@ class GeneralCommand(commands.Cog):
             .add_field(name="ℹ️ Version", value=nameless_config["nameless"]["version"])
             .add_field(
                 name="💻 Runtime",
-                value=(
-                    f"**discord.py {discord.__version__}** "
-                    + f"on **Python {python_version()}**"
-                ),
+                value=(f"**discord.py {discord.__version__}** " + f"on **Python {python_version()}**"),
             )
         )
 

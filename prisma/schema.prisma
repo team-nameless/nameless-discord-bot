@@ -18,6 +18,7 @@ model Guild {
   HoneypotChannelId BigInt
   HostedChats       CrossChatRoom[]
   ConnectedChats    CrossChatConnection[]
+  PlayerSettings    PlayerSettings?
 }
 
 model CrossChatRoom {
@@ -47,4 +48,10 @@ model CrossChatMessage {
   ConnectionId    String?
   OriginMessageId BigInt
   ClonedMessageId BigInt
+}
+
+model PlayerSettings {
+  Id      String @id @default(cuid())
+  Guild   Guild  @relation(fields: [GuildId], references: [Id])
+  GuildId BigInt @unique
 }

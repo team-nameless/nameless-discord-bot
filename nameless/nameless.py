@@ -38,6 +38,7 @@ class Nameless(commands.Bot):
             description=_description,
             **kwargs,
         )
+        nameless_config["runtime"]["is_shutting_down"] = False
 
     @override
     async def setup_hook(self):
@@ -61,25 +62,21 @@ class Nameless(commands.Bot):
         nameless_config["nameless"]["start_time"] = datetime.now(UTC)
 
     @override
-    async def on_command_error(
-        self, ctx: commands.Context[Self], ex: commands.errors.CommandError
-    ):
+    async def on_command_error(self, ctx: commands.Context[Self], ex: commands.errors.CommandError):
         await ctx.send(
-            "Something went wrong during command execution, "
-            + "please notify us on GitHub issue if needed."
+            "Something went wrong during command execution, " + "please notify us on GitHub issue if needed."
         )
         logging.error("Something went wrong.", exc_info=ex)
 
     def start_bot(self, *, is_debug: bool = False):
         """Start the bot."""
-        logging.info(
-            f"This bot will now start in {'debug' if is_debug else 'production'} mode."
-        )
+        logging.info(f"This bot will now start in {'debug' if is_debug else 'production'} mode.")
         self.run(os.getenv("TOKEN", ""), log_handler=None)
 
     @override
     async def close(self):
         logging.warning("Shutting down...")
+        nameless_config["runtime"]["is_shutting_down"] = True
         await NamelessPrisma.dispose()
         nameless_cache.yank_to_persitence()
         await super().close()
@@ -121,9 +118,7 @@ class Nameless(commands.Bot):
         # And ignore ones that starts with _ (underscore)
         current_path = Path(__file__).parent
         py_file_re = re.compile(r"^(?!_.*)(\w.*).py")
-        available_files = [
-            *filter(py_file_re.match, os.listdir(current_path / "command"))
-        ]
+        available_files = [*filter(py_file_re.match, os.listdir(current_path / "command"))]
 
         for file in available_files:
             module_name = file.replace(".py", "")

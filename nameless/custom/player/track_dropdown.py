@@ -1,7 +1,7 @@
 from typing import final
 
 import discord
-import wavelink
+import pomice
 
 from nameless.custom.ui import NamelessDropdown
 
@@ -10,7 +10,7 @@ __all__ = ["TrackDropdown"]
 
 @final
 class TrackDropdown(NamelessDropdown):
-    def __init__(self, tracks: list[wavelink.Playable]):
+    def __init__(self, tracks: list[pomice.Track]):
         super().__init__(
             custom_id="music-pick-select",
             placeholder="Choose your tracks",

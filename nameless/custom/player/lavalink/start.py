@@ -5,12 +5,13 @@ from pathlib import Path
 
 import aiohttp
 
-from nameless.config import nameless_config
+if __name__ == "__main__":
+    nameless_config = {"nameless": {"is_shutting_down": False}}
+else:
+    from nameless.config import nameless_config
 
 CWD = Path(__file__).parent
-LAVALINK_URL = (
-    "https://github.com/lavalink-devs/Lavalink/releases/latest/download/Lavalink.jar"
-)
+LAVALINK_URL = "https://github.com/lavalink-devs/Lavalink/releases/latest/download/Lavalink.jar"
 LAVALINK_BIN = CWD / "bin" / "Lavalink.jar"
 LAVALINK_CONFIG = CWD / "bin" / "application.yml"
 
@@ -22,6 +23,7 @@ stop_event = asyncio.Event()
 async def check_plugin_version(auto_update: bool = False) -> bool:
     """
     Check for latest version of Lavalink plugin.
+
     The youtube-source plugin to be specific
     """
     target = "dev.lavalink.youtube:youtube-plugin:"
@@ -37,9 +39,11 @@ async def check_plugin_version(auto_update: bool = False) -> bool:
             return False
 
         async with aiohttp.ClientSession() as session:
-            git_req = await session.get(
-                "https://api.github.com/repos/lavalink-devs/youtube-source/releases/latest"
-            )
+            git_req = await session.get("https://api.github.com/repos/lavalink-devs/youtube-source/releases/latest")
+        if git_req.status != 200:
+            logging.error("Failed to check Lavalink plugin version. Request failed.")
+            return False
+
         latest_version: str = (await git_req.json()).get("tag_name", "0.0.0")  # pyright: ignore[reportAny]
 
         if version == latest_version:
@@ -63,7 +67,8 @@ async def check_plugin_version(auto_update: bool = False) -> bool:
 async def check_lavalink_version() -> bool:
     """Check for latest version of Lavalink.
 
-    Returns:
+    Returns
+    -------
         bool: True if the version is the latest, False otherwise
     """
     try:
@@ -91,10 +96,11 @@ async def check_lavalink_version() -> bool:
             logging.error("Failed to check Lavalink version. Version not found.")
             return False
         async with aiohttp.ClientSession() as session:
-            git_req = await session.get(
-                "https://api.github.com/repos/lavalink-devs/Lavalink/releases/latest"
-            )
+            git_req = await session.get("https://api.github.com/repos/lavalink-devs/Lavalink/releases/latest")
         latest_version: str = (await git_req.json()).get("tag_name", "0.0.0")  # pyright: ignore[reportAny]
+        if git_req.status != 200:
+            logging.error("Failed to check Lavalink plugin version. Request failed.")
+            return False
 
         if version == latest_version:
             return True
@@ -122,9 +128,7 @@ async def start():
     """Start the Lavalink server from /bin folder."""
     global proc, stop_event
     while True:
-        proc = await asyncio.create_subprocess_exec(
-            "java", "-jar", "Lavalink.jar", cwd=CWD / "bin", stdout=-3
-        )
+        proc = await asyncio.create_subprocess_exec("java", "-jar", "Lavalink.jar", cwd=CWD / "bin", stdout=-3)
         await proc.wait()
         if nameless_config["nameless"]["is_shutting_down"]:
             stop_event.set()
@@ -161,16 +165,19 @@ def check_file():
 async def download_lavalink():
     """Download Lavalink.jar from the official repo."""
     LAVALINK_BIN.parent.mkdir(parents=True, exist_ok=True)
-    async with aiohttp.ClientSession() as session, session.get(
-        LAVALINK_URL, allow_redirects=True
-    ) as resp:
+    async with (
+        aiohttp.ClientSession() as session,
+        session.get(LAVALINK_URL, allow_redirects=True) as resp,
+    ):
         with open(LAVALINK_BIN, "wb") as f:
             f.write(await resp.read())
 
 
-async def main(loop: asyncio.AbstractEventLoop, auto_update: bool = False):
-    """Main function to start the Lavalink server."""
+async def main(loop: asyncio.AbstractEventLoop | None, auto_update: bool = False):
+    """Start the Lavalink server."""
     global task
+
+    loop = loop or asyncio.get_event_loop()
 
     if not check_file():
         logging.warning("Lavalink.jar not found Downloading...")
@@ -187,3 +194,7 @@ async def main(loop: asyncio.AbstractEventLoop, auto_update: bool = False):
     await check_plugin_version(auto_update)
 
     task = loop.create_task(start())
+
+
+if __name__ == "__main__":
+    asyncio.run(main(None, auto_update=True))

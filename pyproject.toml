@@ -1,36 +1,35 @@
 [project]
 name = "nameless"
-version = "6.6.6"
+version = "1.0.0"
 description = "A Discord BOT, written with batteries in mind."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "audioop-lts==0.2.1 ; python_full_version >= '3.13'",
-    "beautifulsoup4==4.12.3",
-    "discord-py==2.4.0",
-    "jishaku==2.6.0",
-    "prisma==0.15.0",
-    "python-dotenv==1.0.1",
-    "requests==2.32.3",
-    "uv==0.5.24",
-    "wavelink>=3.4.1",
+    "beautifulsoup4>=4.12.3",
+    "discord-py>=2.4.0",
+    "jishaku>=2.6.0",
+    "pomice>=2.9.2",
+    "prisma>=0.15.0",
+    "python-dotenv>=1.0.1",
+    "requests>=2.32.3",
+    "uv>=0.5.24",
 ]
 
 [dependency-groups]
 dev = ["basedpyright==1.24.0", "ruff==0.9.3"]
 
 [tool.basedpyright]
-exclude = ["venv", ".venv", "**/__pycache__"]
 reportUnnecessaryTypeIgnoreComment = "error"
 reportPrivateLocalImportUsage = "error"
 reportPrivateImportUsage = "error"
-reportPrivateUsage = "error"
+reportPrivateUsage = "none"
 reportUnusedCallResult = "none"
 reportMissingTypeStubs = "none"
+reportCallIssue = "none"
 typeCheckingMode = "recommended"
 
 [tool.ruff]
-line-length = 88
+line-length = 120
 indent-width = 4
 fix = true
 src = ["nameless"]

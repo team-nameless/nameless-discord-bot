@@ -5,10 +5,3 @@ support_server = ""
 
 [command]
 prefixes = ["n."]
-
-[[wavelinks]]
-name = "default"
-uri = "http://localhost:2333"
-password = "youshallnotpass"
-auto_start = true
-auto_update = true

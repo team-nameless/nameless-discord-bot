@@ -24,8 +24,10 @@ class NamelessBlacklist(TypedDict):
 
 
 class WavelinkNode(TypedDict):
-    uri: str
+    host: str
+    port: int
     password: str
+    identifier: str
     region: NotRequired[str]
     auto_start: NotRequired[bool]
     auto_update: NotRequired[bool]

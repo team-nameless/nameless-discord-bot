@@ -51,8 +51,7 @@ model CrossChatMessage {
 }
 
 model PlayerSettings {
-  Id               String @id @default(cuid())
-  SponsorblockFlag BigInt
-  Guild            Guild  @relation(fields: [GuildId], references: [Id])
-  GuildId          BigInt @unique
+  Id      String @id @default(cuid())
+  Guild   Guild  @relation(fields: [GuildId], references: [Id])
+  GuildId BigInt @unique
 }

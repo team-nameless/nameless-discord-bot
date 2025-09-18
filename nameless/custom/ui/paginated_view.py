@@ -2,7 +2,7 @@ from collections.abc import Iterable
 from typing import Self, override
 
 import discord
-from discord.ext.commands import Bot, Context
+from discord.ext import commands
 from discord.ui import Button, Modal, TextInput
 
 __all__ = ["NamelessPaginatedView"]
@@ -32,9 +32,9 @@ class JumpToPageModal(Modal):
 class NamelessPaginatedView(discord.ui.View):
     """nameless* custom paginated view."""
 
-    def __init__(self, ctx: Context[Bot], timeout: int = 60):
+    def __init__(self, ctx: commands.Context[commands.Bot], timeout: int = 60):
         super().__init__(timeout=timeout)
-        self.ctx: Context[Bot] = ctx
+        self.ctx: commands.Context[commands.Bot] = ctx
         self.pages: list[discord.Embed] = []
         self.current_page: int = 0
         self._current_message: discord.Message | None = None
@@ -256,6 +256,4 @@ class NavigationButton(Button[NamelessPaginatedView]):
         with_disabled: bool = False,
         **kwargs: object,
     ):
-        return cls.create_button(
-            "End", cls.END_ID, "⏹️", with_label, with_emote, with_disabled, **kwargs
-        )
+        return cls.create_button("End", cls.END_ID, "⏹️", with_label, with_emote, with_disabled, **kwargs)

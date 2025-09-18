@@ -1,8 +1,11 @@
-from typing import Self, override
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Self, override
 
 import discord
 
-from nameless import Nameless
+if TYPE_CHECKING:
+    from nameless import Nameless
 
 __all__ = ["NamelessYesNoPrompt"]
 
@@ -15,17 +18,13 @@ class NamelessYesNoPrompt(discord.ui.View):
         self.is_a_yes: bool = False
 
     @discord.ui.button(label="Yep!", style=discord.ButtonStyle.green)
-    async def confirm(
-        self, interaction: discord.Interaction[Nameless], _btn: discord.ui.Button[Self]
-    ) -> None:
+    async def confirm(self, interaction: discord.Interaction[Nameless], _btn: discord.ui.Button[Self]) -> None:
         self.is_a_yes = True
         await interaction.followup.send("Response received!")
         self.stop()
 
     @discord.ui.button(label="Nope!", style=discord.ButtonStyle.red)
-    async def cancel(
-        self, interaction: discord.Interaction[Nameless], _btn: discord.ui.Button[Self]
-    ) -> None:
+    async def cancel(self, interaction: discord.Interaction[Nameless], _btn: discord.ui.Button[Self]) -> None:
         await interaction.followup.send("Response received!")
         self.stop()
 

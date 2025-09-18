@@ -1,13 +1,17 @@
+from __future__ import annotations
+
 import logging
 from datetime import datetime
 from platform import python_version
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import discord
 from discord.ext import commands
 
-from nameless import Nameless
 from nameless.config import nameless_config
+
+if TYPE_CHECKING:
+    from nameless import Nameless
 
 __all__ = ["GeneralCommand"]
 

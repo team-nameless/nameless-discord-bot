@@ -1,15 +1,19 @@
+from __future__ import annotations
+
 import contextlib
 import logging
+from typing import TYPE_CHECKING
 
 import discord
-import discord.ui
 from discord.ext import commands
 from prisma.models import Guild
 
-from nameless import Nameless
 from nameless.custom.cache import nameless_cache
 from nameless.custom.prisma import NamelessPrisma
 from nameless.utils import create_cache_key
+
+if TYPE_CHECKING:
+    from nameless import Nameless
 
 __all__ = ["HoneypotCommand"]
 

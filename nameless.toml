@@ -5,3 +5,4 @@ support_server = ""
 
 [command]
 prefixes = ["n."]
+ignores = ["maimai", "crossover", "honeypot"]

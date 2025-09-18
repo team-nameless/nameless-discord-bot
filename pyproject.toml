@@ -39,7 +39,7 @@ indent-style = "space"
 
 [tool.ruff.lint]
 select = ["E", "F", "UP", "B", "SIM", "I", "Q", "TID", "D"]
-ignore = ["B018", "D1", "D417"]
+ignore = ["B018", "D1", "D417", "TID252"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F403", "TID252"]

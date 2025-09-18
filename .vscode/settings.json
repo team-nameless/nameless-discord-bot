@@ -1,5 +1,5 @@
 {
-    "python.analysis.typeCheckingMode": "standard",
+    "python.analysis.typeCheckingMode": "strict",
     "ruff.organizeImports": true,
     "editor.codeActionsOnSave": {
         "source.fixAll.ruff": "always",

@@ -19,6 +19,7 @@ class NamelessRuntime(TypedDict):
 
 class NamelessCommands(TypedDict):
     prefixes: list[str]
+    ignores: NotRequired[list[str]]
 
 
 class NamelessBlacklist(TypedDict):
@@ -26,7 +27,7 @@ class NamelessBlacklist(TypedDict):
     guilds: list[int]
 
 
-class WavelinkNode(TypedDict):
+class LavalinkNode(TypedDict):
     host: str
     port: int
     password: str
@@ -41,7 +42,7 @@ class NamelessConfig(TypedDict):
     command: NamelessCommands
     runtime: NamelessRuntime
     blacklist: NamelessBlacklist
-    wavelinks: list[WavelinkNode]
+    lavalinks: list[LavalinkNode]
 
 
 _cfg_path: Path = Path(__file__).parent.parent.absolute() / "nameless.toml"
@@ -50,4 +51,4 @@ with open(_cfg_path, encoding="utf-8") as f:
     _content: str = f.read()
 
 # Maybe add a type checker here, using the annotation from the TypedDict
-nameless_config: NamelessConfig = NamelessConfig(**loads(_content))
+nameless_config: NamelessConfig = NamelessConfig(**loads(_content), runtime={"is_shutting_down": False})

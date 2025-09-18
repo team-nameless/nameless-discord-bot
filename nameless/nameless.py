@@ -1,14 +1,15 @@
+import importlib
 import logging
 import os
-import re
+import pkgutil
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Self, override
 
 import discord
 from discord import ActivityType, Permissions
 from discord.ext import commands
 
+import nameless.command
 from nameless.config import nameless_config
 from nameless.custom.cache import nameless_cache
 from nameless.custom.prisma import NamelessPrisma
@@ -114,20 +115,26 @@ class Nameless(commands.Bot):
         # Add jishaku by default.
         await self.load_extension("jishaku")
 
-        # We get ones that end in .py, in `command` directory.
-        # And ignore ones that starts with _ (underscore)
-        current_path = Path(__file__).parent
-        py_file_re = re.compile(r"^(?!_.*)(\w.*).py")
-        available_files = [*filter(py_file_re.match, os.listdir(current_path / "command"))]
+        ignore_list = nameless_config.get("command", {}).get("ignores", [])
+        logging.info(f"Loaded ignore list: {ignore_list}")
 
-        for file in available_files:
-            module_name = file.replace(".py", "")
-            module_name = f"nameless.command.{module_name}"
+        command_package = nameless.command
+        for finder, module_name, ispkg in pkgutil.iter_modules(
+            command_package.__path__, command_package.__name__ + "."
+        ):
+            name = module_name.split(".")[-1]
+            if name.startswith("_") or name in ignore_list:
+                continue
 
             try:
-                await self.load_extension(module_name)
-            except commands.ExtensionFailed as ex:
-                logging.error("Command load failure.", exc_info=ex)
+                module = importlib.import_module(module_name)
+                if hasattr(module, "setup") and callable(module.setup):
+                    await self.load_extension(module_name)
+                    logging.info(f"Loaded extension: {module_name}")
+                else:
+                    logging.debug(f"Skipped {module_name}: no setup function found")
+            except Exception as ex:
+                logging.error(f"Failed to load extension {module_name}", exc_info=ex)
 
     def get_prefix_list(self) -> list[str]:
         """Get prefix list."""

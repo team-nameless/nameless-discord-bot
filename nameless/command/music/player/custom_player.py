@@ -55,11 +55,12 @@ class CustomPlayer(pomice.Player):
         else:
             raise TypeError("Expected a list of tracks or a playlist.")
 
-    async def send_to_channel(
+    async def send_to_trigger(
         self,
         content: str | None = None,
         *,
         embed: discord.Embed | None = None,
+        view: discord.ui.View | None = None,
         delete_after: float | None = None,
         silent: bool = False,
         mention_author: bool = False,
@@ -78,4 +79,5 @@ class CustomPlayer(pomice.Player):
             delete_after=delete_after,  # type: ignore
             silent=silent,
             mention_author=mention_author,
+            view=view,  # type: ignore
         )

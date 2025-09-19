@@ -119,16 +119,14 @@ class Nameless(commands.Bot):
         logging.info(f"Loaded ignore list: {ignore_list}")
 
         command_package = nameless.command
-        for finder, module_name, ispkg in pkgutil.iter_modules(
-            command_package.__path__, command_package.__name__ + "."
-        ):
+        for _, module_name, _ in pkgutil.iter_modules(command_package.__path__, command_package.__name__ + "."):
             name = module_name.split(".")[-1]
             if name.startswith("_") or name in ignore_list:
                 continue
 
             try:
                 module = importlib.import_module(module_name)
-                if hasattr(module, "setup") and callable(module.setup):
+                if hasattr(module, "setup") and callable(module.setup):  # pyright: ignore[reportAny]
                     await self.load_extension(module_name)
                     logging.info(f"Loaded extension: {module_name}")
                 else:

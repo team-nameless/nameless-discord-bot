@@ -48,12 +48,19 @@ class MusicCommands(commands.GroupCog, name="music"):
         "is_ready",
         "pomice",
         "_connect_task",
+        "_lavalink_nodes",
         "player_manager",
         "embed_generator",
         "track_selector",
         "cache",
         "config",
     )
+
+    if TYPE_CHECKING:
+        bot: Nameless
+        pomice: pomice.NodePool
+        _connect_task: asyncio.Task[None] | None
+        _lavalink_nodes: list[LavalinkNode]
 
     def __init__(self, bot: Nameless):
         self.bot = bot
@@ -66,25 +73,61 @@ class MusicCommands(commands.GroupCog, name="music"):
 
         self.pomice = pomice.NodePool()
         self._connect_task = self.bot.loop.create_task(self.connect_nodes())
+        self._lavalink_nodes = nameless_config.get("lavalinks", [])
 
-    async def connect_nodes(self):
+    async def connect_nodes(self, max_retries: int = 5, retry_delay: int = 5) -> None:
         logging.info("Waiting for Discord connection before connecting to Lavalink...")
         await self.bot.wait_until_ready()
         logging.info("Discord ready. Connecting to Lavalink nodes...")
 
-        for node in nameless_config.get("lavalinks", []):
-            try:
-                _node = await self.pomice.create_node(
-                    bot=self.bot,
-                    host=node["host"],
-                    port=node["port"],
-                    password=node["password"],
-                    identifier=node.get("identifier"),
-                    secure=node.get("secure", False),
-                )
-                logging.info("Connected to Lavalink node: %s", _node._identifier)  # type: ignore
-            except Exception as e:
-                logging.error("Failed to connect to node %s: %s", node.get("identifier", "unknown"), e)
+        pending_nodes = self._lavalink_nodes.copy()
+
+        for retry_attempt in range(max_retries + 1):
+            if not pending_nodes:
+                break
+
+            if retry_attempt > 0:
+                logging.info("Retry attempt %d/%d after %d seconds...", retry_attempt, max_retries, retry_delay)
+                await asyncio.sleep(retry_delay)
+
+            nodes_to_retry = pending_nodes.copy()
+            pending_nodes.clear()
+
+            for node in nodes_to_retry:
+                try:
+                    _node = await self.pomice.create_node(
+                        bot=self.bot,
+                        host=node["host"],
+                        port=node["port"],
+                        password=node["password"],
+                        identifier=node.get("identifier"),
+                        secure=node.get("secure", False),
+                    )
+                    logging.info("Connected to Lavalink node: %s", _node._identifier)  # type: ignore
+                except Exception as e:
+                    node_id = node.get("identifier", "unknown")
+                    if retry_attempt < max_retries:
+                        logging.warning(
+                            "Failed to connect to node %s (attempt %d/%d): %s",
+                            node_id,
+                            retry_attempt + 1,
+                            max_retries + 1,
+                            e,
+                        )
+                        pending_nodes.append(node)
+                    else:
+                        logging.error(
+                            "Failed to connect to node %s after %d attempts: %s",
+                            node_id,
+                            max_retries + 1,
+                            e,
+                            exc_info=True,
+                        )
+
+        if pending_nodes:
+            logging.warning("Failed to connect to %d node(s) after %d retry attempts", len(pending_nodes), max_retries)
+        else:
+            logging.info("Successfully connected to all Lavalink nodes")
 
         self.is_ready.set()
         if self._connect_task:
@@ -102,11 +145,11 @@ class MusicCommands(commands.GroupCog, name="music"):
         if self.bot.user:
             embed = self.embed_generator.create_now_playing_embed(player, track, self.bot.user)
             view = MusicControlView(player)
-            await player.send_to_trigger(embed=embed, view=view)
+            await player.send_to_trigger_channel(embed=embed, view=view)
 
     @commands.Cog.listener()
     async def on_wavelink_inactive_player(self, player: CustomPlayer):
-        await player.send_to_trigger("🔇 I've been inactive for a while. Goodbye!")
+        await player.send_to_trigger_channel("🔇 I've been inactive for a while. Goodbye!")
         await player.disconnect()
 
     @commands.Cog.listener()
@@ -122,7 +165,7 @@ class MusicCommands(commands.GroupCog, name="music"):
             return cached_result
 
         search_type = SOURCE_MAPPING.get(source, pomice.SearchType.ytsearch)
-        results = await player.get_tracks(query, search_type=search_type)  # type: ignore
+        results = await player.get_tracks(query, search_type=search_type)  # pyright: ignore[reportUnknownMemberType]
 
         if isinstance(results, list):
             self.cache.set(query, source, results)
@@ -238,13 +281,12 @@ class MusicCommands(commands.GroupCog, name="music"):
 
                 random.shuffle(tracks)
 
-            added_count = await self._add_tracks_to_queue(player, tracks, position)
+            await self._add_tracks_to_queue(player, tracks, position)
 
             if not player.is_playing and player.queue:
                 await player.play(player.queue.get())
 
-            view = MusicControlView(player)
-            await ctx.send(embed=embed, view=view)
+            await player.send_to_channel(ctx.channel, embed=embed)
 
         except Exception as e:
             embed = self.embed_generator.create_error_embed("Playback Error", str(e))

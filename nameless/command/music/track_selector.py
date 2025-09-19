@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Self, final, override
 
 import discord.ui
 from discord.ui import Button, Select, View
@@ -33,6 +33,7 @@ class TrackSelector:
         return view.selected_tracks
 
 
+@final
 class TrackSelectionView(View):
     def __init__(self, tracks: list[pomice.Track]):
         super().__init__(timeout=60)
@@ -42,7 +43,7 @@ class TrackSelectionView(View):
         self.add_item(TrackDropdown(tracks))
 
     @discord.ui.button(label="Confirm Selection", style=discord.ButtonStyle.success, emoji="✅")
-    async def confirm(self, interaction: discord.Interaction, button: Button[Self]):
+    async def confirm(self, interaction: discord.Interaction, _: Button[Self]):
         dropdown = self.children[0]
         if isinstance(dropdown, TrackDropdown) and dropdown.values:
             self.selected_tracks = [self.tracks[int(value)] for value in dropdown.values]
@@ -51,7 +52,7 @@ class TrackSelectionView(View):
         self.stop()
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.danger, emoji="❌")
-    async def cancel(self, interaction: discord.Interaction, button: Button[Self]):
+    async def cancel(self, interaction: discord.Interaction, _: Button[Self]):
         self.selected_tracks = []
         await interaction.response.defer()
         self.stop()
@@ -85,6 +86,7 @@ class TrackDropdown(Select[TrackSelectionView]):
             options=options,
         )
 
+    @override
     async def callback(self, interaction: discord.Interaction):
         view = self.view
         if view and hasattr(view, "children"):

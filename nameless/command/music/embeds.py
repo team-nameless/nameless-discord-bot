@@ -113,10 +113,14 @@ class EmbedGenerator:
         for i, track in enumerate(tracks, start=1):
             duration = self.format_duration(track.length)
             track_list.append(
-                f"`{i}.` **[{escape_markdown(track.title or 'Unknown')}]({track.uri or 'N/A'})**\n"
-                f"      by {self.resolve_artist_name(track.author)} • {duration}"
+                "`{index}.` **[{title}]({uri})**\n      by {artist} • {duration}".format(
+                    index=i,
+                    title=escape_markdown(track.title or "Unknown"),
+                    uri=track.uri or "N/A",
+                    artist=self.resolve_artist_name(track.author),
+                    duration=duration,
+                )
             )
-
         embed.description = "\n\n".join(track_list)
         embed.set_footer(text=f"Page {page}/{total_pages}")
 
@@ -127,8 +131,13 @@ class EmbedGenerator:
             track = tracks[0]
             embed = discord.Embed(
                 title="✅ Track Added",
-                description=f"**[{escape_markdown(track.title or 'Unknown')}]({track.uri or 'N/A'})**\n"
-                f"by {self.resolve_artist_name(track.author)}",
+                description=(
+                    "**[{title}]({uri})**\nby {artist}".format(
+                        title=escape_markdown(track.title or "Unknown"),
+                        uri=track.uri or "N/A",
+                        artist=self.resolve_artist_name(track.author),
+                    )
+                ),
                 color=discord.Color.green(),
             )
             embed.set_thumbnail(url=track.thumbnail or "")

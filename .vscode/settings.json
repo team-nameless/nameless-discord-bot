@@ -1,5 +1,5 @@
 {
-    "python.analysis.typeCheckingMode": "strict",
+    "python.analysis.typeCheckingMode": "standard",
     "ruff.organizeImports": true,
     "editor.codeActionsOnSave": {
         "source.fixAll.ruff": "always",
@@ -11,5 +11,6 @@
         "**/venv/": true,
         "**/__pycache__/": true,
         "**/.ruff_cache/": true,
-    }
+    },
+    "python.languageServer": "None"
 }

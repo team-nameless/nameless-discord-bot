@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Self, final, override
 
 import discord
 from discord.ui import Button, View
@@ -9,17 +9,17 @@ if TYPE_CHECKING:
     from .player import CustomPlayer
 
 
+@final
 class MusicControlView(View):
-    if TYPE_CHECKING:
-        pause_resume_button: Button[Self]
-
     def __init__(self, player: CustomPlayer, timeout: int = 300):
         super().__init__(timeout=timeout)
         self.player = player
+        self.pause_resume_button = None
+
         self.update_buttons()
 
     def update_buttons(self):
-        if hasattr(self, "pause_resume_button"):
+        if self.pause_resume_button:
             self.pause_resume_button.emoji = "▶️" if self.player.is_paused else "⏸️"
             self.pause_resume_button.label = "Resume" if self.player.is_paused else "Pause"
 
@@ -92,12 +92,14 @@ class MusicControlView(View):
         await interaction.followup.send("👋 Disconnected from voice channel", ephemeral=True)
         self.stop()
 
+    @override
     async def on_timeout(self):
         for item in self.children:
             if isinstance(item, Button):
                 item.disabled = True
 
 
+@final
 class VolumeModal(discord.ui.Modal):
     def __init__(self, player: CustomPlayer):
         super().__init__(title="Set Volume")
@@ -110,6 +112,7 @@ class VolumeModal(discord.ui.Modal):
             max_length=3,
         )
 
+    @override
     async def on_submit(self, interaction: discord.Interaction):
         try:
             volume = int(self.volume_input.value)
@@ -123,6 +126,7 @@ class VolumeModal(discord.ui.Modal):
             await interaction.response.send_message("❌ Please enter a valid number", ephemeral=True)
 
 
+@final
 class ConfirmationView(View):
     def __init__(self, timeout: int = 60):
         super().__init__(timeout=timeout)

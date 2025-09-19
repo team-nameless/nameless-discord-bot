@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 if TYPE_CHECKING:
     from pomice import Track
 
 
+@final
 class TrackCache:
     def __init__(self, max_size: int = 1000):
         self.cache: dict[str, list[Track]] = {}

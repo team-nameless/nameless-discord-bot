@@ -1,5 +1,5 @@
 server: # REST and WS server
-  port: 8233
+  port: 18233
   address: 0.0.0.0
   http2:
     enabled: false # Whether to enable HTTP/2 support

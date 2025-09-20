@@ -47,8 +47,8 @@ class Nameless(commands.Bot):
         nameless_cache.populate_from_persistence()
         await self._register_commands()
 
-        logging.info("Syncing commands.")
-        await self.tree.sync()
+        # logging.info("Syncing commands.")
+        # await self.tree.sync()
         logging.warning("Text-based Commands should be available now.")
         logging.warning("Application Commands should be available in one hour.")
 
@@ -64,10 +64,10 @@ class Nameless(commands.Bot):
 
     @override
     async def on_command_error(self, ctx: commands.Context[Self], ex: commands.errors.CommandError):
+        logging.error("Something went wrong.", exc_info=ex)
         await ctx.send(
             "Something went wrong during command execution, " + "please notify us on GitHub issue if needed."
         )
-        logging.error("Something went wrong.", exc_info=ex)
 
     def start_bot(self, *, is_debug: bool = False):
         """Start the bot."""

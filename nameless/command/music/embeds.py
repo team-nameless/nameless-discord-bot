@@ -1,4 +1,5 @@
 import datetime
+import logging
 from typing import TYPE_CHECKING
 
 import discord
@@ -115,7 +116,7 @@ class EmbedGenerator:
             track_list.append(
                 "`{index}.` **[{title}]({uri})**\n      by {artist} • {duration}".format(
                     index=i,
-                    title=escape_markdown(track.title or "Unknown"),
+                    title=(track.title or "Unknown"),
                     uri=track.uri or "N/A",
                     artist=self.resolve_artist_name(track.author),
                     duration=duration,
@@ -133,7 +134,7 @@ class EmbedGenerator:
                 title="✅ Track Added",
                 description=(
                     "**[{title}]({uri})**\nby {artist}".format(
-                        title=escape_markdown(track.title or "Unknown"),
+                        title=(track.title or "Unknown"),
                         uri=track.uri or "N/A",
                         artist=self.resolve_artist_name(track.author),
                     )
@@ -156,6 +157,13 @@ class EmbedGenerator:
             description=description,
             color=discord.Color.red(),
         )
+
+    def create_error_embed_from_exception(
+        self, title: str, exception: Exception, print_stack: bool = False
+    ) -> discord.Embed:
+        if print_stack:
+            logging.error("An error occurred", exc_info=exception)
+        return self.create_error_embed(title, str(exception))
 
     def create_success_embed(self, title: str, description: str) -> discord.Embed:
         return discord.Embed(

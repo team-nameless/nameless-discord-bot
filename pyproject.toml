@@ -16,9 +16,12 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["ruff>=0.9.3"]
+dev = [
+    "ruff>=0.9.3",
+    "watchdog>=6.0.0",
+]
 
-[tool.basedpyright]
+[tool.pyright]
 reportUnnecessaryTypeIgnoreComment = "error"
 reportPrivateLocalImportUsage = "error"
 reportPrivateImportUsage = "error"

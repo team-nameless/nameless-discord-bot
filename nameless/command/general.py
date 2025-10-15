@@ -125,15 +125,13 @@ class GeneralCommand(commands.Cog):
         servers_count = len(ctx.bot.guilds)
         total_members_count = sum(len(guild.members) for guild in ctx.bot.guilds)
 
-        launch_time: datetime = nameless_config["nameless"]["start_time"]
-
-        uptime = int(launch_time.timestamp())
+        uptime = int(nameless_config.nameless.start_time.timestamp())
         bot_inv = discord.utils.oauth_url(
             ctx.bot.user.id,
             permissions=ctx.bot.get_needed_permissions(),
             scopes=["bot", "applications.commands"],
         )
-        support_guild: str = nameless_config["nameless"]["support_server"]
+        support_guild: str = nameless_config.nameless.support_server
 
         embed: discord.Embed = (
             discord.Embed(
@@ -154,7 +152,7 @@ class GeneralCommand(commands.Cog):
                 value=f"<t:{uptime}:F> (<t:{uptime}:R>)",
                 inline=False,
             )
-            .add_field(name="ℹ️ Version", value=nameless_config["nameless"]["version"])
+            .add_field(name="ℹ️ Version", value=nameless_config.nameless.version)
             .add_field(
                 name="💻 Runtime",
                 value=(f"**discord.py {discord.__version__}** " + f"on **Python {python_version()}**"),

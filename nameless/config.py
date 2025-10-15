@@ -1,54 +1,80 @@
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from tomllib import loads
-from typing import NotRequired, TypedDict
 
 __all__ = ["nameless_config"]
 
 
-class NamelessMetadata(TypedDict):
+@dataclass(eq=False, repr=False, slots=True)
+class NamelessMetadata:
     version: str
     description: str
     support_server: str
-    start_time: datetime
+    start_time: datetime = field(default_factory=datetime.now)
 
 
-class NamelessRuntime(TypedDict):
-    is_shutting_down: bool
+@dataclass(eq=False, repr=False, slots=True)
+class NamelessRuntime:
+    is_shutting_down: bool = False
 
 
-class NamelessCommands(TypedDict):
-    prefixes: list[str]
-    ignores: NotRequired[list[str]]
+@dataclass(eq=False, repr=False, slots=True)
+class NamelessCommands:
+    prefixes: set[str]
+    ignores: list[str] = field(default_factory=list)
+
+    def __post_init__(self):
+        self.prefixes = set(self.prefixes)
 
 
-class NamelessBlacklist(TypedDict):
-    users: list[int]
-    guilds: list[int]
+@dataclass(eq=False, repr=False, slots=True)
+class NamelessBlacklist:
+    users: list[int] = field(default_factory=list)
+    guilds: list[int] = field(default_factory=list)
 
 
-class LavalinkNode(TypedDict):
+@dataclass(eq=False, repr=False, slots=True)
+class LavalinkNode:
     host: str
     port: int
     password: str
-    identifier: str
-    region: NotRequired[str]
-    auto_start: NotRequired[bool]
-    auto_update: NotRequired[bool]
+    identifier: str = field(default="")
+    secure: bool = False
+    region: str | None = None
+    auto_start: bool = field(default=False)
+    auto_update: bool = field(default=False)
+
+    def __post_init__(self):
+        if not self.identifier:
+            self.identifier = f"{self.host}:{self.port}"
 
 
-class NamelessConfig(TypedDict):
+@dataclass(eq=False, repr=False, slots=True)
+class NamelessDevConfig:
+    enabled: bool
+    debug: bool
+    server_sync_ids: list[int] = field(default_factory=list)
+
+
+@dataclass(eq=False, repr=False, slots=True)
+class NamelessConfig:
     nameless: NamelessMetadata
     command: NamelessCommands
-    runtime: NamelessRuntime
-    blacklist: NamelessBlacklist
-    lavalinks: list[LavalinkNode]
+    dev: NamelessDevConfig
+    runtime: NamelessRuntime = field(default_factory=NamelessRuntime)
+    blacklist: NamelessBlacklist = field(default_factory=NamelessBlacklist)
+    lavalinks: list[LavalinkNode] = field(default_factory=list)
+
+    def __post_init__(self):
+        for key_name, value_class in self.__annotations__.items():
+            value = getattr(self, key_name)
+            if isinstance(value, dict):
+                setattr(self, key_name, value_class(**value))
 
 
 _cfg_path: Path = Path(__file__).parent.parent.absolute() / "nameless.toml"
-
 with open(_cfg_path, encoding="utf-8") as f:
     _content: str = f.read()
 
-# Maybe add a type checker here, using the annotation from the TypedDict
-nameless_config: NamelessConfig = NamelessConfig(**loads(_content), runtime={"is_shutting_down": False})
+nameless_config: NamelessConfig = NamelessConfig(**loads(_content))

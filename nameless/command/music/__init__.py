@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
-from typing import TYPE_CHECKING, final
+from typing import TYPE_CHECKING, final, override
 
+import aiohttp.client_exceptions
 import discord
 import pomice
 from discord import app_commands
 from discord.ext import commands
 
-from nameless.config import nameless_config
+from nameless.config import LavalinkNode, nameless_config
 from nameless.custom.ui import NamelessPaginatedView
 
 from .cache import TrackCache
@@ -17,6 +19,7 @@ from .embeds import EmbedGenerator
 from .exceptions import (
     AutoplayDisabledError,
     EmptyQueueError,
+    InvalidParameterError,
     InvalidPositionError,
     InvalidVolumeError,
     NoTracksFoundError,
@@ -27,7 +30,6 @@ from .player_manager import PlayerManager
 from .track_selector import TrackSelector
 
 if TYPE_CHECKING:
-    from nameless.config import LavalinkNode
     from nameless.nameless import Nameless
 
 
@@ -72,7 +74,7 @@ class MusicCommands(commands.GroupCog, name="music"):
 
         self.node_pool = pomice.NodePool()
         self._connect_task = self.bot.loop.create_task(self.connect_nodes())
-        self._lavalink_nodes = nameless_config.get("lavalinks", [])
+        self._lavalink_nodes = nameless_config.lavalinks
 
     async def connect_nodes(self, max_retries: int = 5, retry_delay: int = 5) -> None:
         logging.info("Waiting for Discord connection before connecting to Lavalink...")
@@ -96,15 +98,15 @@ class MusicCommands(commands.GroupCog, name="music"):
                 try:
                     _node = await self.node_pool.create_node(
                         bot=self.bot,
-                        host=node["host"],
-                        port=node["port"],
-                        password=node["password"],
-                        identifier=node.get("identifier"),
-                        secure=node.get("secure", False),
+                        host=node.host,
+                        port=node.port,
+                        password=node.password,
+                        identifier=node.identifier,
+                        secure=node.secure,
                     )
-                    logging.info("Connected to Lavalink node: %s", _node._identifier)  # type: ignore
+                    logging.info("Connected to Lavalink node: %s", _node._identifier)
                 except Exception as e:
-                    node_id = node.get("identifier", "unknown")
+                    node_id = node.identifier
                     if retry_attempt < max_retries:
                         logging.warning(
                             "Failed to connect to node %s (attempt %d/%d): %s",
@@ -134,12 +136,8 @@ class MusicCommands(commands.GroupCog, name="music"):
 
     @commands.Cog.listener()
     async def on_pomice_track_start(self, player: CustomPlayer, track: pomice.Track):
-        if not player.guild:
-            logging.warning("Player guild is None - bot may have been kicked")
+        if not player.np_message_allowed or player.queue.loop_mode == pomice.LoopMode.TRACK:
             return
-
-        # if not player.play_now_allowed and player.queue.loop_mode != pomice.LoopMode.QUEUE:
-        #     return
 
         if self.bot.user:
             embed = self.embed_generator.create_now_playing_embed(player, track, self.bot.user)
@@ -147,26 +145,37 @@ class MusicCommands(commands.GroupCog, name="music"):
 
     @commands.Cog.listener()
     async def on_pomice_track_end(self, player: CustomPlayer, _reason: str, _track: pomice.Track):
-        if not player.guild:
-            logging.warning("Player guild is None - bot may have been kicked")
+        await player.do_next()
+
+    @commands.Cog.listener()
+    async def on_pomice_track_stuck(self, player: CustomPlayer, track: pomice.Track, _threshold: int):
+        logging.warning("Track stuck: %s in guild %s", track.title, player.guild.id if player.guild else "Unknown")
+        await player.do_next()
+
+    @commands.Cog.listener()
+    async def on_pomice_track_exception(self, player: CustomPlayer, track: pomice.Track, exception: dict[str, str]):
+        logging.error(
+            "Track exception: %s in guild %s - %s",
+            track.title,
+            player.guild.id if player.guild else "Unknown",
+            "\n\t".join(f"{k}={v}" for k, v in exception.items()),
+        )
+
+        should_skip = await player.handle_track_error(track)
+        if should_skip:
+            await player.do_next()
             return
 
-        if player.queue:
-            next_track = player.queue.get()
-            await player.play(next_track)
-            return
+        cause = exception.get("cause", "Unknown error")
+        if "403" in cause or "java.lang.RuntimeException" in cause:
+            embed = self.embed_generator.create_error_embed("Playback Error", f"Cannot play track: {cause}")
+            await player.send_to_trigger_channel(embed=embed, make_controller=False)
+            await player.disable_last_control_view()
+        else:
+            embed = self.embed_generator.create_error_embed("Playback Error", f"An error occurred: {cause}")
+            await player.send_to_trigger_channel(embed=embed, make_controller=False)
 
-        if player.is_autoplaying:
-            if not player.auto_queue:
-                await player.refresh_auto_queue()
-                if not player.auto_queue:
-                    raise AutoplayDisabledError()
-
-            next_track = player.auto_queue.pop(0)
-            await player.play(next_track)
-            return
-
-        player.start_disconnect_timer()
+        await player.do_next()
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member: discord.Member, _: discord.VoiceState, after: discord.VoiceState):
@@ -186,7 +195,7 @@ class MusicCommands(commands.GroupCog, name="music"):
             return cached_result
 
         search_type = SOURCE_MAPPING.get(source, pomice.SearchType.ytsearch)
-        results = await player.get_tracks(query, search_type=search_type)  # pyright: ignore[reportUnknownMemberType]
+        results = await player.get_tracks(query, search_type=search_type)
 
         if isinstance(results, list):
             self.cache.set(query, source, results)
@@ -204,7 +213,7 @@ class MusicCommands(commands.GroupCog, name="music"):
         if position <= 0:
             player.queue.extend(tracks)
         else:
-            queue_list = list(player.queue._queue)  # type: ignore
+            queue_list = list(player.queue._queue)
             insert_pos = min(position - 1, len(queue_list))
             queue_list[insert_pos:insert_pos] = tracks
             player.queue.clear()
@@ -352,7 +361,7 @@ class MusicCommands(commands.GroupCog, name="music"):
         if not player.queue and not player.auto_queue:
             raise EmptyQueueError()
 
-        all_tracks = list(player.queue._queue)  # type: ignore
+        all_tracks = list(player.queue._queue)
         if player.auto_queue:
             all_tracks.extend(list(player.auto_queue))
 
@@ -422,7 +431,7 @@ class MusicCommands(commands.GroupCog, name="music"):
             )
             return
 
-        mode = mode.capitalize()
+        mode = mode.upper()
         if mode == "OFF":
             player.queue.disable_loop()
         else:
@@ -522,41 +531,18 @@ class MusicCommands(commands.GroupCog, name="music"):
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
-    @autoplay.command(name="enable")
+    @autoplay.command(name="toggle")
     @app_commands.guild_only()
-    async def autoplay_enable(self, ctx: commands.Context[Nameless]) -> None:
+    async def autoplay_toggle(self, ctx: commands.Context[Nameless]) -> None:
         player = await self.player_manager.get_or_create_player(ctx)
 
-        if player.is_autoplaying:
-            embed = self.embed_generator.create_info_embed("Already Enabled", "Autoplay is already enabled")
-            await ctx.send(embed=embed)
-            return
+        player.toggle_autoplay()
+        if player.is_autoplay_enabled:
+            await player.refresh_auto_queue()
 
-        if not player.current:
-            embed = self.embed_generator.create_error_embed("No Track", "Need a track playing to enable autoplay")
-            await ctx.send(embed=embed)
-            return
-
-        await player.refresh_auto_queue()
-        player.is_autoplaying = True
-
-        embed = self.embed_generator.create_success_embed("Autoplay Enabled", "Autoplay mode has been enabled")
-        await ctx.send(embed=embed)
-
-    @autoplay.command(name="disable")
-    @app_commands.guild_only()
-    async def autoplay_disable(self, ctx: commands.Context[Nameless]) -> None:
-        player = await self.player_manager.get_or_create_player(ctx)
-
-        if not player.is_autoplaying:
-            embed = self.embed_generator.create_info_embed("Already Disabled", "Autoplay is already disabled")
-            await ctx.send(embed=embed)
-            return
-
-        player.is_autoplaying = False
-        player.clear_auto_queue()
-
-        embed = self.embed_generator.create_success_embed("Autoplay Disabled", "Autoplay mode has been disabled")
+        embed = self.embed_generator.create_success_embed(
+            "Autoplay Toggled", f"Autoplay mode has been {'enabled' if player.is_autoplay_enabled else 'disabled'}"
+        )
         await ctx.send(embed=embed)
 
     @autoplay.command(name="refresh")
@@ -566,7 +552,7 @@ class MusicCommands(commands.GroupCog, name="music"):
 
         player = await self.player_manager.get_or_create_player(ctx)
 
-        if not player.is_autoplaying:
+        if not player.is_autoplay_enabled:
             raise AutoplayDisabledError()
 
         if not player.current:
@@ -579,26 +565,73 @@ class MusicCommands(commands.GroupCog, name="music"):
         embed = self.embed_generator.create_success_embed("Autoplay Refreshed", "Autoplay queue has been refreshed")
         await ctx.send(embed=embed)
 
+    @commands.hybrid_group(name="auto_disconnect")
+    async def auto_disconnect(self, ctx: commands.Context[Nameless]):
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(ctx.command)
+
+    # scaffold
+    @auto_disconnect.command(name="set")
+    @app_commands.guild_only()
+    @app_commands.describe(timeout="Timeout in seconds (0 to disable)")
+    async def set_auto_disconnect(self, ctx: commands.Context[Nameless], timeout: int) -> None:
+        if timeout < 0:
+            raise InvalidParameterError("timeout", f"{timeout}. Must be 0 or positive.")
+
+        player = await self.player_manager.get_or_create_player(ctx)
+        if timeout == 0:
+            player.set_auto_disconnect(False, 0)
+            embed = self.embed_generator.create_success_embed(
+                "Auto-Disconnect Disabled",
+                "Auto-disconnect has been disabled",
+            )
+        else:
+            player.set_auto_disconnect(True, timeout)
+            embed = self.embed_generator.create_success_embed(
+                "Auto-Disconnect Set",
+                f"Auto-disconnect timeout set to **{timeout} seconds**",
+            )
+        await ctx.send(embed=embed)
+
+    @auto_disconnect.command(name="toggle")
+    @app_commands.guild_only()
+    async def toggle_auto_disconnect(self, ctx: commands.Context[Nameless]) -> None:
+        player = await self.player_manager.get_or_create_player(ctx)
+        player.set_auto_disconnect(not player.is_auto_disconnect_enabled)
+        embed = self.embed_generator.create_success_embed(
+            "Auto-Disconnect Toggled",
+            f"Auto-disconnect has been {'enabled' if player.is_auto_disconnect_enabled else 'disabled'}",
+        )
+        await ctx.send(embed=embed)
+
+    @override
+    async def cog_unload(self):
+        if self._connect_task:
+            self._connect_task.cancel()
+            self._connect_task = None
+        with contextlib.suppress(aiohttp.client_exceptions.ClientConnectorError, ConnectionRefusedError):
+            await self.node_pool.disconnect()
+
 
 async def setup(bot: Nameless):
     autostart_lavalink = False
     autoupdate_lavalink = False
 
-    lavalinks = nameless_config.setdefault("lavalinks", [])
+    lavalinks = nameless_config.lavalinks
     for node in lavalinks:
-        if node.get("auto_start", False):
+        if node.auto_start:
             autostart_lavalink = True
-            autoupdate_lavalink = node.get("auto_update", False)
+            autoupdate_lavalink = node.auto_update
             break
     else:
-        default_node: LavalinkNode = {
-            "host": "localhost",
-            "port": 18233,
-            "password": "youshallnotpass",
-            "auto_start": True,
-            "auto_update": True,
-            "identifier": "default-node",
-        }
+        default_node = LavalinkNode(
+            host="localhost",
+            port=18233,
+            password="youshallnotpass",
+            auto_start=True,
+            auto_update=True,
+            identifier="default-node",
+        )
         lavalinks.append(default_node)
         logging.warning("No Lavalink nodes configured. Added default node.")
         autostart_lavalink = True
@@ -617,17 +650,15 @@ async def setup(bot: Nameless):
 
 
 async def teardown(bot: Nameless):
-    lavalinks = nameless_config.get("lavalinks", [])
+    lavalinks = nameless_config.lavalinks
     for node in lavalinks:
-        if node.get("auto_start", False):
+        if node.auto_start:
             try:
                 logging.info("Stopping Lavalink node...")
                 await lavalink.stop()
-            except ImportError:
-                logging.warning("Could not import lavalink stop function")
             except Exception as e:
-                logging.error("Error stopping lavalink: %s", e)
+                logging.error("Error stopping lavalink: %s", e, exc_info=True)
             break
 
     await bot.remove_cog("music")
-    logging.info("Enhanced music commands unloaded!")
+    logging.info("Music commands unloaded!")

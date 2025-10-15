@@ -92,7 +92,7 @@ class PlayerManager:
         if not player:
             return False
 
-        await player.disconnect()
+        await player.destroy()
         if ctx.guild:
             logging.info(f"Disconnected from voice channel in {ctx.guild.name}")
         return True

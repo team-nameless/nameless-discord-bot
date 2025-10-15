@@ -74,7 +74,7 @@ class MusicControlView(View):
             return
 
         queue_text: list[str] = []
-        queue_list = list(self.player.queue._queue[:10])  # type: ignore
+        queue_list = list(self.player.queue._queue[:10])
         for i, track in enumerate(queue_list, 1):
             queue_text.append(f"{i}. {track.title}")
 
@@ -88,7 +88,7 @@ class MusicControlView(View):
     @discord.ui.button(label="Disconnect", emoji="🔌", style=discord.ButtonStyle.danger, custom_id="disconnect", row=1)
     async def disconnect(self, interaction: discord.Interaction, _: Button[Self]):
         await interaction.response.defer(ephemeral=True)
-        await self.player.disconnect()
+        await self.player.destroy()
         await interaction.followup.send("👋 Disconnected from voice channel", ephemeral=True)
         self.stop()
 

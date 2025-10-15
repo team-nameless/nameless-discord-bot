@@ -20,14 +20,19 @@ class EmptyQueueError(MusicError):
         super().__init__("The queue is empty! Add some tracks with `/music play`.")
 
 
-class InvalidVolumeError(MusicError):
+class InvalidParameterError(MusicError):
+    def __init__(self, parameter: str, reason: str):
+        super().__init__(f"Invalid parameter '{parameter}': {reason}")
+
+
+class InvalidVolumeError(InvalidParameterError):
     def __init__(self, volume: int):
-        super().__init__(f"Invalid volume level: {volume}. Volume must be between 0 and 200.")
+        super().__init__("volume", f"{volume}. Volume must be between 0 and 200.")
 
 
-class InvalidPositionError(MusicError):
+class InvalidPositionError(InvalidParameterError):
     def __init__(self, position: int, max_position: int):
-        super().__init__(f"Invalid position: {position}. Must be between 1 and {max_position}.")
+        super().__init__("position", f"{position}. Must be between 1 and {max_position}.")
 
 
 class TrackNotSeekableError(MusicError):

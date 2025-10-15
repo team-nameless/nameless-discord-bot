@@ -1,19 +1,15 @@
 import asyncio
+import contextlib
 import logging
 import signal
 from pathlib import Path
 
 import aiohttp
 
-if __name__ == "__main__":
-    nameless_config = {"runtime": {"is_shutting_down": False}}
-else:
-    from nameless.config import nameless_config
+from nameless.config import nameless_config
 
 CWD = Path(__file__).parent
-LAVALINK_URL = (
-    "https://github.com/lavalink-devs/Lavalink/releases/latest/download/Lavalink.jar"
-)
+LAVALINK_URL = "https://github.com/lavalink-devs/Lavalink/releases/latest/download/Lavalink.jar"
 LAVALINK_BIN = CWD / "bin" / "Lavalink.jar"
 LAVALINK_CONFIG = CWD / "bin" / "application.yml"
 
@@ -38,17 +34,15 @@ async def check_plugin_version(auto_update: bool = False) -> bool:
 
         if not version:
             logging.error("Failed to check Lavalink plugin version. Version not found.")
-            return False
+            return True  # Assume true to not block startup
 
         async with aiohttp.ClientSession() as session:
-            git_req = await session.get(
-                "https://api.github.com/repos/lavalink-devs/youtube-source/releases/latest"
-            )
+            git_req = await session.get("https://api.github.com/repos/lavalink-devs/youtube-source/releases/latest")
         if git_req.status != 200:
             logging.error("Failed to check Lavalink plugin version. Request failed.")
-            return False
+            return True  # Assume true to not block startup
 
-        latest_version: str = (await git_req.json()).get("tag_name", "0.0.0")  # pyright: ignore[reportAny]
+        latest_version: str = (await git_req.json()).get("tag_name", "0.0.0")
 
         if version == latest_version:
             return True
@@ -99,14 +93,13 @@ async def check_lavalink_version() -> bool:
         if not version:
             logging.error("Failed to check Lavalink version. Version not found.")
             return False
+
         async with aiohttp.ClientSession() as session:
-            git_req = await session.get(
-                "https://api.github.com/repos/lavalink-devs/Lavalink/releases/latest"
-            )
-        latest_version: str = (await git_req.json()).get("tag_name", "0.0.0")  # pyright: ignore[reportAny]
+            git_req = await session.get("https://api.github.com/repos/lavalink-devs/Lavalink/releases/latest")
+        latest_version: str = (await git_req.json()).get("tag_name", "0.0.0")
         if git_req.status != 200:
             logging.error("Failed to check Lavalink plugin version. Request failed.")
-            return False
+            return True  # Assume true to not block startup
 
         if version == latest_version:
             return True
@@ -133,13 +126,18 @@ async def check_lavalink_version() -> bool:
 async def start():
     """Start the Lavalink server from /bin folder."""
     global proc, stop_event
-    while True:
+    while not stop_event.is_set():
         proc = await asyncio.create_subprocess_exec(
-            "java", "-jar", "Lavalink.jar", cwd=CWD / "bin", stdout=-3
+            "java",
+            "-jar",
+            "Lavalink.jar",
+            cwd=CWD / "bin",
+            stdout=asyncio.subprocess.DEVNULL,
+            stdin=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
         )
         await proc.wait()
-        if nameless_config["runtime"]["is_shutting_down"]:
-            stop_event.set()
+        if nameless_config.runtime.is_shutting_down or stop_event.is_set():
             break
 
         logging.warning("Lavalink server stopped. Restarting in 5 seconds...")
@@ -150,13 +148,14 @@ async def stop():
     """Stop the Lavalink server."""
     global proc, task, stop_event
 
-    if proc:
-        proc.send_signal(signal.CTRL_C_EVENT)
-        await proc.wait()
-        proc = None
+    stop_event.set()
+    with contextlib.suppress(ProcessLookupError, ConnectionResetError, ConnectionRefusedError):
+        if proc and proc.returncode is None:
+            proc.send_signal(signal.CTRL_C_EVENT)
+            await proc.wait()
+            proc = None
 
-    if task:
-        await stop_event.wait()
+    if task and not task.done():
         task.cancel()
         task = None
 

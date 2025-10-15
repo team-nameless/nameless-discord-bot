@@ -12,9 +12,19 @@ plugins:
     # The clients to use for track loading. See below for a list of valid clients.
     # Clients are queried in the order they are given (so the first client is queried first and so on...)
     clients:
+      # - ANDROID_VR 
       - MUSIC
       - WEB
       - WEBEMBEDDED 
+    oauth:
+      # setting "enabled: true" is the bare minimum to get OAuth working.
+      enabled: true
+    remoteCipher:
+      url: "https://cipher.kikkia.dev/" # The base URL of your remote cipher server.
+      # password: "your_secret_password" # The password to authenticate with your remote cipher server.
+      # userAgent: "your_service_name" # Optional user-agent header, used for metrics on the backend. 
+
+
 lavalink:
   plugins:
     #    - dependency: "com.github.example:example-plugin:1.0.0" # required, the coordinates of your plugin
@@ -24,7 +34,7 @@ lavalink:
     #  defaultPluginRepository: "https://maven.lavalink.dev/releases" # optional, defaults to the Lavalink release repository
     #  defaultPluginSnapshotRepository: "https://maven.lavalink.dev/snapshots" # optional, defaults to the Lavalink snapshot repository
     # Replace VERSION with the current version as shown by the Releases tab or a long commit hash for snapshots.
-    - dependency: "dev.lavalink.youtube:youtube-plugin:1.13.5"
+    - dependency: "dev.lavalink.youtube:youtube-plugin:1.15.0"
       snapshot: false
     # - dependency: "com.github.topi314.sponsorblock:sponsorblock-plugin:3.0.1"
     #   repository: "https://maven.lavalink.dev/releases"

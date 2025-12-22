@@ -375,27 +375,15 @@ class MusicCommands(commands.GroupCog, name="music"):
         vc_members = [m for m in player.channel.members if not m.bot]
         required = (len(vc_members) // 2) + 1
 
-        # Create vote skip view
         view = VoteSkipView(player, ctx.author.id, required, timeout=60)
-
-        embed = create_info_embed(
-            "Vote Skip",
-            f"**{ctx.author.display_name}** wants to skip **{player.current.title}**\nVotes needed: **1/{required}**",
-        )
+        embed = view.create_embed(player.current.title, ctx.author.display_name)
 
         message = await ctx.send(embed=embed, view=view)
+        view.set_message(message)
         await view.wait()
 
-        # Update message after voting ends
-        if view.is_a_yes:
-            final_embed = create_success_embed(
-                "Vote Skip", f"Vote passed! Skipping **{player.current.title if player.current else 'track'}**"
-            )
-        else:
-            final_embed = create_info_embed(
-                "Vote Skip", f"Vote ended. **{len(view.voters)}/{required}** votes - not enough to skip."
-            )
-
+        track_title = player.current.title if player.current else "track"
+        final_embed = view.create_result_embed(track_title, ctx.author.display_name)
         await message.edit(embed=final_embed, view=None)
 
     @commands.hybrid_command()

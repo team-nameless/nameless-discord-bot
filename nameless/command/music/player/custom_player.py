@@ -20,40 +20,30 @@ class CustomQueue(pomice.Queue):
         self._current_item: pomice.Track | None = None
 
     @override
-    def get(self):
-        if self._loop_mode == pomice.LoopMode.TRACK and self._current_item:
-            return self._current_item
+    def get(self) -> pomice.Track:
+        if self._should_loop_current_track():
+            return self._current_item  # type: ignore[return-value]
 
         if self.is_empty:
             raise pomice.QueueEmpty("No items in the queue.")
 
-        if self._loop_mode == pomice.LoopMode.QUEUE:
-            # set current item to first track in queue if not set already
-            # otherwise exception will be raised
-            if not self._current_item or self._current_item not in self._queue:
-                if self._queue:
-                    item = self._queue[0]
-                else:
-                    raise pomice.QueueEmpty("No items in the queue.")
-
-            # set current item to first track in queue if not set already
-            if not self._current_item:
-                self._current_item = self._queue[0]
-                item = self._current_item
-
-            # we reached the end of the queue, go back to first track
-            if self._index(self._current_item) == len(self._queue) - 1:
-                item = self._queue[0]
-
-            # we are in the middle of the queue, go the next item
-            else:
-                index = self._index(self._current_item) + 1
-                item = self._queue[index]
-        else:
-            item = self._get()
-
+        item = self._get_next_item_in_queue_loop() if self._loop_mode == pomice.LoopMode.QUEUE else self._get()
         self._current_item = item
         return item
+
+    def _should_loop_current_track(self) -> bool:
+        return self._loop_mode == pomice.LoopMode.TRACK and self._current_item is not None
+
+    def _get_next_item_in_queue_loop(self) -> pomice.Track:
+        if self._is_current_item_invalid():
+            return self._queue[0]
+
+        current_index = self._index(self._current_item)
+        is_at_end_of_queue = current_index >= len(self._queue) - 1
+        return self._queue[0] if is_at_end_of_queue else self._queue[current_index + 1]
+
+    def _is_current_item_invalid(self) -> bool:
+        return not self._current_item or self._current_item not in self._queue
 
 
 class CustomPlayer(pomice.Player):

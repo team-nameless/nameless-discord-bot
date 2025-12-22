@@ -75,9 +75,6 @@ class CustomPlayer(pomice.Player):
 
         self._autoplay_extraction_track: pomice.Track | None = None
 
-        # start timer immediately
-        self.start_disconnect_timer()
-
     @property
     def is_autoplay_enabled(self) -> bool:
         return self._autoplay_enabled

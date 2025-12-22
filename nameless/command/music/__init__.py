@@ -148,6 +148,8 @@ class MusicCommands(commands.GroupCog, name="music"):
 
     @commands.Cog.listener()
     async def on_pomice_track_start(self, player: CustomPlayer, track: pomice.Track):
+        player.cancel_disconnect_timer()
+
         if not player.np_message_allowed or player.queue.loop_mode == pomice.LoopMode.TRACK:
             return
 

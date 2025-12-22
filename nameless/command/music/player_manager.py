@@ -70,6 +70,7 @@ class PlayerManager:
             assert ctx.guild is not None  # for type checking
             player = cast("CustomPlayer", ctx.guild.voice_client)
             player.trigger_channel = ctx.channel
+            player.start_disconnect_timer()
 
             if ctx.guild:
                 logging.info(f"Connected to voice channel: {channel.name} in {ctx.guild.name}")

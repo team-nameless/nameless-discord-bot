@@ -29,9 +29,7 @@ class MaimaiClient:
             "back_url": "https://maimai.sega.com/",
         }
 
-        self.session.get(
-            "https://lng-tgk-aime-gw.am-all.net/common_auth/login", params=params
-        )
+        self.session.get("https://lng-tgk-aime-gw.am-all.net/common_auth/login", params=params)
 
         auth_data = {
             "sid": os.getenv("SEGA_ID_USER", ""),
@@ -39,9 +37,7 @@ class MaimaiClient:
             "retention": "1",
         }
 
-        self.session.post(
-            "https://lng-tgk-aime-gw.am-all.net/common_auth/login/sid", data=auth_data
-        )
+        self.session.post("https://lng-tgk-aime-gw.am-all.net/common_auth/login/sid", data=auth_data)
 
     def _create_html_parser(self, html: str) -> BeautifulSoup:
         """Create bs4 html parser from HTML."""
@@ -51,9 +47,7 @@ class MaimaiClient:
         """Stoopid SEGA does not allow you to query your own code."""
         res = self.session.get(f"{self._HOME_URL}/friend/userFriendCode")
         soup = self._create_html_parser(res.text)
-        code_tag = soup.find(
-            "div", {"class": "see_through_block m_t_5 m_b_5 p_5 t_c f_15"}
-        )
+        code_tag = soup.find("div", {"class": "see_through_block m_t_5 m_b_5 p_5 t_c f_15"})
 
         assert code_tag is not None
         self.own_friend_code = int(code_tag.text)
@@ -69,9 +63,7 @@ class MaimaiClient:
         if friend_code == self.own_friend_code:
             request_url = f"{self._HOME_URL}/friend/userFriendCode"
         else:
-            request_url = (
-                f"{self._HOME_URL}/friend/search/searchUser?friendCode={friend_code}"
-            )
+            request_url = f"{self._HOME_URL}/friend/search/searchUser?friendCode={friend_code}"
 
         res = self.session.get(request_url)
         soup = self._create_html_parser(res.text)

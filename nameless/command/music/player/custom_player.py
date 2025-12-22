@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from collections import deque
 from typing import cast, final, override
 
 import discord
@@ -60,8 +61,7 @@ class CustomPlayer(pomice.Player):
 
         self._logger: logging.Logger = logging.getLogger(f"CustomPlayer({self.guild.id})")
         self._auto_queue: list[pomice.Track] = []
-        self._history: list[pomice.Track] = []
-        self._votes: set[int] = set()
+        self._history: deque[pomice.Track] = deque(maxlen=50)
         self._speed: float = 1.0
         self._last_control_message: discord.Message | None = None
         self._inactive_disconnect_task: asyncio.Task[None] | None = None
@@ -88,12 +88,8 @@ class CustomPlayer(pomice.Player):
         return self._auto_queue
 
     @property
-    def history(self) -> list[pomice.Track]:
+    def history(self) -> deque[pomice.Track]:
         return self._history
-
-    @property
-    def votes(self) -> set[int]:
-        return self._votes
 
     @property
     def speed(self) -> float:
@@ -195,7 +191,6 @@ class CustomPlayer(pomice.Player):
         self.queue.clear()
         self._auto_queue.clear()
         self._history.clear()
-        self._votes.clear()
         self._track_errors.clear()
         self.cancel_disconnect_timer()
         super().cleanup()
@@ -283,11 +278,7 @@ class CustomPlayer(pomice.Player):
 
     async def do_next(self):
         if self.current:
-            self._history.insert(0, self.current)
-            if len(self._history) > 50:
-                self._history.pop()
-
-        self._votes.clear()
+            self._history.appendleft(self.current)
 
         if self.queue:
             next_track = self.queue.get()

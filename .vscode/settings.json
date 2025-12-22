@@ -12,5 +12,5 @@
         "**/__pycache__/": true,
         "**/.ruff_cache/": true,
     },
-    "python.languageServer": "None"
+    "python.analysis.autoImportCompletions": false
 }

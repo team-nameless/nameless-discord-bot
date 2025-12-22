@@ -6,3 +6,8 @@ support_server = ""
 [command]
 prefixes = ["n."]
 ignores = ["maimai", "crossover", "honeypot"]
+
+[dev]
+enabled = true
+debug = false
+server_sync_ids = [890026104277057577]

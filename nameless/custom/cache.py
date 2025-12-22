@@ -20,18 +20,17 @@ class NamelessKeyCache:
             logging.warning("Cache does not exist, creating cold cache file.")
             self.cache_path.touch(exist_ok=False)
 
-        with open(self.cache_path, encoding="utf-8") as f:
+        with self.cache_path.open(encoding="utf-8") as f:
             lines = f.read().splitlines()
             for line in lines:
                 self.cache[line] = True
 
-    def yank_to_persitence(self) -> None:
+    def yank_to_persistence(self) -> None:
         """Write to cache persistence."""
         logging.info("Writing to cache file.")
 
-        with open(self.cache_path, mode="w", encoding="utf-8") as f:
-            for key in self.cache:
-                f.write(f"{key}\n")
+        with self.cache_path.open(mode="w", encoding="utf-8") as f:
+            f.writelines(f"{key}\n" for key in self.cache)
 
     def set_key(self, key: str) -> None:
         """Flag a key to be exist."""

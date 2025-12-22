@@ -9,12 +9,12 @@ from prisma.models import User
 
 from nameless.custom.cache import nameless_cache
 from nameless.custom.maimai.maimai import MaimaiClient
-from nameless.custom.maimai.models import MaimaiUser
 from nameless.custom.prisma import NamelessPrisma
 from nameless.utils import create_cache_key
 
 if TYPE_CHECKING:
     from nameless import Nameless
+    from nameless.custom.maimai.models import MaimaiUser
 
 __all__ = ["MaimaiCommand"]
 

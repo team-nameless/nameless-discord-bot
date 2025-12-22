@@ -148,7 +148,7 @@ class NavigationButton(Button[NamelessPaginatedView]):
         with_emote: bool,
         with_disabled: bool,
         **kwargs: object,
-    ):
+    ) -> Self:
         return cls(
             style=discord.ButtonStyle.gray,
             label=label if with_label else None,
@@ -165,7 +165,7 @@ class NavigationButton(Button[NamelessPaginatedView]):
         with_emote: bool = True,
         with_disabled: bool = False,
         **kwargs: object,
-    ):
+    ) -> Self:
         return cls.create_button(
             "Back",
             cls.PREVIOUS_PAGE_ID,
@@ -183,7 +183,7 @@ class NavigationButton(Button[NamelessPaginatedView]):
         with_emote: bool = True,
         with_disabled: bool = False,
         **kwargs: object,
-    ):
+    ) -> Self:
         return cls.create_button(
             "Next",
             cls.NEXT_PAGE_ID,
@@ -201,7 +201,7 @@ class NavigationButton(Button[NamelessPaginatedView]):
         with_emote: bool = True,
         with_disabled: bool = False,
         **kwargs: object,
-    ):
+    ) -> Self:
         return cls.create_button(
             "First Page",
             cls.GO_TO_FIRST_PAGE_ID,
@@ -219,7 +219,7 @@ class NavigationButton(Button[NamelessPaginatedView]):
         with_emote: bool = True,
         with_disabled: bool = False,
         **kwargs: object,
-    ):
+    ) -> Self:
         return cls.create_button(
             "Last Page",
             cls.GO_TO_LAST_PAGE_ID,
@@ -237,7 +237,7 @@ class NavigationButton(Button[NamelessPaginatedView]):
         with_emote: bool = True,
         with_disabled: bool = False,
         **kwargs: object,
-    ):
+    ) -> Self:
         return cls.create_button(
             "Page Selection",
             cls.GO_TO_PAGE_ID,
@@ -255,5 +255,5 @@ class NavigationButton(Button[NamelessPaginatedView]):
         with_emote: bool = True,
         with_disabled: bool = False,
         **kwargs: object,
-    ):
+    ) -> Self:
         return cls.create_button("End", cls.END_ID, "⏹️", with_label, with_emote, with_disabled, **kwargs)

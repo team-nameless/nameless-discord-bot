@@ -32,7 +32,7 @@ class GeneralCommand(commands.Cog):
         """
         await ctx.defer()
 
-        member = member if member else cast(discord.Member, ctx.author)
+        member = member if member else cast("discord.Member", ctx.author)
 
         account_create_date = member.created_at
         join_date = member.joined_at
@@ -81,7 +81,7 @@ class GeneralCommand(commands.Cog):
         bots_count = len([member for member in members if member.bot])
         humans_count = len([member for member in members if not member.bot])
         total_count = bots_count + humans_count
-        public_threads_count = len([thread for thread in guild.threads])
+        public_threads_count = len(tuple(guild.threads))
         events = guild.scheduled_events
         boosts_count = guild.premium_subscription_count
 
@@ -125,15 +125,13 @@ class GeneralCommand(commands.Cog):
         servers_count = len(ctx.bot.guilds)
         total_members_count = sum(len(guild.members) for guild in ctx.bot.guilds)
 
-        launch_time: datetime = nameless_config["nameless"]["start_time"]
-
-        uptime = int(launch_time.timestamp())
+        uptime = int(nameless_config.nameless.start_time.timestamp())
         bot_inv = discord.utils.oauth_url(
             ctx.bot.user.id,
             permissions=ctx.bot.get_needed_permissions(),
             scopes=["bot", "applications.commands"],
         )
-        support_guild: str = nameless_config["nameless"]["support_server"]
+        support_guild: str = nameless_config.nameless.support_server
 
         embed: discord.Embed = (
             discord.Embed(
@@ -154,7 +152,7 @@ class GeneralCommand(commands.Cog):
                 value=f"<t:{uptime}:F> (<t:{uptime}:R>)",
                 inline=False,
             )
-            .add_field(name="ℹ️ Version", value=nameless_config["nameless"]["version"])
+            .add_field(name="ℹ️ Version", value=nameless_config.nameless.version)
             .add_field(
                 name="💻 Runtime",
                 value=(f"**discord.py {discord.__version__}** " + f"on **Python {python_version()}**"),

@@ -12,13 +12,13 @@ class NamelessPrisma:
     """A Prisma class to connect to Prisma ORM."""
 
     @staticmethod
-    async def init():
+    async def init() -> None:
         """Intialize Prisma connection."""
         logging.info("Connecting to database.")
         await _raw_db.connect()
 
     @staticmethod
-    async def dispose():
+    async def dispose() -> None:
         """Properly dispose Prisma connection."""
         logging.warning("Disconnecting from Prisma.")
         await _raw_db.disconnect()

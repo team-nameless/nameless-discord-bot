@@ -8,6 +8,7 @@ import discord
 from discord.ext import commands
 from prisma.models import CrossChatConnection, CrossChatMessage, CrossChatRoom
 
+from nameless.config import nameless_config
 from nameless.custom.cache import nameless_cache
 from nameless.custom.prisma import NamelessPrisma
 from nameless.custom.types import NamelessTextable
@@ -88,8 +89,7 @@ class CrossOverCommand(commands.Cog):
 
             assert conn.Messages is not None
 
-            the_true_id: int = [x.ClonedMessageId for x in conn.Messages if x.OriginMessageId == this_message.id][0]
-
+            the_true_id: int = next(x.ClonedMessageId for x in conn.Messages if x.OriginMessageId == this_message.id)
             the_true_message = await channel.fetch_message(the_true_id)
 
             result.append((conn, the_true_message))
@@ -139,7 +139,7 @@ class CrossOverCommand(commands.Cog):
             return
 
         cache_key = self._create_guild_channel_cache_key(message.guild, message.channel)
-        prefix_list: list[str] = self.bot.get_prefix_list()
+        prefix_list: set[str] = nameless_config.command.prefixes
 
         # We ignore:
         # - Message from nameless* itself.

@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from tomllib import loads
+from typing import get_args, get_origin
 
 __all__ = ["nameless_config"]
 
@@ -67,10 +68,24 @@ class NamelessConfig:
     lavalinks: list[LavalinkNode] = field(default_factory=list[LavalinkNode])
 
     def __post_init__(self):
-        for key_name, value_class in self.__annotations__.items():
+        for key_name, value_type in self.__annotations__.items():
             value = getattr(self, key_name)
-            if isinstance(value, dict):
-                setattr(self, key_name, value_class(**value))
+
+            if not isinstance(value, dict | list):
+                continue
+
+            origin = get_origin(value_type)
+            if origin is list:
+                args = get_args(value_type)
+                if args and isinstance(value, list):
+                    item_class = args[0]
+                    if hasattr(item_class, "__dataclass_fields__"):
+                        converted = [item_class(**item) if isinstance(item, dict) else item for item in value]
+                        setattr(self, key_name, converted)
+
+            elif isinstance(value, dict):
+                if hasattr(value_type, "__dataclass_fields__"):
+                    setattr(self, key_name, value_type(**value))
 
 
 _cfg_path: Path = Path(__file__).parent.parent.absolute() / "nameless.toml"

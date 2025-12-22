@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import io
 import logging
-from typing import TYPE_CHECKING, final, override
+import random
+from typing import TYPE_CHECKING, cast, final, override
 
 import aiohttp.client_exceptions
 import discord
@@ -15,7 +17,17 @@ from nameless.config import LavalinkNode, nameless_config
 from nameless.custom.ui import NamelessPaginatedView
 
 from .cache import TrackCache
-from .embeds import EmbedGenerator
+from .embeds import (
+    create_added_embed,
+    create_error_embed,
+    create_error_embed_from_exception,
+    create_info_embed,
+    create_now_playing_embed,
+    create_playlist_embed,
+    create_queue_embed,
+    create_success_embed,
+    format_duration,
+)
 from .exceptions import (
     AutoplayDisabledError,
     EmptyQueueError,
@@ -26,8 +38,10 @@ from .exceptions import (
     TrackNotSeekableError,
 )
 from .player import CustomPlayer, lavalink
+from .player._patchers import pomice_pool
 from .player_manager import PlayerManager
 from .track_selector import TrackSelector
+from .vote_skip import VoteSkipView
 
 if TYPE_CHECKING:
     from nameless.nameless import Nameless
@@ -45,16 +59,13 @@ SOURCE_MAPPING = {
 @final
 class MusicCommands(commands.GroupCog, name="music"):
     __slots__ = (
-        "bot",
-        "is_ready",
-        "pomice",
         "_connect_task",
         "_lavalink_nodes",
-        "player_manager",
-        "embed_generator",
-        "track_selector",
+        "bot",
         "cache",
-        "config",
+        "is_ready",
+        "player_manager",
+        "track_selector",
     )
 
     if TYPE_CHECKING:
@@ -64,17 +75,18 @@ class MusicCommands(commands.GroupCog, name="music"):
         _lavalink_nodes: list[LavalinkNode]
 
     def __init__(self, bot: Nameless):
+        pomice_pool.apply_pool_get_recommendations_patch()
+
         self.bot = bot
         self.is_ready = asyncio.Event()
 
         self.player_manager = PlayerManager(bot)
-        self.embed_generator = EmbedGenerator()
         self.track_selector = TrackSelector()
         self.cache = TrackCache()
 
         self.node_pool = pomice.NodePool()
-        self._connect_task = self.bot.loop.create_task(self.connect_nodes())
         self._lavalink_nodes = nameless_config.lavalinks
+        self._connect_task = self.bot.loop.create_task(self.connect_nodes())
 
     async def connect_nodes(self, max_retries: int = 5, retry_delay: int = 5) -> None:
         logging.info("Waiting for Discord connection before connecting to Lavalink...")
@@ -140,7 +152,7 @@ class MusicCommands(commands.GroupCog, name="music"):
             return
 
         if self.bot.user:
-            embed = self.embed_generator.create_now_playing_embed(player, track, self.bot.user)
+            embed = create_now_playing_embed(player, track, self.bot.user)
             await player.send_to_trigger_channel(embed=embed, make_controller=True)
 
     @commands.Cog.listener()
@@ -168,11 +180,11 @@ class MusicCommands(commands.GroupCog, name="music"):
 
         cause = exception.get("cause", "Unknown error")
         if "403" in cause or "java.lang.RuntimeException" in cause:
-            embed = self.embed_generator.create_error_embed("Playback Error", f"Cannot play track: {cause}")
+            embed = create_error_embed("Playback Error", f"Cannot play track: {cause}")
             await player.send_to_trigger_channel(embed=embed, make_controller=False)
             await player.disable_last_control_view()
         else:
-            embed = self.embed_generator.create_error_embed("Playback Error", f"An error occurred: {cause}")
+            embed = create_error_embed("Playback Error", f"An error occurred: {cause}")
             await player.send_to_trigger_channel(embed=embed, make_controller=False)
 
         await player.do_next()
@@ -184,7 +196,7 @@ class MusicCommands(commands.GroupCog, name="music"):
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx: commands.Context[Nameless], error: commands.CommandError):
-        embed = self.embed_generator.create_error_embed_from_exception("Error", error)
+        embed = create_error_embed_from_exception("Error", error)
         await ctx.send(embed=embed)
 
     async def _search_tracks(
@@ -202,9 +214,14 @@ class MusicCommands(commands.GroupCog, name="music"):
 
         return results
 
-    async def _add_tracks_to_queue(self, player: CustomPlayer, tracks: list[pomice.Track], position: int = 0) -> int:
+    async def _add_tracks_to_queue(
+        self, player: CustomPlayer, tracks: list[pomice.Track], requester: discord.Member, position: int = 0
+    ) -> int:
         if not tracks:
             return 0
+
+        for track in tracks:
+            track.requester = requester
 
         total_size = len(player.queue) + len(tracks)
         if player.queue.max_size and (total_size > player.queue.max_size):
@@ -232,7 +249,7 @@ class MusicCommands(commands.GroupCog, name="music"):
 
         player = await self.player_manager.connect_to_voice(ctx, channel)
         if player and ctx.guild:
-            embed = self.embed_generator.create_success_embed("Connected", f"Connected to **{player.channel.name}**")
+            embed = create_success_embed("Connected", f"Connected to **{player.channel.name}**")
             await player.send_to_channel(ctx, embed=embed, make_controller=True)
         else:
             raise commands.CommandError("Failed to connect to voice channel")
@@ -242,11 +259,9 @@ class MusicCommands(commands.GroupCog, name="music"):
     async def disconnect(self, ctx: commands.Context[Nameless]) -> None:
         success = await self.player_manager.disconnect_player(ctx)
         if success:
-            embed = self.embed_generator.create_success_embed(
-                "Disconnected", "Successfully disconnected from voice channel"
-            )
+            embed = create_success_embed("Disconnected", "Successfully disconnected from voice channel")
         else:
-            embed = self.embed_generator.create_error_embed("Not Connected", "I'm not connected to a voice channel")
+            embed = create_error_embed("Not Connected", "I'm not connected to a voice channel")
         await ctx.send(embed=embed)
 
     @commands.hybrid_command(aliases=["p", "add"])
@@ -279,22 +294,21 @@ class MusicCommands(commands.GroupCog, name="music"):
         if not results:
             raise NoTracksFoundError(query)
 
+        tracks: list[pomice.Track]
         if isinstance(results, pomice.Playlist):
             tracks = results.tracks
-            embed = self.embed_generator.create_playlist_embed(results)
+            embed = create_playlist_embed(results)
         else:
             tracks = await self.track_selector.select_tracks(ctx, results)
             if not tracks:
                 return
 
-            embed = self.embed_generator.create_added_embed(tracks, len(tracks))
+            embed = create_added_embed(tracks, len(tracks))
 
         if shuffle:
-            import random
-
             random.shuffle(tracks)
 
-        await self._add_tracks_to_queue(player, tracks, position)
+        await self._add_tracks_to_queue(player, tracks, cast("discord.Member", ctx.author), position)
 
         if not player.is_playing and player.queue:
             await player.play(player.queue.get())
@@ -307,10 +321,12 @@ class MusicCommands(commands.GroupCog, name="music"):
         player = await self.player_manager.get_or_create_player(ctx)
 
         if player.is_paused:
-            embed = self.embed_generator.create_info_embed("Already Paused", "The player is already paused")
+            embed = create_info_embed("Already Paused", "The player is already paused")
         else:
             await player.set_pause(True)
-            embed = self.embed_generator.create_success_embed("Paused", "Playback has been paused")
+            # Update the last control message if it exists
+            await player.update_now_playing_embed()
+            embed = create_success_embed("Paused", "Playback has been paused")
 
         await player.send_to_channel(ctx, embed=embed, make_controller=True)
 
@@ -320,10 +336,12 @@ class MusicCommands(commands.GroupCog, name="music"):
         player = await self.player_manager.get_or_create_player(ctx)
 
         if not player.is_paused:
-            embed = self.embed_generator.create_info_embed("Already Playing", "The player is already playing")
+            embed = create_info_embed("Already Playing", "The player is already playing")
         else:
             await player.set_pause(False)
-            embed = self.embed_generator.create_success_embed("Resumed", "Playback has been resumed")
+            # Update the last control message if it exists
+            await player.update_now_playing_embed()
+            embed = create_success_embed("Resumed", "Playback has been resumed")
 
         await player.send_to_channel(ctx, embed=embed, make_controller=True)
 
@@ -338,7 +356,119 @@ class MusicCommands(commands.GroupCog, name="music"):
         current_track = player.current
         await player.stop()
 
-        embed = self.embed_generator.create_success_embed("Skipped", f"Skipped **{current_track.title}**")
+        embed = create_success_embed("Skipped", f"Skipped **{current_track.title}**")
+        await ctx.send(embed=embed)
+
+    @commands.hybrid_command()
+    @app_commands.guild_only()
+    async def voteskip(self, ctx: commands.Context[Nameless]) -> None:
+        player = await self.player_manager.get_or_create_player(ctx)
+
+        if not player.current:
+            raise EmptyQueueError()
+
+        if ctx.author.id in player.votes:
+            await ctx.send("You have already voted to skip this track.", ephemeral=True)
+            return
+
+        # Calculate required votes (excluding bot)
+        vc_members = [m for m in player.channel.members if not m.bot]
+        required = (len(vc_members) // 2) + 1
+
+        # Create vote skip view
+        view = VoteSkipView(player, ctx.author.id, required, timeout=60)
+
+        embed = create_info_embed(
+            "Vote Skip",
+            f"**{ctx.author.display_name}** wants to skip **{player.current.title}**\nVotes needed: **1/{required}**",
+        )
+
+        message = await ctx.send(embed=embed, view=view)
+        await view.wait()
+
+        # Update message after voting ends
+        if view.is_a_yes:
+            final_embed = create_success_embed(
+                "Vote Skip", f"Vote passed! Skipping **{player.current.title if player.current else 'track'}**"
+            )
+        else:
+            final_embed = create_info_embed(
+                "Vote Skip", f"Vote ended. **{len(view.voters)}/{required}** votes - not enough to skip."
+            )
+
+        await message.edit(embed=final_embed, view=None)
+
+    @commands.hybrid_command()
+    @app_commands.guild_only()
+    async def history(self, ctx: commands.Context[Nameless]) -> None:
+        player = await self.player_manager.get_or_create_player(ctx)
+
+        if not player.history:
+            await ctx.send("No history found.")
+            return
+
+        history_text = []
+        for i, track in enumerate(player.history[:10], 1):
+            history_text.append(f"{i}. **{track.title}**")
+
+        embed = discord.Embed(
+            title="📜 Recently Played", description="\n".join(history_text), color=discord.Color.blue()
+        )
+        await ctx.send(embed=embed)
+
+    @commands.hybrid_command()
+    @app_commands.guild_only()
+    async def export(self, ctx: commands.Context[Nameless]) -> None:
+        player = await self.player_manager.get_or_create_player(ctx)
+
+        if not player.queue:
+            raise EmptyQueueError()
+
+        queue_text = [f"{track.title} - {track.uri}" for track in player.queue]
+        content = "\n".join(queue_text)
+        file = discord.File(io.BytesIO(content.encode()), filename="queue.txt")
+
+        await ctx.send("Here is your exported queue:", file=file)
+
+    @commands.hybrid_command()
+    @app_commands.guild_only()
+    @app_commands.describe(index="Queue index (0 for current)")
+    async def info(self, ctx: commands.Context[Nameless], index: int = 0) -> None:
+        player = await self.player_manager.get_or_create_player(ctx)
+
+        track: pomice.Track | None = None
+        if index == 0:
+            track = player.current
+        elif 1 <= index <= len(player.queue):
+            track = player.queue[index - 1]
+
+        if not track:
+            await ctx.send("Track not found.")
+            return
+
+        embed = discord.Embed(title="Track Info", color=discord.Color.blue())
+        embed.add_field(name="Title", value=track.title, inline=False)
+        embed.add_field(name="Author", value=track.author, inline=True)
+        embed.add_field(name="Duration", value=format_duration(track.length), inline=True)
+        embed.add_field(name="Identifier", value=f"`{track.identifier}`", inline=True)
+        embed.add_field(name="Seekable", value="Yes" if track.is_seekable else "No", inline=True)
+        embed.add_field(name="Stream", value="Yes" if track.is_stream else "No", inline=True)
+        embed.set_thumbnail(url=track.thumbnail)
+
+        await ctx.send(embed=embed)
+
+    @commands.hybrid_command()
+    @app_commands.guild_only()
+    @app_commands.describe(speed="Playback speed (0.5 - 2.0)")
+    async def speed(self, ctx: commands.Context[Nameless], speed: float) -> None:
+        if not 0.5 <= speed <= 2.0:
+            await ctx.send("Speed must be between 0.5 and 2.0.")
+            return
+
+        player = await self.player_manager.get_or_create_player(ctx)
+        await player.set_speed(speed)
+
+        embed = create_success_embed("Speed Changed", f"Playback speed set to **{speed}x**")
         await ctx.send(embed=embed)
 
     @commands.hybrid_command()
@@ -349,7 +479,7 @@ class MusicCommands(commands.GroupCog, name="music"):
         await player.stop()
         player.queue.clear()
 
-        embed = self.embed_generator.create_success_embed("Stopped", "Playback stopped and queue cleared")
+        embed = create_success_embed("Stopped", "Playback stopped and queue cleared")
         await ctx.send(embed=embed)
 
     @commands.hybrid_command(aliases=["q"])
@@ -370,13 +500,14 @@ class MusicCommands(commands.GroupCog, name="music"):
 
         tracks_per_page = 10
         pages: list[discord.Embed] = []
+        total_duration = player.total_duration
 
         for i in range(0, len(all_tracks), tracks_per_page):
             page_tracks = all_tracks[i : i + tracks_per_page]
             page_num = i // tracks_per_page + 1
             total_pages = (len(all_tracks) + tracks_per_page - 1) // tracks_per_page
 
-            embed = self.embed_generator.create_queue_embed(page_tracks, page_num, total_pages)
+            embed = create_queue_embed(page_tracks, page_num, total_pages, total_duration)
             pages.append(embed)
 
         view = NamelessPaginatedView(ctx, timeout=120)
@@ -390,11 +521,11 @@ class MusicCommands(commands.GroupCog, name="music"):
         player = await self.player_manager.get_or_create_player(ctx)
 
         if not player.current:
-            embed = self.embed_generator.create_info_embed("Nothing Playing", "No track is currently playing")
+            embed = create_info_embed("Nothing Playing", "No track is currently playing")
             await ctx.send(embed=embed)
             return
 
-        embed = self.embed_generator.create_now_playing_embed(player, player.current, ctx.author)
+        embed = create_now_playing_embed(player, player.current, ctx.author)
         await player.send_to_channel(ctx, embed=embed, make_controller=True)
 
     @commands.hybrid_command(aliases=["random"])
@@ -406,7 +537,7 @@ class MusicCommands(commands.GroupCog, name="music"):
             raise EmptyQueueError()
 
         player.queue.shuffle()
-        embed = self.embed_generator.create_success_embed("Shuffled", f"Shuffled {len(player.queue)} tracks")
+        embed = create_success_embed("Shuffled", f"Shuffled {len(player.queue)} tracks")
         await ctx.send(embed=embed)
 
     @commands.hybrid_command()
@@ -422,7 +553,7 @@ class MusicCommands(commands.GroupCog, name="music"):
         player = await self.player_manager.get_or_create_player(ctx)
         if not mode:
             await ctx.send(
-                embed=self.embed_generator.create_info_embed(
+                embed=create_info_embed(
                     "Loop Mode",
                     "Current loop mode is **{mode}**".format(
                         mode=player.queue.loop_mode.name if player.queue.loop_mode else "OFF"
@@ -436,7 +567,11 @@ class MusicCommands(commands.GroupCog, name="music"):
             player.queue.disable_loop()
         else:
             player.queue.set_loop_mode(pomice.LoopMode[mode])
-        embed = self.embed_generator.create_success_embed("Loop Mode Changed", f"Loop mode set to **{mode or 'Off'}**")
+
+        # Update the last control message if it exists
+        await player.update_now_playing_embed()
+
+        embed = create_success_embed("Loop Mode Changed", f"Loop mode set to **{mode or 'Off'}**")
         await ctx.send(embed=embed)
 
     @commands.hybrid_command()
@@ -449,7 +584,10 @@ class MusicCommands(commands.GroupCog, name="music"):
         player = await self.player_manager.get_or_create_player(ctx)
         await player.set_volume(volume)
 
-        embed = self.embed_generator.create_success_embed("Volume Changed", f"Volume set to **{volume}%**")
+        # Update the last control message if it exists
+        await player.update_now_playing_embed()
+
+        embed = create_success_embed("Volume Changed", f"Volume set to **{volume}%**")
         await ctx.send(embed=embed)
 
     @commands.hybrid_command()
@@ -467,9 +605,70 @@ class MusicCommands(commands.GroupCog, name="music"):
         removed_track = player.queue[index - 1]
         player.queue.remove(removed_track)
 
-        embed = self.embed_generator.create_success_embed(
-            "Track Removed", f"Removed **{removed_track.title}** from queue"
-        )
+        embed = create_success_embed("Track Removed", f"Removed **{removed_track.title}** from queue")
+        await ctx.send(embed=embed)
+
+    @commands.hybrid_command()
+    @app_commands.guild_only()
+    @app_commands.describe(from_pos="Current position", to_pos="New position")
+    async def move(self, ctx: commands.Context[Nameless], from_pos: int, to_pos: int) -> None:
+        player = await self.player_manager.get_or_create_player(ctx)
+
+        if not player.queue:
+            raise EmptyQueueError()
+
+        if not (1 <= from_pos <= len(player.queue)) or not (1 <= to_pos <= len(player.queue)):
+            raise commands.CommandError("Invalid positions provided.")
+
+        queue_list = list(player.queue._queue)
+        track = queue_list.pop(from_pos - 1)
+        queue_list.insert(to_pos - 1, track)
+
+        player.queue.clear()
+        player.queue.extend(queue_list)
+
+        embed = create_success_embed("Track Moved", f"Moved **{track.title}** from #{from_pos} to #{to_pos}")
+        await ctx.send(embed=embed)
+
+    @commands.hybrid_command()
+    @app_commands.guild_only()
+    @app_commands.describe(pos1="First position", pos2="Second position")
+    async def swap(self, ctx: commands.Context[Nameless], pos1: int, pos2: int) -> None:
+        player = await self.player_manager.get_or_create_player(ctx)
+
+        if not player.queue:
+            raise EmptyQueueError()
+
+        if not (1 <= pos1 <= len(player.queue)) or not (1 <= pos2 <= len(player.queue)):
+            raise commands.CommandError("Invalid positions provided.")
+
+        queue_list = list(player.queue._queue)
+        queue_list[pos1 - 1], queue_list[pos2 - 1] = queue_list[pos2 - 1], queue_list[pos1 - 1]
+
+        player.queue.clear()
+        player.queue.extend(queue_list)
+
+        embed = create_success_embed("Tracks Swapped", f"Swapped tracks at #{pos1} and #{pos2}")
+        await ctx.send(embed=embed)
+
+    @commands.hybrid_command()
+    @app_commands.guild_only()
+    @app_commands.describe(index="Position to jump to")
+    async def jump(self, ctx: commands.Context[Nameless], index: int) -> None:
+        player = await self.player_manager.get_or_create_player(ctx)
+
+        if not player.queue:
+            raise EmptyQueueError()
+
+        if not 1 <= index <= len(player.queue):
+            raise InvalidPositionError(index, len(player.queue))
+
+        # Remove tracks before the index
+        for _ in range(index - 1):
+            player.queue.get()
+
+        await player.stop()
+        embed = create_success_embed("Jumped", f"Jumped to track #{index}")
         await ctx.send(embed=embed)
 
     @commands.hybrid_command()
@@ -483,7 +682,7 @@ class MusicCommands(commands.GroupCog, name="music"):
         track_count = len(player.queue)
         player.queue.clear()
 
-        embed = self.embed_generator.create_success_embed("Queue Cleared", f"Removed {track_count} tracks from queue")
+        embed = create_success_embed("Queue Cleared", f"Removed {track_count} tracks from queue")
         await ctx.send(embed=embed)
 
     @commands.hybrid_command()
@@ -494,7 +693,7 @@ class MusicCommands(commands.GroupCog, name="music"):
         player = await self.player_manager.get_or_create_player(ctx)
 
         if not player.current:
-            embed = self.embed_generator.create_error_embed("No Track", "No track is currently playing")
+            embed = create_error_embed("No Track", "No track is currently playing")
             await ctx.send(embed=embed)
             return
 
@@ -508,7 +707,7 @@ class MusicCommands(commands.GroupCog, name="music"):
             position = total_seconds * 1000
 
         if position < 0 or position > player.current.length:
-            embed = self.embed_generator.create_error_embed("Invalid Position", "Seek position is out of track bounds")
+            embed = create_error_embed("Invalid Position", "Seek position is out of track bounds")
             await ctx.send(embed=embed)
             return
 
@@ -523,10 +722,10 @@ class MusicCommands(commands.GroupCog, name="music"):
         else:
             pos_str = f"{pos_minutes}:{pos_seconds:02d}"
 
-        embed = self.embed_generator.create_success_embed("Seeked", f"Seeked to **{pos_str}**")
+        embed = create_success_embed("Seeked", f"Seeked to **{pos_str}**")
         await ctx.send(embed=embed)
 
-    @commands.hybrid_group(name="autoplay")
+    @commands.hybrid_group(name="autoplay", with_app_command=True)
     async def autoplay(self, ctx: commands.Context[Nameless]):
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
@@ -540,7 +739,10 @@ class MusicCommands(commands.GroupCog, name="music"):
         if player.is_autoplay_enabled:
             await player.refresh_auto_queue()
 
-        embed = self.embed_generator.create_success_embed(
+        # Update the last control message if it exists
+        await player.update_now_playing_embed()
+
+        embed = create_success_embed(
             "Autoplay Toggled", f"Autoplay mode has been {'enabled' if player.is_autoplay_enabled else 'disabled'}"
         )
         await ctx.send(embed=embed)
@@ -556,13 +758,16 @@ class MusicCommands(commands.GroupCog, name="music"):
             raise AutoplayDisabledError()
 
         if not player.current:
-            embed = self.embed_generator.create_error_embed("No Track", "Need a track playing to refresh autoplay")
+            embed = create_error_embed("No Track", "Need a track playing to refresh autoplay")
             await ctx.send(embed=embed)
             return
 
         await player.refresh_auto_queue()
 
-        embed = self.embed_generator.create_success_embed("Autoplay Refreshed", "Autoplay queue has been refreshed")
+        # Update the last control message if it exists
+        await player.update_now_playing_embed()
+
+        embed = create_success_embed("Autoplay Refreshed", "Autoplay queue has been refreshed")
         await ctx.send(embed=embed)
 
     @commands.hybrid_group(name="auto_disconnect")
@@ -581,13 +786,13 @@ class MusicCommands(commands.GroupCog, name="music"):
         player = await self.player_manager.get_or_create_player(ctx)
         if timeout == 0:
             player.set_auto_disconnect(False, 0)
-            embed = self.embed_generator.create_success_embed(
+            embed = create_success_embed(
                 "Auto-Disconnect Disabled",
                 "Auto-disconnect has been disabled",
             )
         else:
             player.set_auto_disconnect(True, timeout)
-            embed = self.embed_generator.create_success_embed(
+            embed = create_success_embed(
                 "Auto-Disconnect Set",
                 f"Auto-disconnect timeout set to **{timeout} seconds**",
             )
@@ -598,7 +803,7 @@ class MusicCommands(commands.GroupCog, name="music"):
     async def toggle_auto_disconnect(self, ctx: commands.Context[Nameless]) -> None:
         player = await self.player_manager.get_or_create_player(ctx)
         player.set_auto_disconnect(not player.is_auto_disconnect_enabled)
-        embed = self.embed_generator.create_success_embed(
+        embed = create_success_embed(
             "Auto-Disconnect Toggled",
             f"Auto-disconnect has been {'enabled' if player.is_auto_disconnect_enabled else 'disabled'}",
         )
@@ -627,7 +832,7 @@ async def setup(bot: Nameless):
         default_node = LavalinkNode(
             host="localhost",
             port=18233,
-            password="youshallnotpass",
+            password="youshallnotpass",  # noqa  default password
             auto_start=True,
             auto_update=True,
             identifier="default-node",

@@ -68,7 +68,7 @@ class PlayerManager:
         try:
             await channel.connect(self_deaf=True, cls=CustomPlayer)
             assert ctx.guild is not None  # for type checking
-            player = cast(CustomPlayer, ctx.guild.voice_client)
+            player = cast("CustomPlayer", ctx.guild.voice_client)
             player.trigger_channel = ctx.channel
 
             if ctx.guild:
@@ -78,7 +78,7 @@ class PlayerManager:
         except discord.ClientException as e:
             if "already connected" in str(e).lower():
                 assert ctx.guild is not None  # for type checking
-                return cast(CustomPlayer, ctx.guild.voice_client)
+                return cast("CustomPlayer", ctx.guild.voice_client)
             raise ConnectionFailedError(str(e)) from e
         except Exception as e:
             logging.error(f"Failed to connect to voice channel: {e}")

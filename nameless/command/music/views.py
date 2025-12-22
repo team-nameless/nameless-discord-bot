@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Self, final, override
 
 import discord
+import pomice
 from discord.ui import Button, View
 
 if TYPE_CHECKING:
@@ -23,6 +24,18 @@ class MusicControlView(View):
             self.pause_resume_button.emoji = "▶️" if self.player.is_paused else "⏸️"
             self.pause_resume_button.label = "Resume" if self.player.is_paused else "Pause"
 
+        loop_button = discord.utils.get(self.children, custom_id="loop")
+        if isinstance(loop_button, Button):
+            if self.player.queue.loop_mode == pomice.LoopMode.TRACK:
+                loop_button.emoji = "🔂"
+                loop_button.style = discord.ButtonStyle.primary
+            elif self.player.queue.loop_mode == pomice.LoopMode.QUEUE:
+                loop_button.emoji = "🔁"
+                loop_button.style = discord.ButtonStyle.primary
+            else:
+                loop_button.emoji = "🔄"
+                loop_button.style = discord.ButtonStyle.secondary
+
         has_track = self.player.current is not None
         for item in self.children:
             if isinstance(item, Button) and item.custom_id not in ["disconnect", "queue"]:
@@ -30,29 +43,49 @@ class MusicControlView(View):
 
     @discord.ui.button(label="Previous", emoji="⏮️", style=discord.ButtonStyle.secondary, custom_id="previous")
     async def previous(self, interaction: discord.Interaction, _: Button[Self]):
-        await interaction.response.defer(ephemeral=True)
+        await interaction.response.defer()
         await interaction.followup.send("⏮️ Previous track feature not implemented yet", ephemeral=True)
+        if interaction.message:
+            await self.player.update_now_playing_embed(interaction.message, interaction.user)
 
     @discord.ui.button(label="Pause", emoji="⏸️", style=discord.ButtonStyle.primary, custom_id="pause_resume")
     async def pause_resume(self, interaction: discord.Interaction, button: Button[Self]):
-        await interaction.response.defer(ephemeral=True)
+        await interaction.response.defer()
 
         if self.player.is_paused:
             await self.player.set_pause(False)
-            await interaction.followup.send("▶️ Resumed playback", ephemeral=True)
         else:
             await self.player.set_pause(True)
-            await interaction.followup.send("⏸️ Paused playback", ephemeral=True)
 
         self.pause_resume_button = button
         self.update_buttons()
-        await interaction.edit_original_response(view=self)
+        if interaction.message:
+            await self.player.update_now_playing_embed(interaction.message, interaction.user)
 
     @discord.ui.button(label="Skip", emoji="⏭️", style=discord.ButtonStyle.secondary, custom_id="skip")
     async def skip(self, interaction: discord.Interaction, _: Button[Self]):
-        await interaction.response.defer(ephemeral=True)
+        await interaction.response.defer()
         await self.player.stop()
-        await interaction.followup.send("⏭️ Skipped track", ephemeral=True)
+        # await interaction.followup.send("⏭️ Skipped track", ephemeral=True)
+
+    @discord.ui.button(label="Loop", emoji="🔄", style=discord.ButtonStyle.secondary, custom_id="loop")
+    async def loop(self, interaction: discord.Interaction, _: Button[Self]):
+        await interaction.response.defer()
+
+        if self.player.queue.loop_mode is None:
+            self.player.queue.set_loop_mode(pomice.LoopMode.TRACK)
+            mode = "Track"
+        elif self.player.queue.loop_mode == pomice.LoopMode.TRACK:
+            self.player.queue.set_loop_mode(pomice.LoopMode.QUEUE)
+            mode = "Queue"
+        else:
+            self.player.queue.disable_loop()
+            mode = "Off"
+
+        self.update_buttons()
+        if interaction.message:
+            await self.player.update_now_playing_embed(interaction.message, interaction.user)
+        await interaction.followup.send(f"🔄 Loop mode set to **{mode}**", ephemeral=True)
 
     @discord.ui.button(label="Shuffle", emoji="🔀", style=discord.ButtonStyle.secondary, custom_id="shuffle", row=1)
     async def shuffle(self, interaction: discord.Interaction, _: Button[Self]):

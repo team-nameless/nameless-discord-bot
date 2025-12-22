@@ -8,7 +8,8 @@ import discord
 import pomice
 from discord.abc import Messageable
 
-from ..exceptions import AutoplayDisabledError
+from ..embeds import create_now_playing_embed
+from ..exceptions import AutoplayPopulateError
 from ..views import MusicControlView
 
 
@@ -56,7 +57,7 @@ class CustomQueue(pomice.Queue):
 
 
 class CustomPlayer(pomice.Player):
-    def __init__(self, *args, timeout=300, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.np_message_allowed: bool = True
@@ -65,18 +66,23 @@ class CustomPlayer(pomice.Player):
 
         self._autoplay_enabled: bool = True
         self._auto_disconnect_enabled: bool = True
+        self._auto_disconnect_timeout: int = 300  # seconds
 
         self._logger: logging.Logger = logging.getLogger(f"CustomPlayer({self.guild.id})")
         self._auto_queue: list[pomice.Track] = []
+        self._history: list[pomice.Track] = []
+        self._votes: set[int] = set()
+        self._speed: float = 1.0
         self._last_control_message: discord.Message | None = None
         self._inactive_disconnect_task: asyncio.Task[None] | None = None
+
+        self.__reset_track_error_later_tasks = set()
 
         # track error handling
         self._track_errors: dict[str, int] = {}  # track_id -> error_count
         self._max_track_errors: int = 3
         self._error_reset_time: int = 300
 
-        #
         self._autoplay_extraction_track: pomice.Track | None = None
 
         # start timer immediately
@@ -93,6 +99,22 @@ class CustomPlayer(pomice.Player):
     @property
     def auto_queue(self) -> list[pomice.Track]:
         return self._auto_queue
+
+    @property
+    def history(self) -> list[pomice.Track]:
+        return self._history
+
+    @property
+    def votes(self) -> set[int]:
+        return self._votes
+
+    @property
+    def speed(self) -> float:
+        return self._speed
+
+    @property
+    def total_duration(self) -> int:
+        return sum(track.length for track in self.queue)
 
     @override
     async def stop(self) -> None:
@@ -118,7 +140,7 @@ class CustomPlayer(pomice.Player):
             return
 
         try:
-            await asyncio.sleep(300)
+            await asyncio.sleep(self._auto_disconnect_timeout)
             if not self.is_playing and not self.is_paused:
                 await self.send_to_trigger_channel("Disconnecting due to inactivity.")
                 await self.disconnect()
@@ -134,6 +156,9 @@ class CustomPlayer(pomice.Player):
 
     def set_auto_disconnect(self, value: bool, timeout: int | None = None) -> None:
         self._auto_disconnect_enabled = value
+        if timeout is not None and timeout > 0:
+            self._auto_disconnect_timeout = timeout
+
         if not value:
             self.cancel_disconnect_timer()
         else:
@@ -147,8 +172,9 @@ class CustomPlayer(pomice.Player):
         self._track_errors[track_id] = self._track_errors.get(track_id, 0) + 1
 
         # schedule error count reset
-        asyncio.create_task(self._reset_track_error_later(track_id))
-
+        task = asyncio.create_task(self._reset_track_error_later(track_id))
+        task.add_done_callback(lambda t: self.__reset_track_error_later_tasks.discard(t))
+        self.__reset_track_error_later_tasks.add(task)
         return self._track_errors[track_id]
 
     async def _reset_track_error_later(self, track_id: str) -> None:
@@ -181,6 +207,8 @@ class CustomPlayer(pomice.Player):
     def cleanup(self) -> None:
         self.queue.clear()
         self._auto_queue.clear()
+        self._history.clear()
+        self._votes.clear()
         self._track_errors.clear()
         self.cancel_disconnect_timer()
         super().cleanup()
@@ -212,6 +240,27 @@ class CustomPlayer(pomice.Player):
 
         self._logger.info(f"Refreshed auto queue with {len(self._auto_queue)} tracks.")
 
+    async def update_now_playing_embed(
+        self,
+        message: discord.Message | None = None,
+        user: discord.User | discord.Member | discord.ClientUser | None = None,
+    ):
+        target_message = message or self._last_control_message
+        if target_message is None or not self.current:
+            return
+
+        try:
+            embed = create_now_playing_embed(
+                self,
+                self.current,
+                user or self.guild.me,
+            )
+            view = MusicControlView(self)
+            await target_message.edit(embed=embed, view=view)
+        except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+            if message is None:
+                self._last_control_message = None
+
     async def disable_last_control_view(self) -> None:
         if self._last_control_message is None:
             return
@@ -237,7 +286,22 @@ class CustomPlayer(pomice.Player):
 
         return False
 
+    async def set_speed(self, speed: float) -> None:
+        self._speed = speed
+        # Try to edit if exists, else add
+        try:
+            await self.edit_filter(pomice.Timescale(tag="speed", speed=speed))
+        except pomice.FilterTagInvalid:
+            await self.add_filter(pomice.Timescale(tag="speed", speed=speed))
+
     async def do_next(self):
+        if self.current:
+            self._history.insert(0, self.current)
+            if len(self._history) > 50:
+                self._history.pop()
+
+        self._votes.clear()
+
         if self.queue:
             next_track = self.queue.get()
             await self.play(next_track)
@@ -247,7 +311,7 @@ class CustomPlayer(pomice.Player):
             if not self.auto_queue:
                 await self.refresh_auto_queue()
                 if not self.auto_queue:
-                    raise AutoplayDisabledError()
+                    raise AutoplayPopulateError()
 
             next_track = self.auto_queue.pop(0)
             await self.play(next_track)
@@ -331,7 +395,7 @@ class CustomPlayer(pomice.Player):
         mention_author: bool,
     ) -> discord.Message:
         return cast(
-            discord.Message,
+            "discord.Message",
             await messageable.send(
                 content=content,
                 embed=embed,

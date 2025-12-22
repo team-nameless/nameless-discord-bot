@@ -21,7 +21,7 @@ class TrackSelector:
         if len(tracks) > 25:
             tracks = tracks[:25]
 
-        view = TrackSelectionView(tracks)
+        view = TrackSelectionView(tracks, ctx.author.id)
         message = await ctx.send("🎵 **Multiple tracks found!** Please select the ones you want:", view=view)
 
         timeout = await view.wait()
@@ -35,20 +35,26 @@ class TrackSelector:
 
 @final
 class TrackSelectionView(View):
-    def __init__(self, tracks: list[pomice.Track]):
+    def __init__(self, tracks: list[pomice.Track], user_id: int):
         super().__init__(timeout=60)
         self.tracks = tracks
         self.selected_tracks: list[pomice.Track] = []
+        self.user_id = user_id
 
-        self.add_item(TrackDropdown(tracks))
+        self._dropdown = TrackDropdown(tracks)
+        self.add_item(self._dropdown)
 
     @discord.ui.button(label="Confirm Selection", style=discord.ButtonStyle.success, emoji="✅")
     async def confirm(self, interaction: discord.Interaction, _: Button[Self]):
-        dropdown = self.children[0]
-        if isinstance(dropdown, TrackDropdown) and dropdown.values:
-            self.selected_tracks = [self.tracks[int(value)] for value in dropdown.values]
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("❌ You cannot interact with this selection.", ephemeral=True)
+            return
 
         await interaction.response.defer()
+
+        if self._dropdown.values:
+            self.selected_tracks = [self.tracks[int(value)] for value in self._dropdown.values]
+
         self.stop()
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.danger, emoji="❌")
@@ -89,7 +95,7 @@ class TrackDropdown(Select[TrackSelectionView]):
     @override
     async def callback(self, interaction: discord.Interaction):
         view = self.view
-        if view and hasattr(view, "children"):
+        if view and hasattr(view, "children") and self.values:
             for item in view.children:
                 if isinstance(item, Button) and item.label == "Confirm Selection":
                     count = len(self.values)

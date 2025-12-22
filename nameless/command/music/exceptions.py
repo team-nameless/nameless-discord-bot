@@ -53,3 +53,8 @@ class ConnectionFailedError(MusicError):
 class AutoplayDisabledError(MusicError):
     def __init__(self):
         super().__init__("Autoplay is currently disabled. Enable it with `/music autoplay enable`.")
+
+
+class AutoplayPopulateError(MusicError):
+    def __init__(self):
+        super().__init__("Failed to populate autoplay queue. There may be no related tracks available.")

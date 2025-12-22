@@ -25,41 +25,41 @@ async def check_plugin_version(auto_update: bool = False) -> bool:
     The youtube-source plugin to be specific
     """
     target = "dev.lavalink.youtube:youtube-plugin:"
-
-    with open(LAVALINK_CONFIG) as f:
+    with LAVALINK_CONFIG.open("r", encoding="utf-8") as f:
         config = f.read()
-        start_index = config.find(target) + 36
-        end_index = config.find('"', start_index)
-        version = config[start_index:end_index]
+    start_index = config.find(target) + 36
+    end_index = config.find('"', start_index)
+    version = config[start_index:end_index]
 
-        if not version:
-            logging.error("Failed to check Lavalink plugin version. Version not found.")
-            return True  # Assume true to not block startup
+    if not version:
+        logging.error("Failed to check Lavalink plugin version. Version not found.")
+        return True  # Assume true to not block startup
 
-        async with aiohttp.ClientSession() as session:
-            git_req = await session.get("https://api.github.com/repos/lavalink-devs/youtube-source/releases/latest")
+    async with (
+        aiohttp.ClientSession() as session,
+        session.get("https://api.github.com/repos/lavalink-devs/youtube-source/releases/latest") as git_req,
+    ):
         if git_req.status != 200:
             logging.error("Failed to check Lavalink plugin version. Request failed.")
             return True  # Assume true to not block startup
-
         latest_version: str = (await git_req.json()).get("tag_name", "0.0.0")
 
-        if version == latest_version:
-            return True
+    if version == latest_version:
+        return True
 
-        logging.warning(
-            "youtube-source plugin version is outdated. Current: %s, Latest: %s",
-            version,
-            latest_version,
-        )
+    logging.warning(
+        "youtube-source plugin version is outdated. Current: %s, Latest: %s",
+        version,
+        latest_version,
+    )
 
-        if auto_update:
-            with open(LAVALINK_CONFIG, "w") as f:
-                f.write(config.replace(target + version, target + latest_version))
-            logging.info("Updated youtube-source plugin to version %s", latest_version)
-            return True
+    if auto_update:
+        new_config = config.replace(target + version, target + latest_version)
+        await asyncio.to_thread(LAVALINK_CONFIG.write_text, new_config, "utf-8")
+        logging.info("Updated youtube-source plugin to version %s", latest_version)
+        return True
 
-        return False
+    return False
 
 
 async def check_lavalink_version() -> bool:
@@ -125,7 +125,7 @@ async def check_lavalink_version() -> bool:
 
 async def start():
     """Start the Lavalink server from /bin folder."""
-    global proc, stop_event
+    global proc
     while not stop_event.is_set():
         proc = await asyncio.create_subprocess_exec(
             "java",
@@ -146,7 +146,7 @@ async def start():
 
 async def stop():
     """Stop the Lavalink server."""
-    global proc, task, stop_event
+    global proc, task
 
     stop_event.set()
     with contextlib.suppress(ProcessLookupError, ConnectionResetError, ConnectionRefusedError):
@@ -163,8 +163,7 @@ async def stop():
 def check_file():
     """Check if the Lavalink.jar file exists."""
     try:
-        with open(LAVALINK_BIN):
-            return True
+        return LAVALINK_BIN.exists()
     except FileNotFoundError:
         return False
 
@@ -176,8 +175,9 @@ async def download_lavalink():
         aiohttp.ClientSession() as session,
         session.get(LAVALINK_URL, allow_redirects=True) as resp,
     ):
-        with open(LAVALINK_BIN, "wb") as f:
-            f.write(await resp.read())
+        resp.raise_for_status()
+        data = await resp.read()
+        LAVALINK_BIN.write_bytes(data)
 
 
 async def main(loop: asyncio.AbstractEventLoop | None, auto_update: bool = False):
@@ -189,14 +189,13 @@ async def main(loop: asyncio.AbstractEventLoop | None, auto_update: bool = False
     if not check_file():
         logging.warning("Lavalink.jar not found Downloading...")
         await download_lavalink()
-    else:
-        if not await check_lavalink_version():
-            if auto_update:
-                logging.info("Updating Lavalink...")
-                await download_lavalink()
-                logging.info("Lavalink updated.")
-            else:
-                logging.warning("Please update Lavalink to the latest version.")
+    elif not await check_lavalink_version():
+        if auto_update:
+            logging.info("Updating Lavalink...")
+            await download_lavalink()
+            logging.info("Lavalink updated.")
+        else:
+            logging.warning("Please update Lavalink to the latest version.")
 
     await check_plugin_version(auto_update)
 

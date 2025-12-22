@@ -58,9 +58,9 @@ jobs:
           uv run ruff check --exit-zero .
           uv run ruff format .
 
-      - name: Type checking with BasedPyright
+      - name: Type checking with Pyright
         run: |
-          uv run basedpyright
+          uv run pyright
 
       - name: Push the formatted code if needed.
         uses: stefanzweifel/git-auto-commit-action@v5

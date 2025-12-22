@@ -96,7 +96,7 @@ class Nameless(commands.Bot):
             self._file_watcher.join()
 
         await NamelessPrisma.dispose()
-        nameless_cache.yank_to_persitence()
+        nameless_cache.yank_to_persistence()
         await super().close()
 
     @staticmethod

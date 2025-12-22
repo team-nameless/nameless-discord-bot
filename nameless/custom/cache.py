@@ -25,7 +25,7 @@ class NamelessKeyCache:
             for line in lines:
                 self.cache[line] = True
 
-    def yank_to_persitence(self) -> None:
+    def yank_to_persistence(self) -> None:
         """Write to cache persistence."""
         logging.info("Writing to cache file.")
 

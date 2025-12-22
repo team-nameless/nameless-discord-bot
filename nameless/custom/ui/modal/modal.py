@@ -1,4 +1,6 @@
-from typing import Generic, TypeVar, cast, override
+from __future__ import annotations
+
+from typing import TypeVar, cast, override
 
 import discord
 
@@ -9,7 +11,7 @@ V = TypeVar("V", bound=str | int | float | None)
 __all__ = ["NamelessModal"]
 
 
-class NamelessModal(Generic[V], discord.ui.Modal):
+class NamelessModal[V](discord.ui.Modal):
     def __init__(self, title: str) -> None:
         super().__init__(timeout=30, title=title)
 
@@ -22,7 +24,7 @@ class NamelessModal(Generic[V], discord.ui.Modal):
         self.stop()
 
     def get_input(self) -> NamelessModalInput[V]:
-        return cast(NamelessModalInput[V], self.children[0])
+        return cast("NamelessModalInput[V]", self.children[0])
 
     @property
     def value(self) -> V:

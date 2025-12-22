@@ -54,7 +54,7 @@ class LavalinkNode:
 class NamelessDevConfig:
     enabled: bool
     debug: bool
-    server_sync_ids: list[int] = field(default_factory=list)
+    server_sync_ids: list[int] = field(default_factory=list[int])
 
 
 @dataclass(eq=False, repr=False, slots=True)
@@ -64,7 +64,7 @@ class NamelessConfig:
     dev: NamelessDevConfig
     runtime: NamelessRuntime = field(default_factory=NamelessRuntime)
     blacklist: NamelessBlacklist = field(default_factory=NamelessBlacklist)
-    lavalinks: list[LavalinkNode] = field(default_factory=list)
+    lavalinks: list[LavalinkNode] = field(default_factory=list[LavalinkNode])
 
     def __post_init__(self):
         for key_name, value_class in self.__annotations__.items():
@@ -74,7 +74,7 @@ class NamelessConfig:
 
 
 _cfg_path: Path = Path(__file__).parent.parent.absolute() / "nameless.toml"
-with open(_cfg_path, encoding="utf-8") as f:
+with _cfg_path.open(encoding="utf-8") as f:
     _content: str = f.read()
 
 nameless_config: NamelessConfig = NamelessConfig(**loads(_content))

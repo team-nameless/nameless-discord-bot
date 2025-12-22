@@ -3,7 +3,7 @@ import logging
 import os
 import pkgutil
 from datetime import UTC, datetime
-from typing import Self, cast, final, override
+from typing import Self, override
 
 import discord
 from discord import ActivityType, Permissions
@@ -29,7 +29,7 @@ class Nameless(commands.Bot):
         _prefixes.add("nl.")
 
         super().__init__(
-            commands.when_mentioned_or(*_prefixes),
+            _prefixes,
             *args,
             intents=_intents,
             description=nameless_config.nameless.description,
@@ -124,63 +124,63 @@ class Nameless(commands.Bot):
         if not nameless_config.dev.enabled:
             return
 
-        try:
-            import asyncio
-            from pathlib import Path
+        # try:
+        #     import asyncio
+        #     from pathlib import Path
 
-            from watchdog.events import FileSystemEventHandler
-            from watchdog.observers import Observer
+        #     from watchdog.events import FileSystemEventHandler
+        #     from watchdog.observers import Observer
 
-            @final
-            class ExtensionReloadHandler(FileSystemEventHandler):
-                def __init__(self, bot: Nameless, command_path: Path):
-                    self.bot = bot
-                    self.command_path = command_path
+        #     @final
+        #     class ExtensionReloadHandler(FileSystemEventHandler):
+        #         def __init__(self, bot: Nameless, command_path: Path):
+        #             self.bot = bot
+        #             self.command_path = command_path
 
-                @override
-                def on_modified(self, event):
-                    if event.is_directory:
-                        return
+        #         @override
+        #         def on_modified(self, event):
+        #             if event.is_directory:
+        #                 return
 
-                    file_path = Path(cast(str, event.src_path))
-                    if file_path.suffix != ".py":
-                        return
+        #             file_path = Path(cast("str", event.src_path))
+        #             if file_path.suffix != ".py":
+        #                 return
 
-                    # Check if the modified file is in the command package
-                    try:
-                        relative_path = file_path.relative_to(self.command_path)
-                        module_parts = list(relative_path.parts[:-1]) + [relative_path.stem]
-                        module_name = f"nameless.command.{'.'.join(module_parts)}"
+        #             # Check if the modified file is in the command package
+        #             try:
+        #                 relative_path = file_path.relative_to(self.command_path)
+        #                 module_parts = list(relative_path.parts[:-1]) + [relative_path.stem]
+        #                 module_name = f"nameless.command.{'.'.join(module_parts)}"
 
-                        # Check if this extension is loaded
-                        if module_name in self.bot.extensions:
-                            asyncio.create_task(self._reload_extension(module_name))
+        #                 # Check if this extension is loaded
+        #                 if module_name in self.bot.extensions:
+        #                     asyncio.create_task(self._reload_extension(module_name))
 
-                    except ValueError:
-                        # File is not in command package
-                        pass
+        #             except ValueError:
+        #                 # File is not in command package
+        #                 pass
 
-                async def _reload_extension(self, extension_name: str):
-                    try:
-                        await self.bot.reload_extension(extension_name)
-                        logging.info(f"Auto-reloaded extension: {extension_name}")
-                    except Exception as ex:
-                        logging.error(f"Failed to auto-reload extension {extension_name}", exc_info=ex)
+        #         async def _reload_extension(self, extension_name: str):
+        #             try:
+        #                 await self.bot.reload_extension(extension_name)
+        #                 logging.info(f"Auto-reloaded extension: {extension_name}")
+        #             except Exception as ex:
+        #                 logging.error(f"Failed to auto-reload extension {extension_name}", exc_info=ex)
 
-            self._file_watcher = Observer()
-            command_dir = Path(nameless.command.__path__[0])
-            event_handler = ExtensionReloadHandler(self, command_dir)
+        #     self._file_watcher = Observer()
+        #     command_dir = Path(nameless.command.__path__[0])
+        #     event_handler = ExtensionReloadHandler(self, command_dir)
 
-            # Watch the command directory
-            self._file_watcher.schedule(event_handler, str(command_dir), recursive=True)
-            self._file_watcher.start()
+        #     # Watch the command directory
+        #     self._file_watcher.schedule(event_handler, str(command_dir), recursive=True)
+        #     self._file_watcher.start()
 
-            logging.info("File watcher started for auto-reloading extensions")
+        #     logging.info("File watcher started for auto-reloading extensions")
 
-        except ImportError:
-            logging.warning("watchdog not installed, auto-reload disabled")
-        except Exception as ex:
-            logging.error("Failed to setup file watcher", exc_info=ex)
+        # except ImportError:
+        #     logging.warning("watchdog not installed, auto-reload disabled")
+        # except Exception as ex:
+        #     logging.error("Failed to setup file watcher", exc_info=ex)
 
     async def _register_commands(self):
         """Register all available commands."""

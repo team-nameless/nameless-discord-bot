@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import Generic, TypeVar, override
+from typing import TypeVar, override
 
 import discord
 from discord import ui
@@ -9,7 +9,7 @@ V = TypeVar("V", bound=str | int | float | None)
 __all__ = ["NamelessModalInput"]
 
 
-class NamelessModalInput(Generic[V], ui.TextInput[ui.Modal]):
+class NamelessModalInput[V](ui.TextInput[ui.Modal]):
     def __init__(
         self,
         label: str,

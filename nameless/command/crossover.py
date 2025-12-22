@@ -89,8 +89,7 @@ class CrossOverCommand(commands.Cog):
 
             assert conn.Messages is not None
 
-            the_true_id: int = [x.ClonedMessageId for x in conn.Messages if x.OriginMessageId == this_message.id][0]
-
+            the_true_id: int = next(x.ClonedMessageId for x in conn.Messages if x.OriginMessageId == this_message.id)
             the_true_message = await channel.fetch_message(the_true_id)
 
             result.append((conn, the_true_message))

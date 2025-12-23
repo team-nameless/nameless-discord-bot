@@ -6,6 +6,8 @@ import discord
 import pomice
 from discord.ui import Button, View
 
+from .option_modals import PlayerOptionsMenuView
+
 if TYPE_CHECKING:
     from .player import CustomPlayer
 
@@ -38,7 +40,7 @@ class MusicControlView(View):
 
         has_track = self.player.current is not None
         for item in self.children:
-            if isinstance(item, Button) and item.custom_id not in ["disconnect", "queue"]:
+            if isinstance(item, Button) and item.custom_id not in ["disconnect", "options"]:
                 item.disabled = not has_track
 
     @discord.ui.button(label="Previous", emoji="⏮️", style=discord.ButtonStyle.secondary, custom_id="previous")
@@ -98,25 +100,15 @@ class MusicControlView(View):
         self.player.queue.shuffle()
         await interaction.followup.send("🔀 Queue shuffled", ephemeral=True)
 
-    @discord.ui.button(label="Queue", emoji="📋", style=discord.ButtonStyle.secondary, custom_id="queue", row=1)
-    async def show_queue(self, interaction: discord.Interaction, _: Button[Self]):
-        await interaction.response.defer(ephemeral=True)
-
-        if not self.player.queue:
-            await interaction.followup.send("📭 Queue is empty", ephemeral=True)
-            return
-
-        queue_text: list[str] = []
-        queue_list = list(self.player.queue._queue[:10])
-        for i, track in enumerate(queue_list, 1):
-            queue_text.append(f"{i}. {track.title}")
-
-        if len(self.player.queue) > 10:
-            queue_text.append(f"... and {len(self.player.queue) - 10} more tracks")
-
-        embed = discord.Embed(title="📋 Queue", description="\n".join(queue_text), color=discord.Color.blue())
-
-        await interaction.followup.send(embed=embed, ephemeral=True)
+    @discord.ui.button(label="Options", emoji="⚙️", style=discord.ButtonStyle.secondary, custom_id="options", row=1)
+    async def show_options(self, interaction: discord.Interaction, _: Button[Self]):
+        menu_view = PlayerOptionsMenuView(self.player)
+        embed = discord.Embed(
+            title="⚙️ Player Options",
+            description="Choose an option below to configure the player.",
+            color=discord.Color.blue(),
+        )
+        await interaction.response.send_message(embed=embed, view=menu_view, ephemeral=True)
 
     @discord.ui.button(label="Disconnect", emoji="🔌", style=discord.ButtonStyle.danger, custom_id="disconnect", row=1)
     async def disconnect(self, interaction: discord.Interaction, _: Button[Self]):

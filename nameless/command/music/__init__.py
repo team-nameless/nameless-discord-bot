@@ -369,24 +369,24 @@ class MusicCommands(commands.GroupCog, name="music"):
         if not player.current:
             raise EmptyQueueError()
 
-        if ctx.author.id in player.votes:
-            await ctx.send("You have already voted to skip this track.", ephemeral=True)
+        if player.vote_skip_in_progress:
+            await ctx.send("A vote to skip this track is already in progress.", ephemeral=True)
             return
 
-        # Calculate required votes (excluding bot)
         vc_members = [m for m in player.channel.members if not m.bot]
         required = (len(vc_members) // 2) + 1
 
-        view = VoteSkipView(player, ctx.author.id, required, timeout=60)
-        embed = view.create_embed(player.current.title, ctx.author.display_name)
+        async with player.vote_skip_context():
+            view = VoteSkipView(player, ctx.author.id, required, timeout=60)
+            embed = view.create_embed(player.current.title, ctx.author.display_name)
 
-        message = await ctx.send(embed=embed, view=view)
-        view.set_message(message)
-        await view.wait()
+            message = await ctx.send(embed=embed, view=view)
+            view.set_message(message)
+            await view.wait()
 
-        track_title = player.current.title if player.current else "track"
-        final_embed = view.create_result_embed(track_title, ctx.author.display_name)
-        await message.edit(embed=final_embed, view=None)
+            track_title = player.current.title if player.current else "track"
+            final_embed = view.create_result_embed(track_title, ctx.author.display_name)
+            await message.edit(embed=final_embed, view=None)
 
     @commands.hybrid_command()
     @app_commands.guild_only()
@@ -397,8 +397,8 @@ class MusicCommands(commands.GroupCog, name="music"):
             await ctx.send("No history found.")
             return
 
-        history_text = []
-        for i, track in enumerate(player.history[:10], 1):
+        history_text: list[str] = []
+        for i, track in enumerate(iter(player.history), 1):
             history_text.append(f"{i}. **{track.title}**")
 
         embed = discord.Embed(
@@ -414,8 +414,7 @@ class MusicCommands(commands.GroupCog, name="music"):
         if not player.queue:
             raise EmptyQueueError()
 
-        queue_text = [f"{track.title} - {track.uri}" for track in player.queue]
-        content = "\n".join(queue_text)
+        content = "\n".join(f"{track.title} - {track.uri}" for track in player.queue)
         file = discord.File(io.BytesIO(content.encode()), filename="queue.txt")
 
         await ctx.send("Here is your exported queue:", file=file)
@@ -632,11 +631,7 @@ class MusicCommands(commands.GroupCog, name="music"):
         if not (1 <= pos1 <= len(player.queue)) or not (1 <= pos2 <= len(player.queue)):
             raise commands.CommandError("Invalid positions provided.")
 
-        queue_list = list(player.queue._queue)
-        queue_list[pos1 - 1], queue_list[pos2 - 1] = queue_list[pos2 - 1], queue_list[pos1 - 1]
-
-        player.queue.clear()
-        player.queue.extend(queue_list)
+        player.queue.swap(pos1 - 1, pos2 - 1)
 
         embed = create_success_embed("Tracks Swapped", f"Swapped tracks at #{pos1} and #{pos2}")
         await ctx.send(embed=embed)

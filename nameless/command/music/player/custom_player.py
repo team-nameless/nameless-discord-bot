@@ -3,6 +3,7 @@
 import asyncio
 import logging
 from collections import deque
+from contextlib import asynccontextmanager
 from typing import cast, final, override
 
 import discord
@@ -32,6 +33,12 @@ class CustomQueue(pomice.Queue):
         self._current_item = item
         return item
 
+    def swap(self, index1: int, index2: int) -> None:
+        if not (0 <= index1 < len(self._queue)) or not (0 <= index2 < len(self._queue)):
+            raise IndexError("Queue index out of range.")
+
+        self._queue[index1], self._queue[index2] = self._queue[index2], self._queue[index1]
+
     def _should_loop_current_track(self) -> bool:
         return self._loop_mode == pomice.LoopMode.TRACK and self._current_item is not None
 
@@ -52,7 +59,7 @@ class CustomPlayer(pomice.Player):
         super().__init__(*args, **kwargs)
 
         self.np_message_allowed: bool = True
-        self.queue: pomice.Queue = CustomQueue()
+        self.queue: CustomQueue = CustomQueue()
         self.trigger_channel: Messageable | None = None
 
         self._autoplay_enabled: bool = True
@@ -62,9 +69,14 @@ class CustomPlayer(pomice.Player):
         self._logger: logging.Logger = logging.getLogger(f"CustomPlayer({self.guild.id})")
         self._auto_queue: list[pomice.Track] = []
         self._history: deque[pomice.Track] = deque(maxlen=50)
-        self._speed: float = 1.0
         self._last_control_message: discord.Message | None = None
         self._inactive_disconnect_task: asyncio.Task[None] | None = None
+
+        # tracker
+        self._vote_skip_in_progress: bool = False
+
+        # filter
+        self._speed: float = 1.0
 
         self.__reset_track_error_later_tasks = set()
 
@@ -74,6 +86,18 @@ class CustomPlayer(pomice.Player):
         self._error_reset_time: int = 300
 
         self._autoplay_extraction_track: pomice.Track | None = None
+
+    @property
+    def vote_skip_in_progress(self) -> bool:
+        return self._vote_skip_in_progress
+
+    @asynccontextmanager
+    async def vote_skip_context(self):
+        self._vote_skip_in_progress = True
+        try:
+            yield
+        finally:
+            self._vote_skip_in_progress = False
 
     @property
     def is_autoplay_enabled(self) -> bool:

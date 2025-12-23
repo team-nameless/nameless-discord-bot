@@ -124,8 +124,6 @@ class VoteSkipView(discord.ui.View):
             return
 
         self.yes_voters.add(interaction.user.id)
-        self.player.votes.add(interaction.user.id)
-
         await self._update_embed(interaction)
 
         if len(self.yes_voters) >= self.required_votes:

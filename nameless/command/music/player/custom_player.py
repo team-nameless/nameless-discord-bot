@@ -1,18 +1,171 @@
 # pyright:reportArgumentType=false,reportIncompatibleVariableOverride=false
+from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from collections import deque
 from contextlib import asynccontextmanager
-from typing import cast, final, override
+from typing import TYPE_CHECKING, cast, final, override
 
 import discord
+import httpx
 import pomice
-from discord.abc import Messageable
 
 from ..embeds import create_now_playing_embed
 from ..exceptions import AutoplayPopulateError
 from ..views import MusicControlView
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping
+    from typing import Any
+
+    from discord.abc import Messageable
+    from discord.ext.commands.context import Context
+
+    from nameless import Nameless
+
+__all__ = ["CustomPlayer", "CustomQueue"]
+
+
+def human_readable_to_int(human_readable: str | Any) -> int:
+    if not human_readable or not isinstance(human_readable, str):
+        return 0
+
+    text = human_readable.strip().lower()
+    if "no views" in text or "no view" in text:
+        return 0
+
+    match = re.search(r"([\d,]+\.?\d*)\s*([kmb])?", text)
+    if not match:
+        return 0
+
+    number_str = match.group(1)
+    suffix = match.group(2)
+
+    try:
+        number = float(number_str.replace(",", ""))
+    except ValueError:
+        return 0
+
+    multipliers = {
+        "k": 1_000,
+        "m": 1_000_000,
+        "b": 1_000_000_000,
+    }
+    if suffix and suffix in multipliers:
+        number *= multipliers[suffix]
+
+    return int(number)
+
+
+def get_and_cast[T](d: Mapping[str, Any], key: str | Iterable[str | int], default: T = None) -> T:
+    if isinstance(key, str):
+        key = [key]
+
+    value = d
+    for k in key:
+        if (isinstance(value, dict) and k in value) or (
+            isinstance(value, list) and isinstance(k, int) and 0 <= k < len(value)  # type: ignore
+        ):
+            value = value[k]  # type: ignore
+        else:
+            return default
+
+    if default is None:
+        return value  # type: ignore
+
+    _type = type(default)
+    try:
+        return _type(value)
+    except (ValueError, TypeError):
+        return default
+
+
+def _parser_youtube_related_tracks(item: Mapping[str, Any]) -> str | None:
+    lockup_view_model = item.get("lockupViewModel")
+    if not (lockup_view_model and lockup_view_model.get("contentType") == "LOCKUP_CONTENT_TYPE_VIDEO"):
+        return None
+
+    video_id = lockup_view_model.get("contentId")
+    if not video_id:
+        return None
+
+    view_count = human_readable_to_int(
+        get_and_cast(
+            lockup_view_model,
+            (
+                "metadata",
+                "lockupMetadataViewModel",
+                "metadata",
+                "contentMetadataViewModel",
+                "metadataRows",
+                1,
+                "metadataParts",
+                0,
+                "text",
+                "content",
+            ),
+            "0 views",
+        )
+    )
+    if view_count < 5000:
+        return None
+
+    return f"https://www.youtube.com/watch?v={video_id}"
+
+
+async def get_youtube_related_tracks(
+    video_info: pomice.Track,
+) -> list[str]:
+    current_track_id = video_info.identifier
+    if not current_track_id:
+        logging.warning("current track ID is missing, cannot fetch related tracks")
+        return []
+
+    api_payload = {
+        "context": {
+            "client": {
+                "hl": "en",
+                "gl": "US",
+                "clientName": "WEB",
+                "clientVersion": "2.20220809.02.00",
+                "originalUrl": "https://www.youtube.com",
+                "platform": "DESKTOP",
+            },
+        },
+        "videoId": current_track_id,
+        "racyCheckOk": True,
+        "contentCheckOk": True,
+    }
+    async with httpx.AsyncClient() as session:
+        response = await session.post(
+            "https://www.youtube.com/youtubei/v1/next?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8",
+            json=api_payload,
+        )
+
+        if response.status_code != 200:
+            logging.error(f"failed to fetch related tracks, status code: {response.status_code}")
+            return []
+
+        data: dict[str, Any] = response.json()
+        try:
+            secondary_results = data["contents"]["twoColumnWatchNextResults"]["secondaryResults"]["secondaryResults"][
+                "results"
+            ]
+        except KeyError as e:
+            logging.error(f"error parsing related tracks response: {e}")
+            return []
+
+        related_tracks: list[str] = []
+        for item in secondary_results:
+            parsed = _parser_youtube_related_tracks(item)
+            if parsed:
+                logging.info(f"related track found: {parsed}")
+                related_tracks.append(parsed)
+
+        logging.info(f"fetched {len(related_tracks)} related tracks from youtube")
+        return related_tracks
 
 
 @final
@@ -78,10 +231,9 @@ class CustomPlayer(pomice.Player):
         # filter
         self._speed: float = 1.0
 
-        self.__reset_track_error_later_tasks = set()
-
         # track error handling
         self._track_errors: dict[str, int] = {}  # track_id -> error_count
+        self.__reset_track_error_later_tasks = set()
         self._max_track_errors: int = 3
         self._error_reset_time: int = 300
 
@@ -223,6 +375,26 @@ class CustomPlayer(pomice.Player):
     async def disconnect(self, *, force: bool = False) -> None:
         await self.disable_last_control_view()
         await super().disconnect(force=force)
+
+    @override
+    async def get_recommendations(
+        self, *, track: pomice.Track, ctx: Context[Nameless] | None = None
+    ) -> list[pomice.Track] | pomice.Playlist | None:
+        try:
+            raise Exception("Force fallback to custom recommendation logic")
+            return await super().get_recommendations(track=track, ctx=ctx)
+        except Exception:
+            if track.track_type is pomice.TrackType.YOUTUBE:
+                related_urls = await get_youtube_related_tracks(track)
+                if related_urls:
+                    tracks: list[pomice.Track] = []
+                    # skip the first one as it's usually the current track
+                    for _url in related_urls[1:11]:
+                        track_item = await self.get_tracks(_url)
+                        if track_item and isinstance(track_item, list):
+                            tracks.append(track_item[0])
+                    return tracks
+            return None
 
     def toggle_autoplay(self) -> bool:
         self._autoplay_enabled = not self._autoplay_enabled

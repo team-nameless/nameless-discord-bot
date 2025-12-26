@@ -38,7 +38,7 @@ from .exceptions import (
     TrackNotSeekableError,
 )
 from .player import CustomPlayer, lavalink
-from .player._patchers import pomice_pool
+from .player._patchers import pomice_player, pomice_pool
 from .player_manager import PlayerManager
 from .track_selector import TrackSelector
 from .vote_skip import VoteSkipView
@@ -76,6 +76,7 @@ class MusicCommands(commands.GroupCog, name="music"):
 
     def __init__(self, bot: Nameless):
         pomice_pool.apply_pool_get_recommendations_patch()
+        pomice_player.apply_player_destroy_patch()
 
         self.bot = bot
         self.is_ready = asyncio.Event()
@@ -158,13 +159,19 @@ class MusicCommands(commands.GroupCog, name="music"):
             await player.send_to_trigger_channel(embed=embed, make_controller=True)
 
     @commands.Cog.listener()
-    async def on_pomice_track_end(self, player: CustomPlayer, _reason: str, _track: pomice.Track):
+    async def on_pomice_track_end(self, player: CustomPlayer, track: pomice.Track, reason: str):
+        logging.info(
+            "Track ended in guild %s, reason: %s, track_title: %s",
+            player.guild.id if player.guild else "Unknown",
+            reason,
+            track.title,
+        )
         await player.do_next()
 
     @commands.Cog.listener()
     async def on_pomice_track_stuck(self, player: CustomPlayer, track: pomice.Track, _threshold: int):
         logging.warning("Track stuck: %s in guild %s", track.title, player.guild.id if player.guild else "Unknown")
-        await player.do_next()
+        # await player.do_next()
 
     @commands.Cog.listener()
     async def on_pomice_track_exception(self, player: CustomPlayer, track: pomice.Track, exception: dict[str, str]):
@@ -808,11 +815,12 @@ async def setup(bot: Nameless):
     autoupdate_lavalink = False
 
     lavalinks = nameless_config.lavalinks
-    for node in lavalinks:
-        if node.auto_start:
-            autostart_lavalink = True
-            autoupdate_lavalink = node.auto_update
-            break
+    if lavalinks:
+        for node in lavalinks:
+            if node.auto_start:
+                autostart_lavalink = True
+                autoupdate_lavalink = node.auto_update
+                break
     else:
         default_node = LavalinkNode(
             host="localhost",

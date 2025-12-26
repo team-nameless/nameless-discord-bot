@@ -2,7 +2,7 @@ server: # REST and WS server
   port: 18233
   address: 0.0.0.0
   http2:
-    enabled: false # Whether to enable HTTP/2 support
+    enabled: true # Whether to enable HTTP/2 support
 plugins:
   youtube:
     enabled: true # Whether this source can be used.
@@ -13,9 +13,11 @@ plugins:
     # Clients are queried in the order they are given (so the first client is queried first and so on...)
     clients:
       # - ANDROID_VR 
-      - MUSIC
-      - WEB
       - WEBEMBEDDED 
+      - MUSIC
+      - MWEB
+      - WEB
+      - TV
     oauth:
       # setting "enabled: true" is the bare minimum to get OAuth working.
       enabled: true
@@ -61,7 +63,7 @@ lavalink:
       rotation: true
       channelMix: true
       lowPass: true
-    nonAllocatingFrameBuffer: false # Setting to true reduces the number of allocations made by each player at the expense of frame rebuilding (e.g. non-instantaneous volume changes)
+    nonAllocatingFrameBuffer: true # Setting to true reduces the number of allocations made by each player at the expense of frame rebuilding (e.g. non-instantaneous volume changes)
     bufferDurationMs: 400 # The duration of the NAS buffer. Higher values fare better against longer GC pauses. Duration <= 0 to disable JDA-NAS. Minimum of 40ms, lower values may introduce pauses.
     frameBufferDurationMs: 5000 # How many milliseconds of audio to keep buffered
     opusEncodingQuality: 10 # Opus encoder quality. Valid values range from 0 to 10, where 10 is best quality but is the most expensive on the CPU.

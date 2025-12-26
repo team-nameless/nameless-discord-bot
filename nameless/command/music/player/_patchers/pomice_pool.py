@@ -47,7 +47,7 @@ async def _patch_get_recommendations(
 
 
 def apply_pool_get_recommendations_patch():
-    if getattr(pomice.Node, "_patched_get_recommendations", False):
+    if getattr(pomice.Node, "_unpatched_get_recommendations", False):
         return
 
     method_name = "get_recommendations"
@@ -56,3 +56,4 @@ def apply_pool_get_recommendations_patch():
         raise RuntimeError(f"Could not find method '{method_name}' on 'pomice.Node' to patch.")
 
     setattr(pomice.Node, method_name, _patch_get_recommendations)
+    setattr(pomice.Node, "_unpatched_get_recommendations", original_method)  # noqa

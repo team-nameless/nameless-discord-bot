@@ -1,6 +1,8 @@
 import asyncio
 import contextlib
 import logging
+import os
+import re
 import signal
 from pathlib import Path
 
@@ -15,7 +17,40 @@ LAVALINK_CONFIG = CWD / "bin" / "application.yml"
 
 proc: asyncio.subprocess.Process | None = None
 task: asyncio.Task[None] | None = None
+monitor_tasks: list[asyncio.Task[None]] = []
 stop_event = asyncio.Event()
+
+OAUTH_PATTERN = re.compile(r"YoutubeOauth2Handler\s+[-:]\s+(?P<message>.*)", re.IGNORECASE)
+OAUTH_CODE_PATTERN = re.compile(r"\b[A-Z0-9]{3}-[A-Z0-9]{3}-[A-Z0-9]{4}\b")
+
+
+async def _monitor_lavalink_output(stream: asyncio.StreamReader) -> None:
+    while True:
+        line = await stream.readline()
+        if not line:
+            break
+
+        try:
+            decoded = line.decode("utf-8").strip()
+            match = OAUTH_PATTERN.search(decoded)
+            if match:
+                message = match.group("message").lower()
+                if (
+                    "code" in message and re.search(OAUTH_CODE_PATTERN, message)
+                ) or "refreshed successfully" in message:
+                    logging.warning("Lavalink YouTube OAuth2: %s", message)
+                elif "token retrieved successfully" in message:
+                    logging.info("Lavalink YouTube OAuth2: %s", message)
+                    logging.info(
+                        "Lavalink YouTube OAuth2 setup complete. You may now close the browser window.",
+                    )
+                    logging.info(
+                        "Remember to save your OAuth2 credentials in .env to avoid reauthorization on restart."
+                    )
+                else:
+                    logging.info("Lavalink YouTube OAuth2: %s", message)
+        except Exception as e:
+            logging.debug("Failed to parse Lavalink output: %s", e)
 
 
 async def check_plugin_version(auto_update: bool = False) -> bool:
@@ -132,10 +167,17 @@ async def start():
             "-jar",
             "Lavalink.jar",
             cwd=CWD / "bin",
-            stdout=asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.PIPE,
             stdin=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.PIPE,
         )
+
+        if not os.getenv("YOUTUBE_REFRESH_TOKEN"):
+            monitor_tasks.clear()
+            if proc.stdout and proc.stderr:
+                monitor_tasks.append(asyncio.create_task(_monitor_lavalink_output(proc.stdout)))
+                monitor_tasks.append(asyncio.create_task(_monitor_lavalink_output(proc.stderr)))
+
         await proc.wait()
         if nameless_config.runtime.is_shutting_down or stop_event.is_set():
             break
@@ -154,6 +196,11 @@ async def stop():
             proc.send_signal(signal.CTRL_C_EVENT)
             await proc.wait()
             proc = None
+
+    for monitor_task in monitor_tasks:
+        if not monitor_task.done():
+            monitor_task.cancel()
+    monitor_tasks.clear()
 
     if task and not task.done():
         task.cancel()

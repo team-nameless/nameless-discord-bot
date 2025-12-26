@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "beautifulsoup4>=4.14.3",
+    "httpx>=0.28.1",
     "jishaku>=2.6.3",
     "pillow>=12.0.0",
     "pomice==2.10.0",
@@ -24,7 +25,7 @@ dev = [
 [tool.pyright]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
-include = ["src"]
+include = ["nameless"]
 exclude = ["**/__pycache__", ".venv"]
 
 reportUnusedImport = false

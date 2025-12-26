@@ -193,7 +193,10 @@ async def stop():
     stop_event.set()
     with contextlib.suppress(ProcessLookupError, ConnectionResetError, ConnectionRefusedError):
         if proc and proc.returncode is None:
-            proc.send_signal(signal.CTRL_C_EVENT)
+            if os.name != "nt":
+                proc.send_signal(signal.SIGINT)
+            else:
+                proc.send_signal(signal.CTRL_C_EVENT)
             await proc.wait()
             proc = None
 

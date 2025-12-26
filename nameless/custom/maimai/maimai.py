@@ -1,7 +1,7 @@
 import os
 from typing import Final
 
-import requests
+import httpx
 from bs4 import BeautifulSoup, Tag
 
 from nameless.custom.maimai.models import MaimaiUser
@@ -15,7 +15,7 @@ class MaimaiClient:
     _HOME_URL: Final[str] = "https://maimaidx-eng.com/maimai-mobile"
 
     def __init__(self):
-        self.session: requests.Session = requests.Session()
+        self.session: httpx.Client = httpx.Client()
         self.own_friend_code: int = 0
 
         self._pre_populate_cookies()
@@ -82,5 +82,5 @@ class MaimaiClient:
             friend_code=friend_code,
             name=name_tag.text,
             rating=int(rate_tag.text),
-            avatar_img=img_tag.attrs["src"],
+            avatar_img=img_tag.attrs["src"],  # type: ignore
         )

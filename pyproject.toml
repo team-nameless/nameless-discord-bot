@@ -17,6 +17,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "nodejs-wheel>=24.12.0",
     "pyright>=1.1.407",
     "ruff>=0.9.3",
     "watchdog>=6.0.0",
@@ -34,7 +35,6 @@ reportUnusedFunction = false
 
 reportUninitializedInstanceVariable = "error"
 reportUnnecessaryTypeIgnoreComment  = "error"
-reportPrivateLocalImportUsage       = "error"
 reportPrivateImportUsage            = "error"
 reportMissingParameterType = "information"
 reportUnknownParameterType = "information"

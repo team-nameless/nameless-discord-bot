@@ -1,5 +1,4 @@
 {
-    "python.analysis.typeCheckingMode": "standard",
     "ruff.organizeImports": true,
     "editor.codeActionsOnSave": {
         "source.fixAll.ruff": "always",
@@ -7,6 +6,14 @@
     },
     "files.eol": "\n",
     "files.exclude": {
+        "**/.venv/": true,
+        "**/venv/": true,
+        "**/__pycache__/": true,
+        "**/.ruff_cache/": true,
+    },
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
         "**/.venv/": true,
         "**/venv/": true,
         "**/__pycache__/": true,

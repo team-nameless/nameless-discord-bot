@@ -8,7 +8,7 @@ import discord
 if TYPE_CHECKING:
     from nameless.nameless import Nameless
 
-    from .player import CustomPlayer
+    from ..player import CustomPlayer
 
 
 __all__ = ["VoteSkipView"]

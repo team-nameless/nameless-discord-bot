@@ -6,10 +6,10 @@ import discord
 import pomice
 from discord.ui import Button, View
 
-from .option_modals import PlayerOptionsMenuView
+from .options import PlayerOptionsMenuView
 
 if TYPE_CHECKING:
-    from .player import CustomPlayer
+    from ..player import CustomPlayer
 
 
 @final

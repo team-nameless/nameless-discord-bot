@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 import logging
 from typing import TYPE_CHECKING
@@ -44,7 +46,7 @@ def create_progress_bar(current: float, total: int, size: int = 18) -> str:
 
 
 def create_now_playing_embed(
-    player: "CustomPlayer",
+    player: CustomPlayer,
     track: pomice.Track,
     user: discord.User | discord.Member | discord.ClientUser,
 ) -> discord.Embed:
@@ -53,30 +55,29 @@ def create_now_playing_embed(
             return "⏸️"
         return "▶️"
 
-    status_text = "Autoplaying" if track.isrc else "Now Playing"
+    is_autoplay = player.is_autoplay_enabled and user == player.bot.user
+    status_text = "Autoplay" if is_autoplay else "Now Playing"
 
     current_pos = player.position
     total_duration = track.length
     progress_bar = create_progress_bar(current_pos, total_duration)
     current_pos_format = format_duration(current_pos)
     total_duration_format = format_duration(total_duration)
+    logging.debug(f"{current_pos=}, {total_duration=}, {current_pos_format=}, {total_duration_format=}")
 
-    embed = discord.Embed(
-        title=escape_markdown(track.title or "Unknown"),
-        url=track.uri or None,
-        color=discord.Color.orange(),
-        timestamp=datetime.datetime.now(datetime.UTC),
+    embed = (
+        discord.Embed(
+            title=escape_markdown(track.title or "Unknown"),
+            url=track.uri or None,
+            color=discord.Color.orange(),
+            timestamp=datetime.datetime.now(datetime.UTC),
+        )
+        .set_author(name=f"{get_status_icon()} {status_text}", icon_url=user.display_avatar.url)
+        .set_thumbnail(url=track.thumbnail)
     )
-
-    embed.set_author(name=f"{get_status_icon()} {status_text}", icon_url=user.display_avatar.url)
-    embed.set_thumbnail(url=track.thumbnail or "")
 
     description = f"by **{resolve_artist_name(track.author)}**\n\n"
     description += f"`{current_pos_format}` {progress_bar} `{total_duration_format}`\n\n"
-
-    requester = track.requester
-    if requester and isinstance(requester, (discord.Member, discord.User)):
-        description += f"👤 **Requested by:** {requester.mention}\n"
 
     loop_mode = "Off"
     if player.queue.loop_mode == pomice.LoopMode.TRACK:
@@ -96,10 +97,21 @@ def create_now_playing_embed(
         next_track = player.queue[0]
         embed.add_field(
             name="⏭️ Up Next",
-            value=f"[{escape_markdown(next_track.title or 'Unknown')}]({next_track.uri or 'N/A'})",
+            value="{escape_markdown}[{title}]({uri})".format(
+                escape_markdown=escape_markdown(next_track.title or "Unknown"),
+                title=next_track.title or "Unknown",
+                uri=next_track.uri or "N/A",
+            ),
             inline=False,
         )
         embed.set_footer(text=f"{queue_len} track{'s' if queue_len > 1 else ''} remaining in queue")
+    elif is_autoplay:
+        embed.set_footer(
+            text="Autoplay's playlist ({queue_len} remaining track{plural})".format(
+                queue_len=len(player.auto_queue),
+                plural="s" if len(player.auto_queue) != 1 else "",
+            )
+        )
     else:
         embed.set_footer(text="End of queue")
 
@@ -222,3 +234,36 @@ def create_playlist_embed(playlist: pomice.Playlist) -> discord.Embed:
         )
 
     return embed
+
+
+def create_eq_preview_embed(player: CustomPlayer) -> discord.Embed:
+    embed = discord.Embed(title="Equalizer Settings", color=discord.Color.blue())
+
+    bands = [player.eq_bands.get(i, 0.0) for i in range(15)]
+    chart = _generate_eq_chart(bands)
+    embed.description = f"```\n{chart}\n```"
+
+    if player.eq_bands:
+        modified = ", ".join(f"Band {b}: {g:+.2f}" for b, g in sorted(player.eq_bands.items()))
+        embed.add_field(name="Modified Bands", value=modified, inline=False)
+    else:
+        embed.add_field(name="Status", value="Flat (no adjustments)", inline=False)
+
+    return embed
+
+
+def _generate_eq_chart(bands: list[float]) -> str:
+    blocks = " ▁▂▃▄▅▆▇█"
+
+    lines: list[str] = []
+    for gain in bands:
+        normalized = int(((gain + 0.25) / 1.25) * 8)
+        normalized = max(0, min(8, normalized))
+        bar = blocks[normalized]
+        lines.append(f"{bar} {gain:+.2f}")
+
+    chart = ""
+    for i, line in enumerate(lines):
+        chart += f"Band {i:2d}: {line}\n"
+
+    return chart

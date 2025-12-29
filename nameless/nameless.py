@@ -3,7 +3,7 @@ import logging
 import os
 import pkgutil
 from datetime import UTC, datetime
-from typing import Self, override
+from typing import override
 
 import discord
 from discord import ActivityType, Permissions
@@ -13,8 +13,6 @@ import nameless.command
 from nameless.config import nameless_config
 from nameless.custom.cache import nameless_cache
 from nameless.custom.prisma import NamelessPrisma
-
-from .command.music.exceptions import MusicError
 
 __all__ = ["Nameless"]
 
@@ -71,15 +69,15 @@ class Nameless(commands.Bot):
         logging.info("nameless* is now operational!")
         nameless_config.nameless.start_time = datetime.now(UTC)
 
-    @override
-    async def on_command_error(self, context: commands.Context[Self], exception: commands.errors.CommandError):  # pyright: ignore
-        if isinstance(exception, MusicError):
-            return
+    # @override
+    # async def on_command_error(self, context: commands.Context[Self], exception: commands.errors.CommandError):
+    #     if isinstance(exception, MusicError):
+    #         return
 
-        logging.error("Something went wrong.", exc_info=exception)
-        await context.send(
-            "Something went wrong during command execution, " + "please notify us on GitHub issue if needed."
-        )
+    #     logging.error("Something went wrong.", exc_info=exception)
+    #     await context.send(
+    #         "Something went wrong during command execution, " + "please notify us on GitHub issue if needed."
+    #     )
 
     def start_bot(self, *, is_debug: bool = False):
         """Start the bot."""

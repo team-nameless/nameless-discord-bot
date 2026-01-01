@@ -493,12 +493,7 @@ class MusicCommands(commands.GroupCog, name="music"):
         if not player.queue and not player.auto_queue:
             raise EmptyQueueError()
 
-        all_tracks = list(player.queue._queue)
-        if player.auto_queue:
-            all_tracks.extend(list(player.auto_queue))
-
-        if not all_tracks:
-            raise EmptyQueueError()
+        all_tracks = player.queue._queue
 
         tracks_per_page = 10
         pages: list[discord.Embed] = []

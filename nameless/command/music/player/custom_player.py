@@ -297,13 +297,14 @@ class CustomPlayer(pomice.Player):
         self._auto_disconnect_timeout: int = 300  # seconds
 
         self._logger: logging.Logger = logging.getLogger(f"CustomPlayer({self.guild.id})")
-        self._auto_queue: list[pomice.Track | str] = []
+        self._auto_queue: deque[pomice.Track | str] = deque()
         self._history: deque[pomice.Track] = deque(maxlen=100)
         self._last_control_message: discord.Message | None = None
         self._inactive_disconnect_task: asyncio.Task[None] | None = None
 
         # tracker
         self._vote_skip_in_progress: bool = False
+        self._is_current_track_autoplay: bool = False
 
         # filter
         ## timescale
@@ -337,7 +338,7 @@ class CustomPlayer(pomice.Player):
         return self._auto_disconnect_enabled
 
     @property
-    def auto_queue(self) -> list[pomice.Track | str]:
+    def auto_queue(self) -> deque[pomice.Track | str]:
         return self._auto_queue
 
     @property
@@ -604,11 +605,11 @@ class CustomPlayer(pomice.Player):
         return False
 
     async def _get_next_auto_track(self) -> pomice.Track | None:
-        if self._refresh_autoplay_on_track_end and self.queue.is_empty:
+        if self._refresh_autoplay_on_track_end and self.queue.is_empty and not self._is_current_track_autoplay:
             await self.refresh_auto_queue()
 
         while self._auto_queue:
-            next_track = self._auto_queue.pop(0)
+            next_track = self._auto_queue.popleft()
             if isinstance(next_track, str):
                 next_track_obj = await self.get_track(next_track)
                 if not next_track_obj:
@@ -631,6 +632,7 @@ class CustomPlayer(pomice.Player):
 
             success = await self._play_with_retries(next_track)
             if success:
+                self._is_current_track_autoplay = False
                 return
 
         if not self.is_autoplay_enabled:
@@ -644,6 +646,7 @@ class CustomPlayer(pomice.Player):
             raise AutoplayPopulateError()
 
         await self._play_with_retries(next_auto_track)
+        self._is_current_track_autoplay = True
 
     async def send_to_channel(
         self,

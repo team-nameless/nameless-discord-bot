@@ -17,17 +17,6 @@ from nameless.config import LavalinkNode, nameless_config
 from nameless.custom.ui import NamelessPaginatedView
 
 from .cache import TrackCache
-from .embeds import (
-    create_added_embed,
-    create_error_embed,
-    create_error_embed_from_exception,
-    create_info_embed,
-    create_now_playing_embed,
-    create_playlist_embed,
-    create_queue_embed,
-    create_success_embed,
-    format_duration,
-)
 from .exceptions import (
     AutoplayDisabledError,
     EmptyQueueError,
@@ -38,10 +27,22 @@ from .exceptions import (
     TrackNotSeekableError,
 )
 from .player import CustomPlayer, lavalink
-from .player._patchers import pomice_player, pomice_pool
 from .player_manager import PlayerManager
-from .track_selector import TrackSelector
-from .vote_skip import VoteSkipView
+from .ui.embeds import (
+    create_added_embed,
+    create_eq_preview_embed,
+    create_error_embed,
+    create_error_embed_from_exception,
+    create_info_embed,
+    create_now_playing_embed,
+    create_playlist_embed,
+    create_queue_embed,
+    create_success_embed,
+    format_duration,
+)
+from .ui.options import EQSettingsView
+from .ui.track_selector import TrackSelector
+from .ui.vote_skip import VoteSkipView
 
 if TYPE_CHECKING:
     from nameless.nameless import Nameless
@@ -75,9 +76,6 @@ class MusicCommands(commands.GroupCog, name="music"):
         _lavalink_nodes: list[LavalinkNode]
 
     def __init__(self, bot: Nameless):
-        pomice_pool.apply_pool_get_recommendations_patch()
-        pomice_player.apply_player_destroy_patch()
-
         self.bot = bot
         self.is_ready = asyncio.Event()
 
@@ -155,7 +153,7 @@ class MusicCommands(commands.GroupCog, name="music"):
             return
 
         if self.bot.user:
-            embed = create_now_playing_embed(player, track, self.bot.user)
+            embed = create_now_playing_embed(player, track, track.requester or self.bot.user)
             await player.send_to_trigger_channel(embed=embed, make_controller=True)
 
     @commands.Cog.listener()
@@ -182,11 +180,6 @@ class MusicCommands(commands.GroupCog, name="music"):
             "\n\t".join(f"{k}={v}" for k, v in exception.items()),
         )
 
-        should_skip = await player.handle_track_error(track)
-        if should_skip:
-            await player.do_next()
-            return
-
         cause = exception.get("cause", "Unknown error")
         if "403" in cause or "java.lang.RuntimeException" in cause:
             embed = create_error_embed("Playback Error", f"Cannot play track: {cause}")
@@ -195,8 +188,6 @@ class MusicCommands(commands.GroupCog, name="music"):
         else:
             embed = create_error_embed("Playback Error", f"An error occurred: {cause}")
             await player.send_to_trigger_channel(embed=embed, make_controller=False)
-
-        await player.do_next()
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member: discord.Member, _: discord.VoiceState, after: discord.VoiceState):
@@ -253,10 +244,11 @@ class MusicCommands(commands.GroupCog, name="music"):
         self,
         ctx: commands.Context[Nameless],
         channel: discord.VoiceChannel | discord.StageChannel | None = None,
+        bypass_checks: bool = False,
     ) -> None:
         await ctx.defer()
 
-        player = await self.player_manager.connect_to_voice(ctx, channel)
+        player = await self.player_manager.connect_to_voice(ctx, channel, bypass_checks=bypass_checks)
         if player and ctx.guild:
             embed = create_success_embed("Connected", f"Connected to **{player.channel.name}**")
             await player.send_to_channel(ctx, embed=embed, make_controller=True)
@@ -467,7 +459,21 @@ class MusicCommands(commands.GroupCog, name="music"):
         embed = create_success_embed("Speed Changed", f"Playback speed set to **{speed}x**")
         await ctx.send(embed=embed)
 
-    @commands.hybrid_command()
+    @commands.hybrid_group(name="filter", with_app_command=True)
+    async def filter(self, ctx: commands.Context[Nameless]):
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(ctx.command)
+
+    @filter.command()
+    @app_commands.guild_only()
+    async def equalizer(self, ctx: commands.Context[Nameless]) -> None:
+        player = await self.player_manager.get_player(ctx, raise_on_unconnected=True)
+
+        embed = create_eq_preview_embed(player)
+        view = EQSettingsView(player)
+        await ctx.send(embed=embed, view=view)
+
+    @filter.command()
     @app_commands.guild_only()
     async def stop(self, ctx: commands.Context[Nameless]) -> None:
         player = await self.player_manager.get_or_create_player(ctx)
@@ -487,12 +493,7 @@ class MusicCommands(commands.GroupCog, name="music"):
         if not player.queue and not player.auto_queue:
             raise EmptyQueueError()
 
-        all_tracks = list(player.queue._queue)
-        if player.auto_queue:
-            all_tracks.extend(list(player.auto_queue))
-
-        if not all_tracks:
-            raise EmptyQueueError()
+        all_tracks = player.queue._queue
 
         tracks_per_page = 10
         pages: list[discord.Embed] = []

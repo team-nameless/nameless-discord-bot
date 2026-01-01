@@ -1,7 +1,8 @@
-# pyright:reportArgumentType=false,reportIncompatibleVariableOverride=false
+# pyright:reportArgumentType=false, reportIncompatibleVariableOverride=false
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import re
 from collections import deque
@@ -12,9 +13,11 @@ import discord
 import httpx
 import pomice
 
-from ..embeds import create_now_playing_embed
+from nameless.custom.track_cache import track_info_cache
+
 from ..exceptions import AutoplayPopulateError
-from ..views import MusicControlView
+from ..ui.embeds import create_now_playing_embed
+from ..ui.views import MusicControlView
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -59,7 +62,48 @@ def human_readable_to_int(human_readable: str | Any) -> int:
     return int(number)
 
 
-def get_and_cast[T](d: Mapping[str, Any], key: str | Iterable[str | int], default: T = None) -> T:
+def time_string_to_seconds(time_str: str | Any) -> float:
+    if not time_str or not isinstance(time_str, str):
+        logging.debug(f"invalid time string: {time_str}")
+        return 0.0
+
+    time_str = time_str.strip()
+    if not time_str:
+        return 0.0
+
+    try:
+        parts = time_str.split(":")
+        if len(parts) > 3:
+            logging.warning(f"time string has too many parts: {time_str}")
+            return 0.0
+
+        time_parts: list[int] = []
+        for part in reversed(parts):
+            try:
+                time_parts.append(int(part))
+            except ValueError:
+                logging.warning(f"invalid time component '{part}' in: {time_str}")
+                return 0.0
+
+        total_seconds = 0.0
+        multipliers = [1, 60, 3600]
+
+        for i, value in enumerate(time_parts):
+            if i < len(multipliers):
+                total_seconds += value * multipliers[i]
+            else:
+                logging.warning(f"too many time components in: {time_str}")
+                break
+
+        logging.debug(f"converted '{time_str}' to {total_seconds} seconds")
+        return total_seconds
+
+    except Exception as e:
+        logging.error(f"error converting time string '{time_str}': {e}")
+        return 0.0
+
+
+def get_and_cast[T](d: Mapping[str, Any], key: str | Iterable[str | int], default: T = None, strict: bool = False) -> T:
     if isinstance(key, str):
         key = [key]
 
@@ -74,6 +118,9 @@ def get_and_cast[T](d: Mapping[str, Any], key: str | Iterable[str | int], defaul
 
     if default is None:
         return value  # type: ignore
+
+    if not strict:
+        return cast("T", value)
 
     _type = type(default)
     try:
@@ -109,16 +156,34 @@ def _parser_youtube_related_tracks(item: Mapping[str, Any]) -> str | None:
             "0 views",
         )
     )
-    if view_count < 5000:
+    if view_count < 2000:
+        return None
+
+    duration = time_string_to_seconds(
+        get_and_cast(
+            lockup_view_model,
+            (
+                "contentImage",
+                "thumbnailViewModel",
+                "overlays",
+                0,
+                "thumbnailOverlayBadgeViewModel",
+                "thumbnailBadges",
+                0,
+                "thumbnailBadgeViewModel",
+                "text",
+            ),
+            "0:00",
+        )
+    )
+    if duration < 30 or duration > 540:
         return None
 
     return f"https://www.youtube.com/watch?v={video_id}"
 
 
-async def get_youtube_related_tracks(
-    video_info: pomice.Track,
-) -> list[str]:
-    current_track_id = video_info.identifier
+@track_info_cache
+async def get_youtube_related_tracks(current_track_id: str) -> list[str]:
     if not current_track_id:
         logging.warning("current track ID is missing, cannot fetch related tracks")
         return []
@@ -150,9 +215,20 @@ async def get_youtube_related_tracks(
 
         data: dict[str, Any] = response.json()
         try:
-            secondary_results = data["contents"]["twoColumnWatchNextResults"]["secondaryResults"]["secondaryResults"][
-                "results"
-            ]
+            secondary_results = get_and_cast(
+                data,
+                (
+                    "contents",
+                    "twoColumnWatchNextResults",
+                    "secondaryResults",
+                    "secondaryResults",
+                    "results",
+                ),
+                [],
+                strict=True,
+            )
+            # secondary_results
+            # data["contents"]["twoColumnWatchNextResults"]["secondaryResults"]["secondaryResults"]["results"]
         except KeyError as e:
             logging.error(f"error parsing related tracks response: {e}")
             return []
@@ -212,16 +288,17 @@ class CustomPlayer(pomice.Player):
         super().__init__(*args, **kwargs)
 
         self.np_message_allowed: bool = True
-        self.queue: CustomQueue = CustomQueue()
         self.trigger_channel: Messageable | None = None
+        self.queue: CustomQueue = CustomQueue()
 
         self._autoplay_enabled: bool = True
+        self._refresh_autoplay_on_track_end: bool = True
         self._auto_disconnect_enabled: bool = True
         self._auto_disconnect_timeout: int = 300  # seconds
 
         self._logger: logging.Logger = logging.getLogger(f"CustomPlayer({self.guild.id})")
-        self._auto_queue: list[pomice.Track] = []
-        self._history: deque[pomice.Track] = deque(maxlen=50)
+        self._auto_queue: list[pomice.Track | str] = []
+        self._history: deque[pomice.Track] = deque(maxlen=100)
         self._last_control_message: discord.Message | None = None
         self._inactive_disconnect_task: asyncio.Task[None] | None = None
 
@@ -229,15 +306,15 @@ class CustomPlayer(pomice.Player):
         self._vote_skip_in_progress: bool = False
 
         # filter
-        self._speed: float = 1.0
-
-        # track error handling
-        self._track_errors: dict[str, int] = {}  # track_id -> error_count
-        self.__reset_track_error_later_tasks = set()
-        self._max_track_errors: int = 3
-        self._error_reset_time: int = 300
+        ## timescale
+        self.speed = 1.0
+        self.pitch = 1.0
+        self._rate = 1.0
+        ## eq
+        self.eq_bands: dict[int, float] = {}
 
         self._autoplay_extraction_track: pomice.Track | None = None
+        self._max_play_errors: int = 4
 
     @property
     def vote_skip_in_progress(self) -> bool:
@@ -260,7 +337,7 @@ class CustomPlayer(pomice.Player):
         return self._auto_disconnect_enabled
 
     @property
-    def auto_queue(self) -> list[pomice.Track]:
+    def auto_queue(self) -> list[pomice.Track | str]:
         return self._auto_queue
 
     @property
@@ -268,12 +345,12 @@ class CustomPlayer(pomice.Player):
         return self._history
 
     @property
-    def speed(self) -> float:
-        return self._speed
-
-    @property
     def total_duration(self) -> int:
         return sum(track.length for track in self.queue)
+
+    @property
+    def rate(self) -> float:
+        return self._rate
 
     @override
     async def stop(self) -> None:
@@ -326,48 +403,11 @@ class CustomPlayer(pomice.Player):
     def _get_track_id(self, track: pomice.Track) -> str:
         return f"{track.uri}:{track.title}"
 
-    def _increment_track_error(self, track: pomice.Track) -> int:
-        track_id = self._get_track_id(track)
-        self._track_errors[track_id] = self._track_errors.get(track_id, 0) + 1
-
-        # schedule error count reset
-        task = asyncio.create_task(self._reset_track_error_later(track_id))
-        task.add_done_callback(lambda t: self.__reset_track_error_later_tasks.discard(t))
-        self.__reset_track_error_later_tasks.add(task)
-        return self._track_errors[track_id]
-
-    async def _reset_track_error_later(self, track_id: str) -> None:
-        await asyncio.sleep(self._error_reset_time)
-        if track_id in self._track_errors:
-            del self._track_errors[track_id]
-
-    def _should_skip_track(self, track: pomice.Track) -> bool:
-        track_id = self._get_track_id(track)
-        return self._track_errors.get(track_id, 0) >= self._max_track_errors
-
-    async def _handle_problematic_track(self, track: pomice.Track) -> None:
-        track_id = self._get_track_id(track)
-        error_count = self._track_errors.get(track_id, 0)
-
-        # remove error tracking
-        if track_id in self._track_errors:
-            del self._track_errors[track_id]
-
-        # disable loop to prevent infinite loop
-        if self.queue.loop_mode == pomice.LoopMode.TRACK:
-            self.queue.disable_loop()
-            await self.send_to_trigger_channel(
-                f"**Track loop disabled** - `{track.title}` failed {error_count} times. Skipping to next track."
-            )
-        else:
-            await self.send_to_trigger_channel(f"**Track skipped** - `{track.title}` failed {error_count} times.")
-
     @override
     def cleanup(self) -> None:
         self.queue.clear()
         self._auto_queue.clear()
         self._history.clear()
-        self._track_errors.clear()
         self.cancel_disconnect_timer()
         super().cleanup()
 
@@ -376,25 +416,44 @@ class CustomPlayer(pomice.Player):
         await self.disable_last_control_view()
         await super().disconnect(force=force)
 
-    @override
-    async def get_recommendations(
-        self, *, track: pomice.Track, ctx: Context[Nameless] | None = None
-    ) -> list[pomice.Track] | pomice.Playlist | None:
+    async def _get_youtube_recommendations(self, track: pomice.Track) -> list[str] | None:
+        related_urls = await get_youtube_related_tracks(track.identifier)
+        if not related_urls:
+            return
+
+        return related_urls[1:]
+
+    async def _get_youtube_music_recommendations(self, track: pomice.Track) -> list[pomice.Track] | None:
+        pl_id = f"RDAMVM{track.identifier}"
+        pl_url = f"ytsearch:https://www.youtube.com/watch?v={track.identifier}&list={pl_id}"
         try:
-            raise Exception("Force fallback to custom recommendation logic")
-            return await super().get_recommendations(track=track, ctx=ctx)
-        except Exception:
-            if track.track_type is pomice.TrackType.YOUTUBE:
-                related_urls = await get_youtube_related_tracks(track)
-                if related_urls:
-                    tracks: list[pomice.Track] = []
-                    # skip the first one as it's usually the current track
-                    for _url in related_urls[1:11]:
-                        track_item = await self.get_tracks(_url)
-                        if track_item and isinstance(track_item, list):
-                            tracks.append(track_item[0])
-                    return tracks
+            track_list = await self.get_tracks(query=pl_url, ctx=None)
+            if isinstance(track_list, pomice.Playlist):
+                return track_list.tracks[1:]
+            return track_list[1:] if track_list else None
+        except Exception as e:
+            logging.error(f"error fetching YouTube Music recommendations: {e}")
             return None
+
+    async def custom_get_recommendations(
+        self, *, track: pomice.Track, ctx: Context[Nameless] | None = None
+    ) -> list[str] | list[pomice.Track] | pomice.Playlist | None:
+        result = None
+        with contextlib.suppress(pomice.TrackLoadError):
+            result = await super().get_recommendations(track=track, ctx=ctx)
+
+        if result:
+            return result
+
+        if track.track_type is not pomice.TrackType.YOUTUBE:
+            return
+
+        result = await self._get_youtube_music_recommendations(track)
+        if result:
+            return result
+        logging.warning("Failed to get YouTube Music recommendations, falling back to standard YouTube.")
+
+        return await self._get_youtube_recommendations(track)
 
     def toggle_autoplay(self) -> bool:
         self._autoplay_enabled = not self._autoplay_enabled
@@ -406,15 +465,15 @@ class CustomPlayer(pomice.Player):
             self._auto_queue.clear()
             return
 
-        tracks = await self.get_recommendations(track=current)
-        if not tracks:
+        related_result = await self.custom_get_recommendations(track=current)
+        if not related_result:
             self._auto_queue.clear()
             return
 
-        if isinstance(tracks, list):
-            self._auto_queue = tracks
+        if isinstance(related_result, list):
+            self._auto_queue.extend(related_result)
         else:
-            self._auto_queue = tracks.tracks.copy()
+            self._auto_queue.extend(related_result.tracks)
 
         self._logger.info(f"Refreshed auto queue with {len(self._auto_queue)} tracks.")
 
@@ -455,43 +514,136 @@ class CustomPlayer(pomice.Player):
         finally:
             self._last_control_message = None
 
-    async def handle_track_error(self, track: pomice.Track) -> bool:
-        error_count = self._increment_track_error(track)
-
-        if error_count >= self._max_track_errors:
-            await self._handle_problematic_track(track)
-            return True
-
-        return False
+    async def _update_timescale_filter(self) -> None:
+        timescale = pomice.Timescale(
+            speed=self.speed,
+            pitch=self.pitch,
+            rate=self._rate,
+        )
+        if self.filters.has_filter("timescale"):
+            await self.edit_filter("timescale", timescale)
+        else:
+            await self.add_filter("timescale", timescale)
 
     async def set_speed(self, speed: float) -> None:
-        self._speed = speed
-        # Try to edit if exists, else add
-        try:
-            await self.edit_filter(pomice.Timescale(tag="speed", speed=speed))
-        except pomice.FilterTagInvalid:
-            await self.add_filter(pomice.Timescale(tag="speed", speed=speed))
+        self.speed = speed
+        await self._update_timescale_filter()
+
+    async def set_pitch(self, pitch: float) -> None:
+        self.pitch = pitch
+        await self._update_timescale_filter()
+
+    async def set_rate(self, rate: float) -> None:
+        self._rate = rate
+        await self._update_timescale_filter()
+
+    async def set_eq_band(self, band: int, gain: float) -> None:
+        if not 0 <= band <= 14:
+            raise ValueError("Band must be 0-14")
+        if not -0.25 <= gain <= 1.0:
+            raise ValueError("Gain must be -0.25 to 1.0")
+
+        self.eq_bands[band] = gain
+        await self._update_equalizer()
+
+    async def reset_eq(self) -> None:
+        self.eq_bands.clear()
+        if self.filters.has_filter(filter_tag="equalizer"):
+            await self.remove_filter(filter_tag="equalizer")
+
+    async def _update_equalizer(self) -> None:
+        levels = [(band, gain) for band, gain in self.eq_bands.items()]
+        eq_filter = pomice.Equalizer(tag="equalizer", levels=levels)
+
+        if self.filters.has_filter(filter_tag="equalizer"):
+            await self.edit_filter(filter_tag="equalizer", edited_filter=eq_filter)
+        else:
+            await self.add_filter(eq_filter)
+
+    @track_info_cache
+    async def get_track(
+        self,
+        query: str,
+        *,
+        ctx: Context[Nameless] | None = None,
+        search_type: pomice.SearchType = pomice.SearchType.ytsearch,
+        filters: pomice.Filters | None = None,
+    ):
+        tracks = await super().get_tracks(query, ctx=ctx, search_type=search_type, filters=filters)
+        if not tracks:
+            return None
+        if isinstance(tracks, pomice.Playlist):
+            return tracks.tracks[0]
+        return tracks[0]
+
+    async def _play_with_retries(self, track: pomice.Track, *args, **kwargs) -> bool:
+        for attempt in range(self._max_play_errors):
+            try:
+                if attempt + 1 == self._max_play_errors:
+                    self._logger.error(f"Final attempt to play track {track.title}")
+                    _track = await self.get_track(query=track.uri, ctx=None)  # reload track info
+                    if not _track:
+                        self._logger.error(f"Failed to reload track info for {track.title}, skipping.")
+                        return False
+                    track = _track
+
+                await self.play(track, *args, **kwargs)
+                return True
+            except Exception as e:
+                logging.error(
+                    "Error playing track %s (attempt %d/%d): %s",
+                    track.title,
+                    attempt + 1,
+                    self._max_play_errors,
+                    e,
+                    exc_info=True,
+                )
+                await asyncio.sleep(1)
+
+        logging.error("Max play attempts reached for track %s, skipping.", track.title)
+        return False
+
+    async def _get_next_auto_track(self) -> pomice.Track | None:
+        if self._refresh_autoplay_on_track_end and self.queue.is_empty:
+            await self.refresh_auto_queue()
+
+        while self._auto_queue:
+            next_track = self._auto_queue.pop(0)
+            if isinstance(next_track, str):
+                next_track_obj = await self.get_track(next_track)
+                if not next_track_obj:
+                    self._logger.warning(f"Failed to get track recommendation for '{next_track}', skipping.")
+                    continue
+                next_track = next_track_obj
+
+            return next_track
+        return None
 
     async def do_next(self):
         if self.current:
             self._history.appendleft(self.current)
 
-        if self.queue:
-            next_track = self.queue.get()
-            await self.play(next_track)
+        while not self.queue.is_empty:
+            try:
+                next_track = self.queue.get()
+            except pomice.QueueEmpty:
+                break
+
+            success = await self._play_with_retries(next_track)
+            if success:
+                return
+
+        if not self.is_autoplay_enabled:
+            # nothing left to play
+            self.start_disconnect_timer()
             return
 
-        if self.is_autoplay_enabled:
-            if not self.auto_queue:
-                await self.refresh_auto_queue()
-                if not self.auto_queue:
-                    raise AutoplayPopulateError()
+        next_auto_track = await self._get_next_auto_track()
+        if not next_auto_track:
+            self.start_disconnect_timer()
+            raise AutoplayPopulateError()
 
-            next_track = self.auto_queue.pop(0)
-            await self.play(next_track)
-            return
-
-        self.start_disconnect_timer()
+        await self._play_with_retries(next_auto_track)
 
     async def send_to_channel(
         self,

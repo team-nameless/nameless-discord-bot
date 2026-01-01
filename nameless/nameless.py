@@ -3,7 +3,7 @@ import logging
 import os
 import pkgutil
 from datetime import UTC, datetime
-from typing import Self, override
+from typing import override
 
 import discord
 from discord import ActivityType, Permissions
@@ -12,9 +12,7 @@ from discord.ext import commands
 import nameless.command
 from nameless.config import nameless_config
 from nameless.custom.cache import nameless_cache
-from nameless.custom.prisma import NamelessPrisma
-
-from .command.music.exceptions import MusicError
+from nameless.db import db
 
 __all__ = ["Nameless"]
 
@@ -42,7 +40,7 @@ class Nameless(commands.Bot):
 
     @override
     async def setup_hook(self):
-        await NamelessPrisma.init()
+        await db.init()
         nameless_cache.populate_from_persistence()
         await self._register_commands()
         # await self._setup_file_watcher()
@@ -71,15 +69,15 @@ class Nameless(commands.Bot):
         logging.info("nameless* is now operational!")
         nameless_config.nameless.start_time = datetime.now(UTC)
 
-    @override
-    async def on_command_error(self, context: commands.Context[Self], exception: commands.errors.CommandError):  # pyright: ignore
-        if isinstance(exception, MusicError):
-            return
+    # @override
+    # async def on_command_error(self, context: commands.Context[Self], exception: commands.errors.CommandError):
+    #     if isinstance(exception, MusicError):
+    #         return
 
-        logging.error("Something went wrong.", exc_info=exception)
-        await context.send(
-            "Something went wrong during command execution, " + "please notify us on GitHub issue if needed."
-        )
+    #     logging.error("Something went wrong.", exc_info=exception)
+    #     await context.send(
+    #         "Something went wrong during command execution, " + "please notify us on GitHub issue if needed."
+    #     )
 
     def start_bot(self, *, is_debug: bool = False):
         """Start the bot."""
@@ -95,7 +93,7 @@ class Nameless(commands.Bot):
             self._file_watcher.stop()
             self._file_watcher.join()
 
-        await NamelessPrisma.dispose()
+        await db.dispose()
         nameless_cache.yank_to_persistence()
         await super().close()
 

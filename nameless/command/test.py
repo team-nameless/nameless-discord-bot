@@ -198,16 +198,25 @@ class TestCommand(commands.Cog):
     ) -> None:
         from nameless.command.music import MusicCommands  # noqa: PLC0415
 
+        guild = ctx.guild
+        if not guild:
+            raise ValueError("This command must be used in a guild.")
+
+        vcs = guild.voice_channels
+        if not vcs:
+            raise ValueError("No voice channels found in this guild.")
+        channel = vcs[0]
+
         chain = CommandChain(ctx, test_name="test_player", validate=True, strict=False)
         await (
-            chain.add(MusicCommands.connect.name)
+            chain.add(MusicCommands.connect.qualified_name, channel=channel)
             .add(
-                MusicCommands.play.name,
+                MusicCommands.play.qualified_name,
                 query=query,
             )
-            .add(MusicCommands.queue.name, delay=1)
-            .add(MusicCommands.skip.name, delay=1)
-            .add(MusicCommands.disconnect.name, delay=5)
+            .add(MusicCommands.queue.qualified_name, delay=1)
+            .add(MusicCommands.skip.qualified_name, delay=1)
+            .add(MusicCommands.disconnect.qualified_name, delay=5)
             .execute()
         )
 

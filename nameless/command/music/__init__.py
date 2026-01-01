@@ -27,7 +27,6 @@ from .exceptions import (
     TrackNotSeekableError,
 )
 from .player import CustomPlayer, lavalink
-from .player._patchers import pomice_player, pomice_pool
 from .player_manager import PlayerManager
 from .ui.embeds import (
     create_added_embed,
@@ -77,9 +76,6 @@ class MusicCommands(commands.GroupCog, name="music"):
         _lavalink_nodes: list[LavalinkNode]
 
     def __init__(self, bot: Nameless):
-        pomice_pool.apply_pool_get_recommendations_patch()
-        pomice_player.apply_player_destroy_patch()
-
         self.bot = bot
         self.is_ready = asyncio.Event()
 

@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING
 
 import discord
 from discord.ext import commands
-from prisma.models import Guild
 
 from nameless.custom.cache import nameless_cache
-from nameless.custom.prisma import NamelessPrisma
+from nameless.db import db
+from nameless.db.repositories import GuildRepository
 from nameless.utils import create_cache_key
 
 if TYPE_CHECKING:
@@ -42,7 +42,8 @@ class HoneypotCommand(commands.Cog):
 
         assert isinstance(message.author, discord.Member)
 
-        db_guild = await Guild.prisma().find_unique_or_raise(where={"Id": message.guild.id})
+        async with db.get_session_context() as session, GuildRepository(session) as guild_repo:
+            db_guild = await guild_repo.get_or_create(pk_id=message.guild.id)
 
         if message.channel.id == db_guild.HoneypotChannelId:
             with contextlib.suppress(discord.errors.Forbidden):
@@ -61,7 +62,8 @@ class HoneypotCommand(commands.Cog):
 
         assert ctx.guild is not None
 
-        await NamelessPrisma.get_guild_entry(ctx.guild)
+        async with db.get_session_context() as session, GuildRepository(session) as guild_repo:
+            await guild_repo.get_or_create(pk_id=ctx.guild.id)
 
         if nameless_cache.get_key(self._create_honeypot_cache_key(ctx.guild)):
             await ctx.send("You already activated the honeypot.")
@@ -71,7 +73,12 @@ class HoneypotCommand(commands.Cog):
 
         await created_channel.send("# DO NOT TEXT IN HERE, YOU WILL BE BANNED.")
 
-        await Guild.prisma().update_many(data={"HoneypotChannelId": created_channel.id}, where={"Id": ctx.guild.id})
+        async with db.get_session_context() as session:
+            guild_repo = GuildRepository(session)
+            await guild_repo.update(
+                ctx.guild.id,
+                {"HoneypotChannelId": created_channel.id},
+            )
 
         nameless_cache.set_key(self._create_honeypot_cache_key(ctx.guild))
 
@@ -93,8 +100,8 @@ class HoneypotCommand(commands.Cog):
             await ctx.send("You don't have spam-bait activated.")
             return
 
-        await NamelessPrisma.get_guild_entry(ctx.guild)
-        db_guild = await Guild.prisma().find_unique_or_raise(where={"Id": ctx.guild.id})
+        async with db.get_session_context() as session, GuildRepository(session) as guild_repo:
+            db_guild = await guild_repo.get_or_create(pk_id=ctx.guild.id)
 
         created_channel = await ctx.guild.fetch_channel(db_guild.HoneypotChannelId)
 

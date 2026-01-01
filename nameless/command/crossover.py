@@ -6,12 +6,18 @@ from typing import TYPE_CHECKING
 
 import discord
 from discord.ext import commands
-from prisma.models import CrossChatConnection, CrossChatMessage, CrossChatRoom
 
 from nameless.config import nameless_config
 from nameless.custom.cache import nameless_cache
-from nameless.custom.prisma import NamelessPrisma
 from nameless.custom.types import NamelessTextable
+from nameless.db import db
+from nameless.db.models import CrossChatConnection, CrossChatMessage, CrossChatRoom
+from nameless.db.repositories import (
+    CrossChatConnectionRepository,
+    CrossChatMessageRepository,
+    CrossChatRoomRepository,
+    GuildRepository,
+)
 from nameless.utils import create_cache_key
 
 if TYPE_CHECKING:
@@ -33,11 +39,11 @@ class CrossOverCommand(commands.Cog):
         self, this_guild: discord.Guild, this_channel: NamelessTextable
     ) -> list[tuple[CrossChatConnection, NamelessTextable]]:
         """Get list of subscribed guild channels."""
-        connections = await CrossChatConnection.prisma().find_many(
-            where={"SourceGuildId": this_guild.id, "SourceChannelId": this_channel.id}
-        )
+        async with db.get_session_context() as session:
+            conn_repo = CrossChatConnectionRepository(session)
+            connections = await conn_repo.get_by_source(this_guild.id, this_channel.id)
 
-        result: list[tuple[CrossChatConnection, NamelessTextable]] = []
+        result_list: list[tuple[CrossChatConnection, NamelessTextable]] = []
 
         for conn in connections:
             guild = self.bot.get_guild(conn.TargetGuildId)
@@ -51,9 +57,9 @@ class CrossOverCommand(commands.Cog):
                 continue
 
             if isinstance(channel, NamelessTextable):
-                result.append((conn, channel))
+                result_list.append((conn, channel))
 
-        return result
+        return result_list
 
     async def _get_subscribed_messages(
         self,
@@ -62,16 +68,19 @@ class CrossOverCommand(commands.Cog):
         this_message: discord.Message,
     ) -> list[tuple[CrossChatConnection, discord.Message]]:
         """Get subscribed messages."""
-        connections = await CrossChatConnection.prisma().find_many(
-            where={
-                "SourceGuildId": this_guild.id,
-                "SourceChannelId": this_channel.id,
-                "Messages": {"some": {"OriginMessageId": this_message.id}},
-            },
-            include={"Messages": True},
-        )
+        async with db.get_session_context() as session:
+            conn_repo = CrossChatConnectionRepository(session)
+            connections = await conn_repo.get_by_source(this_guild.id, this_channel.id)
 
-        result: list[tuple[CrossChatConnection, discord.Message]] = []
+            msg_repo = CrossChatMessageRepository(session)
+            connection_messages: dict[str, list[CrossChatMessage]] = {}
+            for conn in connections:
+                messages = await msg_repo.get_by_connection(conn.UUID)
+
+                filtered_messages = [msg for msg in messages if msg.OriginMessageId == this_message.id]
+                connection_messages[conn.UUID] = filtered_messages
+
+        result_list: list[tuple[CrossChatConnection, discord.Message]] = []
 
         for conn in connections:
             guild = self.bot.get_guild(conn.TargetGuildId)
@@ -87,14 +96,16 @@ class CrossOverCommand(commands.Cog):
             if not isinstance(channel, NamelessTextable):
                 continue
 
-            assert conn.Messages is not None
+            messages = connection_messages.get(conn.UUID, [])
+            if not messages:
+                continue
 
-            the_true_id: int = next(x.ClonedMessageId for x in conn.Messages if x.OriginMessageId == this_message.id)
+            the_true_id: int = messages[0].ClonedMessageId
             the_true_message = await channel.fetch_message(the_true_id)
 
-            result.append((conn, the_true_message))
+            result_list.append((conn, the_true_message))
 
-        return result
+        return result_list
 
     async def _is_connected_to_each_other(
         self,
@@ -109,23 +120,14 @@ class CrossOverCommand(commands.Cog):
         A room consisting of (guild, channel) can be used interchangably,
         as long as the "room" is still valid.
         """
-        conn1 = await CrossChatConnection.prisma().find_first(
-            where={
-                "SourceGuildId": this_guild.id,
-                "SourceChannelId": this_channel.id,
-                "TargetGuildId": that_guild.id,
-                "TargetChannelId": that_channel.id,
-            }
-        )
-
-        conn2 = await CrossChatConnection.prisma().find_first(
-            where={
-                "SourceGuildId": that_guild.id,
-                "SourceChannelId": that_channel.id,
-                "TargetGuildId": this_guild.id,
-                "TargetChannelId": this_channel.id,
-            }
-        )
+        async with db.get_session_context() as session:
+            conn_repo = CrossChatConnectionRepository(session)
+            conn1 = await conn_repo.get_by_source_and_target(
+                this_guild.id, this_channel.id, that_guild.id, that_channel.id
+            )
+            conn2 = await conn_repo.get_by_source_and_target(
+                that_guild.id, that_channel.id, this_guild.id, this_channel.id
+            )
 
         return conn1 is not None and conn2 is not None
 
@@ -175,13 +177,14 @@ class CrossOverCommand(commands.Cog):
                 files=[await x.to_file() for x in message.attachments],
             )
 
-            await CrossChatMessage.prisma().create(
-                data={
-                    "Connection": {"connect": {"Id": conn.Id}},
-                    "OriginMessageId": message.id,
-                    "ClonedMessageId": sent_message.id,
-                }
-            )
+            async with db.get_session_context() as session:
+                msg_repo = CrossChatMessageRepository(session)
+                chat_message = CrossChatMessage(
+                    ConnectionId=conn.UUID,
+                    OriginMessageId=message.id,
+                    ClonedMessageId=sent_message.id,
+                )
+                await msg_repo.create(chat_message)
 
     @commands.Cog.listener()
     async def on_message_edit(self, _: discord.Message, message: discord.Message):
@@ -236,16 +239,18 @@ class CrossOverCommand(commands.Cog):
             await ctx.send("You are not inside our accepted channel type (Text/Thread).")
             return
 
-        await NamelessPrisma.get_guild_entry(ctx.guild)
+        async with db.get_session_context() as session:
+            guild_repo = GuildRepository(session)
+            await guild_repo.get_or_create(ctx.guild.id)
 
-        room_data: CrossChatRoom | None = await CrossChatRoom.prisma().find_first(
-            where={"ChannelId": ctx.channel.id, "GuildId": ctx.guild.id},
-        )
+            room_repo = CrossChatRoomRepository(session)
+            room_data = await room_repo.get_by_channel(ctx.guild.id, ctx.channel.id)
 
-        if room_data is None:
-            room_data = await CrossChatRoom.prisma().create(data={"GuildId": ctx.guild.id, "ChannelId": ctx.channel.id})
+            if room_data is None:
+                room_data = CrossChatRoom(GuildId=ctx.guild.id, ChannelId=ctx.channel.id)
+                await room_repo.create(room_data)
 
-        await ctx.send(f"Your cross-chat room code is: `{room_data.Id}`")
+        await ctx.send(f"Your cross-chat room code is: `{room_data.UUID}`")
 
     @crossover.command()
     @commands.guild_only()
@@ -265,7 +270,9 @@ class CrossOverCommand(commands.Cog):
         """
         await ctx.defer()
 
-        room_data: CrossChatRoom | None = await CrossChatRoom.prisma().find_first(where={"Id": room_code})
+        async with db.get_session_context() as session:
+            room_repo = CrossChatRoomRepository(session)
+            room_data = await room_repo.get_by_uuid(room_code)
 
         if room_data is None:
             await ctx.send("Room code does not exist!")
@@ -298,30 +305,33 @@ class CrossOverCommand(commands.Cog):
             await ctx.send("Don't connect to yourself!")
             return
 
-        await NamelessPrisma.get_guild_entry(this_guild)
-        await NamelessPrisma.get_guild_entry(that_guild)
+        async with db.get_session_context() as session:
+            guild_repo = GuildRepository(session)
+            await guild_repo.get_or_create(this_guild.id)
+            await guild_repo.get_or_create(that_guild.id)
 
-        await CrossChatConnection.prisma().create(
-            data={
-                "RoomId": room_code,
-                "SourceGuildId": this_guild.id,
-                "SourceChannelId": this_channel.id,
-                "TargetGuildId": that_guild.id,
-                "TargetChannelId": that_channel.id,
-            }
-        )
+            conn_repo = CrossChatConnectionRepository(session)
+            conn1 = CrossChatConnection(
+                RoomId=room_code,
+                SourceGuildId=this_guild.id,
+                SourceChannelId=this_channel.id,
+                TargetGuildId=that_guild.id,
+                TargetChannelId=that_channel.id,
+            )
+            await conn_repo.create(conn1)
 
         await ctx.send("Linking success!")
 
-        await CrossChatConnection.prisma().create(
-            data={
-                "RoomId": room_code,
-                "SourceGuildId": that_guild.id,
-                "SourceChannelId": that_channel.id,
-                "TargetGuildId": this_guild.id,
-                "TargetChannelId": this_channel.id,
-            }
-        )
+        async with db.get_session_context() as session:
+            conn_repo = CrossChatConnectionRepository(session)
+            conn2 = CrossChatConnection(
+                RoomId=room_code,
+                SourceGuildId=that_guild.id,
+                SourceChannelId=that_channel.id,
+                TargetGuildId=this_guild.id,
+                TargetChannelId=this_channel.id,
+            )
+            await conn_repo.create(conn2)
 
         assert isinstance(this_channel.name, str)
 
@@ -354,13 +364,9 @@ class CrossOverCommand(commands.Cog):
         assert ctx.guild is not None
         assert ctx.channel is not None
 
-        conn_data: CrossChatConnection | None = await CrossChatConnection.prisma().find_first(
-            where={
-                "RoomId": room_code,
-                "SourceGuildId": ctx.guild.id,
-                "SourceChannelId": ctx.channel.id,
-            }
-        )
+        async with db.get_session_context() as session:
+            conn_repo = CrossChatConnectionRepository(session)
+            conn_data = await conn_repo.get_by_room_and_source(room_code, ctx.guild.id, ctx.channel.id)
 
         if conn_data is None:
             await ctx.send("Room code does not exist!")
@@ -389,14 +395,14 @@ class CrossOverCommand(commands.Cog):
             await ctx.send("You are not connected to this room!")
             return
 
-        await NamelessPrisma.get_guild_entry(this_guild)
-        await NamelessPrisma.get_guild_entry(that_guild)
+        async with db.get_session_context() as session:
+            guild_repo = GuildRepository(session)
+            await guild_repo.get_or_create(this_guild.id)
+            await guild_repo.get_or_create(that_guild.id)
 
-        await CrossChatConnection.prisma().delete_many(
-            where={
-                "RoomId": room_code,
-            }
-        )
+            # Delete all connections with this room code
+            conn_repo = CrossChatConnectionRepository(session)
+            await conn_repo.delete_by_room(room_code)
 
         await ctx.send("Disconnection success!")
 
@@ -420,14 +426,20 @@ class CrossOverCommand(commands.Cog):
         assert ctx.guild is not None
         assert ctx.channel is not None
 
-        connections = await CrossChatConnection.prisma().find_many(
-            where={"SourceGuildId": ctx.guild.id, "SourceChannelId": ctx.channel.id},
-            distinct=["RoomId"],
-        )
+        async with db.get_session_context() as session:
+            conn_repo = CrossChatConnectionRepository(session)
+            connections = await conn_repo.get_by_source(ctx.guild.id, ctx.channel.id)
+
+            seen_rooms: set[str] = set()
+            unique_connections: list[CrossChatConnection] = []
+            for conn in connections:
+                if conn.RoomId not in seen_rooms:
+                    seen_rooms.add(conn.RoomId)
+                    unique_connections.append(conn)
 
         rooms: list[str] = []
 
-        for conn in connections:
+        for conn in unique_connections:
             that_guild = await ctx.bot.fetch_guild(conn.TargetGuildId)
             that_channel = await that_guild.fetch_channel(conn.TargetChannelId)
 
@@ -440,7 +452,7 @@ class CrossOverCommand(commands.Cog):
         )
 
         embed.set_thumbnail(url=ctx.guild.icon.url if ctx.guild.icon else "")
-        embed.add_field(name="All connected rooms", value="\n".join(rooms))
+        embed.add_field(name="All connected rooms", value="\n".join(rooms) if rooms else "No connections")
 
         await ctx.send(
             embed=embed,

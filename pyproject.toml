@@ -5,14 +5,16 @@ description = "A Discord BOT, written with batteries in mind."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "aiosqlite>=0.22.1",
     "beautifulsoup4>=4.14.3",
     "cachetools>=5.4.0",
+    "discord-py>=2.6.4",
     "httpx>=0.28.1",
     "jishaku>=2.6.3",
     "pillow>=12.0.0",
-    "pomice==2.10.0",
-    "prisma>=0.15.0",
+    "pomice>=2.10.0",
     "python-dotenv>=1.2.1",
+    "sqlmodel>=0.0.31",
     "uv>=0.9.18",
 ]
 
@@ -20,6 +22,8 @@ dependencies = [
 dev = [
     "nodejs-wheel>=24.12.0",
     "pyright>=1.1.407",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
     "ruff>=0.9.3",
     "watchdog>=6.0.0",
 ]

@@ -5,11 +5,11 @@ from typing import TYPE_CHECKING
 
 import discord
 from discord.ext import commands
-from prisma.models import User
 
 from nameless.custom.cache import nameless_cache
 from nameless.custom.maimai.maimai import MaimaiClient
-from nameless.custom.prisma import NamelessPrisma
+from nameless.db import db
+from nameless.db.repositories import UserRepository
 from nameless.utils import create_cache_key
 
 if TYPE_CHECKING:
@@ -38,7 +38,8 @@ class MaimaiCommand(commands.Cog):
             await ctx.send("You have not linked with me, *yet*.")
             return
 
-        db_user = await NamelessPrisma.get_user_entry(ctx.author)
+        async with db.get_session_context() as session:
+            db_user = await UserRepository(session).get_or_create(ctx.author.id)
 
         moi_user: MaimaiUser = self.moimoi_api.find_by_friend_code(db_user.MaimaiFriendCode)
 
@@ -63,9 +64,11 @@ class MaimaiCommand(commands.Cog):
 
         try:
             self.moimoi_api.find_by_friend_code(friend_code)
-            await NamelessPrisma.get_user_entry(ctx.author)
-
-            await User.prisma().update_many(where={"Id": ctx.author.id}, data={"MaimaiFriendCode": friend_code})
+            async with db.get_session_context() as session, UserRepository(session) as user_repo:
+                await user_repo.update(
+                    ctx.author.id,
+                    {"MaimaiFriendCode": friend_code},
+                )
 
             await ctx.send("Linkage complete!")
 

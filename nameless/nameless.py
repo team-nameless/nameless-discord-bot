@@ -12,7 +12,7 @@ from discord.ext import commands
 import nameless.command
 from nameless.config import nameless_config
 from nameless.custom.cache import nameless_cache
-from nameless.custom.prisma import NamelessPrisma
+from nameless.db import db
 
 __all__ = ["Nameless"]
 
@@ -40,7 +40,7 @@ class Nameless(commands.Bot):
 
     @override
     async def setup_hook(self):
-        await NamelessPrisma.init()
+        await db.init()
         nameless_cache.populate_from_persistence()
         await self._register_commands()
         # await self._setup_file_watcher()
@@ -93,7 +93,7 @@ class Nameless(commands.Bot):
             self._file_watcher.stop()
             self._file_watcher.join()
 
-        await NamelessPrisma.dispose()
+        await db.dispose()
         nameless_cache.yank_to_persistence()
         await super().close()
 

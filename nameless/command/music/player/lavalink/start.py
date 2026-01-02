@@ -3,6 +3,7 @@ import contextlib
 import logging
 import os
 import re
+import shutil
 import signal
 from pathlib import Path
 
@@ -162,6 +163,9 @@ async def start():
     """Start the Lavalink server from /bin folder."""
     global proc
     while not stop_event.is_set():
+        if not CWD.joinpath("application.yml").exists():
+            shutil.copyfile(CWD / "application.example.yml", CWD / "application.yml")
+
         proc = await asyncio.create_subprocess_exec(
             "java",
             "-jar",
@@ -169,14 +173,12 @@ async def start():
             cwd=CWD / "bin",
             stdout=asyncio.subprocess.PIPE,
             stdin=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
         )
 
-        if not os.getenv("YOUTUBE_REFRESH_TOKEN"):
-            monitor_tasks.clear()
-            if proc.stdout and proc.stderr:
-                monitor_tasks.append(asyncio.create_task(_monitor_lavalink_output(proc.stdout)))
-                monitor_tasks.append(asyncio.create_task(_monitor_lavalink_output(proc.stderr)))
+        monitor_tasks.clear()
+        if proc.stdout:
+            monitor_tasks.append(asyncio.create_task(_monitor_lavalink_output(proc.stdout)))
 
         await proc.wait()
         if nameless_config.runtime.is_shutting_down or stop_event.is_set():

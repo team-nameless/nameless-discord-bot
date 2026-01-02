@@ -55,8 +55,7 @@ def create_now_playing_embed(
             return "⏸️"
         return "▶️"
 
-    is_autoplay = player.is_autoplay_enabled and user == player.bot.user
-    status_text = "Autoplay" if is_autoplay else "Now Playing"
+    status_text = "Autoplay" if player.is_current_track_autoplay else "Now Playing"
 
     current_pos = player.position
     total_duration = track.length
@@ -105,7 +104,7 @@ def create_now_playing_embed(
             inline=False,
         )
         embed.set_footer(text=f"{queue_len} track{'s' if queue_len > 1 else ''} remaining in queue")
-    elif is_autoplay:
+    elif player.auto_queue or player.is_current_track_autoplay:
         embed.set_footer(
             text="Autoplay's playlist ({queue_len} remaining track{plural})".format(
                 queue_len=len(player.auto_queue),

@@ -413,6 +413,10 @@ class CustomPlayer(pomice.Player):
         self._max_play_errors: int = 4
 
     @property
+    def is_current_track_autoplay(self) -> bool:
+        return self._is_current_track_autoplay
+
+    @property
     def vote_skip_in_progress(self) -> bool:
         return self._vote_skip_in_progress
 
@@ -725,7 +729,12 @@ class CustomPlayer(pomice.Player):
         return False
 
     async def _get_next_auto_track(self) -> pomice.Track | None:
-        if self._refresh_autoplay_on_track_end and self.queue.is_empty and not self._is_current_track_autoplay:
+        if (
+            self._refresh_autoplay_on_track_end
+            and self.queue.is_empty
+            and not self._is_current_track_autoplay
+            and len(self._auto_queue) < 5
+        ):
             await self.refresh_auto_queue()
 
         while self._auto_queue:

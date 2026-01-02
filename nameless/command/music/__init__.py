@@ -311,6 +311,9 @@ class MusicCommands(commands.GroupCog, name="music"):
 
         await self._add_tracks_to_queue(player, tracks, cast("discord.Member", ctx.author), position)
 
+        if player.current:
+            await player.update_now_playing_embed()
+
         if not player.is_playing and player.queue:
             await player.play(player.queue.get())
 
@@ -325,7 +328,6 @@ class MusicCommands(commands.GroupCog, name="music"):
             embed = create_info_embed("Already Paused", "The player is already paused")
         else:
             await player.set_pause(True)
-            # Update the last control message if it exists
             await player.update_now_playing_embed()
             embed = create_success_embed("Paused", "Playback has been paused")
 
@@ -340,7 +342,6 @@ class MusicCommands(commands.GroupCog, name="music"):
             embed = create_info_embed("Already Playing", "The player is already playing")
         else:
             await player.set_pause(False)
-            # Update the last control message if it exists
             await player.update_now_playing_embed()
             embed = create_success_embed("Resumed", "Playback has been resumed")
 

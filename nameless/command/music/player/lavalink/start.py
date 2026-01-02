@@ -15,6 +15,7 @@ CWD = Path(__file__).parent
 LAVALINK_URL = "https://github.com/lavalink-devs/Lavalink/releases/latest/download/Lavalink.jar"
 LAVALINK_BIN = CWD / "bin" / "Lavalink.jar"
 LAVALINK_CONFIG = CWD / "bin" / "application.yml"
+DEFAULT_LAVALINK_CONFIG = CWD / "bin" / "application.example.yml"
 
 proc: asyncio.subprocess.Process | None = None
 task: asyncio.Task[None] | None = None
@@ -163,8 +164,8 @@ async def start():
     """Start the Lavalink server from /bin folder."""
     global proc
     while not stop_event.is_set():
-        if not CWD.joinpath("application.yml").exists():
-            shutil.copyfile(CWD / "application.example.yml", CWD / "application.yml")
+        if not DEFAULT_LAVALINK_CONFIG.exists():
+            shutil.copyfile(DEFAULT_LAVALINK_CONFIG, DEFAULT_LAVALINK_CONFIG.with_name("application.yml"))
 
         proc = await asyncio.create_subprocess_exec(
             "java",

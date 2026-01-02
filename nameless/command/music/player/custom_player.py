@@ -387,7 +387,6 @@ class CustomPlayer(pomice.Player):
         self.queue: CustomQueue = CustomQueue()
 
         self._autoplay_enabled: bool = True
-        self._refresh_autoplay_on_track_end: bool = True
         self._auto_disconnect_enabled: bool = True
         self._auto_disconnect_timeout: int = 300  # seconds
 
@@ -456,7 +455,7 @@ class CustomPlayer(pomice.Player):
         self.np_message_allowed = not self.np_message_allowed
 
     def clear_auto_queue(self) -> None:
-        self.auto_queue.clear()
+        self._auto_queue.clear()
 
     def start_disconnect_timer(self) -> None:
         if not self._auto_disconnect_enabled:
@@ -729,12 +728,7 @@ class CustomPlayer(pomice.Player):
         return False
 
     async def _get_next_auto_track(self) -> pomice.Track | None:
-        if (
-            self._refresh_autoplay_on_track_end
-            and self.queue.is_empty
-            and not self._is_current_track_autoplay
-            and len(self._auto_queue) < 5
-        ):
+        if self.queue.is_empty and (not self._is_current_track_autoplay or len(self._auto_queue) < 5):
             await self.refresh_auto_queue()
 
         while self._auto_queue:
@@ -755,6 +749,8 @@ class CustomPlayer(pomice.Player):
                 next_track = self.queue.get()
             except pomice.QueueEmpty:
                 break
+
+            self._auto_queue.clear()
 
             success = await self._play_with_retries(next_track)
             if success:

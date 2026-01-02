@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 
     from nameless import Nameless
 
+
 __all__ = ["CustomPlayer", "CustomQueue"]
 
 
@@ -244,6 +245,100 @@ async def get_youtube_related_tracks(current_track_id: str) -> list[str]:
         return related_tracks
 
 
+def _parser_youtube_music_related_tracks(item: Mapping[str, Any]) -> str | None:
+    panel_renderer = item.get("playlistPanelVideoRenderer")
+    if not panel_renderer:
+        return None
+
+    video_id = panel_renderer.get("videoId")
+    if not video_id:
+        return None
+
+    duration = time_string_to_seconds(
+        get_and_cast(
+            panel_renderer,
+            (
+                "lengthText",
+                "runs",
+                0,
+                "text",
+            ),
+            "0:00",
+        )
+    )
+    if duration < 30 or duration > 540:
+        return None
+
+    return f"https://www.youtube.com/watch?v={video_id}"
+
+
+async def get_youtube_music_related_tracks(current_track_id: str) -> list[str]:
+    body = {
+        "context": {
+            "client": {
+                "hl": "en",
+                "gl": "US",
+                "clientName": "WEB_REMIX",
+                "clientVersion": "1.20220918.01.00",
+                "originalUrl": "https://www.youtube.com",
+                "platform": "DESKTOP",
+            },
+        },
+        "enablePersistentPlaylistPanel": True,
+        "isAudioOnly": True,
+        "tunerSettingValue": "AUTOMIX_SETTING_NORMAL",
+        "playlistId": f"RDAMVM{current_track_id}",
+        "params": "wAEB",
+    }
+    async with httpx.AsyncClient() as session:
+        response = await session.post(
+            "https://music.youtube.com/youtubei/v1/next?key=AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30&alt=json",
+            json=body,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0",
+            },
+        )
+
+        if response.status_code != 200:
+            logging.error(f"failed to fetch related tracks, status code: {response.status_code}")
+            return []
+
+        data: dict[str, Any] = response.json()
+        try:
+            sections = get_and_cast(
+                data,
+                (
+                    "contents",
+                    "singleColumnMusicWatchNextResultsRenderer",
+                    "tabbedRenderer",
+                    "watchNextTabbedResultsRenderer",
+                    "tabs",
+                    0,
+                    "tabRenderer",
+                    "content",
+                    "musicQueueRenderer",
+                    "content",
+                    "playlistPanelRenderer",
+                    "contents",
+                ),
+                [],
+                strict=True,
+            )
+        except KeyError as e:
+            logging.error(f"error parsing related tracks response: {e}")
+            return []
+
+        related_tracks: list[str] = []
+        for section in sections:
+            parsed = _parser_youtube_music_related_tracks(section)
+            if parsed:
+                logging.info(f"related track found: {parsed}")
+                related_tracks.append(parsed)
+
+        logging.info(f"fetched {len(related_tracks)} related tracks from youtube music")
+        return related_tracks
+
+
 @final
 class CustomQueue(pomice.Queue):
     def __init__(self) -> None:
@@ -284,7 +379,7 @@ class CustomQueue(pomice.Queue):
 
 
 class CustomPlayer(pomice.Player):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
 
         self.np_message_allowed: bool = True
@@ -424,9 +519,9 @@ class CustomPlayer(pomice.Player):
 
         return related_urls[1:]
 
-    async def _get_youtube_music_recommendations(self, track: pomice.Track) -> list[pomice.Track] | None:
+    async def _legacy_get_youtube_music_recommendations(self, track: pomice.Track) -> list[pomice.Track] | None:
         pl_id = f"RDAMVM{track.identifier}"
-        pl_url = f"ytsearch:https://www.youtube.com/watch?v={track.identifier}&list={pl_id}"
+        pl_url = f"ytsearch:https://music.youtube.com/watch?v={track.identifier}&list={pl_id}"
         try:
             track_list = await self.get_tracks(query=pl_url, ctx=None)
             if isinstance(track_list, pomice.Playlist):
@@ -435,6 +530,13 @@ class CustomPlayer(pomice.Player):
         except Exception as e:
             logging.error(f"error fetching YouTube Music recommendations: {e}")
             return None
+
+    async def _get_youtube_music_recommendations(self, track: pomice.Track) -> list[str] | None:
+        related_urls = await get_youtube_music_related_tracks(track.identifier)
+        if not related_urls:
+            return
+
+        return related_urls[1:]
 
     async def custom_get_recommendations(
         self, *, track: pomice.Track, ctx: Context[Nameless] | None = None
@@ -452,7 +554,16 @@ class CustomPlayer(pomice.Player):
         result = await self._get_youtube_music_recommendations(track)
         if result:
             return result
-        logging.warning("Failed to get YouTube Music recommendations, falling back to standard YouTube.")
+        logging.warning(
+            "Failed to get YouTube Music recommendations, falling back to legacy YouTube Music recommendations."
+        )
+
+        result = await self._legacy_get_youtube_music_recommendations(track)
+        if result:
+            return result
+        logging.warning(
+            "Failed to get legacy YouTube Music recommendations, falling back to standard YouTube recommendations."
+        )
 
         return await self._get_youtube_recommendations(track)
 
@@ -577,7 +688,7 @@ class CustomPlayer(pomice.Player):
             return tracks.tracks[0]
         return tracks[0]
 
-    async def _play_with_retries(self, track: pomice.Track, *args, **kwargs) -> bool:
+    async def _play_with_retries(self, track: pomice.Track, *args: Any, **kwargs: Any) -> bool:
         for attempt in range(self._max_play_errors):
             try:
                 if attempt + 1 == self._max_play_errors:

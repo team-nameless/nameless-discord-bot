@@ -11,11 +11,11 @@ import aiohttp
 
 from nameless.config import nameless_config
 
-CWD = Path(__file__).parent
+CWD = Path(__file__).parent / "bin"
 LAVALINK_URL = "https://github.com/lavalink-devs/Lavalink/releases/latest/download/Lavalink.jar"
-LAVALINK_BIN = CWD / "bin" / "Lavalink.jar"
-LAVALINK_CONFIG = CWD / "bin" / "application.yml"
-DEFAULT_LAVALINK_CONFIG = CWD / "bin" / "application.example.yml"
+LAVALINK_BIN = CWD / "Lavalink.jar"
+LAVALINK_CONFIG = CWD / "application.yml"
+DEFAULT_LAVALINK_CONFIG = CWD / "application.example.yml"
 
 proc: asyncio.subprocess.Process | None = None
 task: asyncio.Task[None] | None = None
@@ -107,9 +107,7 @@ async def check_lavalink_version() -> bool:
         bool: True if the version is the latest, False otherwise
     """
     try:
-        proc = await asyncio.create_subprocess_exec(
-            "java", "-jar", "Lavalink.jar", "-v", cwd=CWD / "bin", stdout=-1, stderr=-1
-        )
+        proc = await asyncio.create_subprocess_exec("java", "-jar", "Lavalink.jar", "-v", cwd=CWD, stdout=-1, stderr=-1)
         status_code = await proc.wait()
         if status_code != 0:
             logging.error("Failed to check Lavalink version.")
@@ -164,14 +162,11 @@ async def start():
     """Start the Lavalink server from /bin folder."""
     global proc
     while not stop_event.is_set():
-        if not LAVALINK_CONFIG.exists():
-            shutil.copyfile(DEFAULT_LAVALINK_CONFIG, LAVALINK_CONFIG)
-
         proc = await asyncio.create_subprocess_exec(
             "java",
             "-jar",
             "Lavalink.jar",
-            cwd=CWD / "bin",
+            cwd=CWD,
             stdout=asyncio.subprocess.PIPE,
             stdin=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL,
@@ -238,6 +233,9 @@ async def main(loop: asyncio.AbstractEventLoop | None, auto_update: bool = False
     global task
 
     loop = loop or asyncio.get_event_loop()
+
+    if not LAVALINK_CONFIG.exists():
+        shutil.copyfile(DEFAULT_LAVALINK_CONFIG, LAVALINK_CONFIG)
 
     if not check_file():
         logging.warning("Lavalink.jar not found Downloading...")

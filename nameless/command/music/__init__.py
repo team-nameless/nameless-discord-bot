@@ -99,25 +99,35 @@ class MusicCommands(commands.GroupCog, name="music"):
                 break
 
             if retry_attempt > 0:
-                logging.info("Retry attempt %d/%d after %d seconds...", retry_attempt, max_retries, retry_delay)
-                await asyncio.sleep(retry_delay)
+                retry_timer = retry_delay * retry_attempt
+                logging.info("Retry attempt %d/%d after %d seconds...", retry_attempt, max_retries, retry_timer)
+                await asyncio.sleep(retry_timer)
 
             nodes_to_retry = pending_nodes.copy()
             pending_nodes.clear()
 
-            for node in nodes_to_retry:
+            for try_node in nodes_to_retry:
+                node = pomice.Node(
+                    pool=pomice.NodePool,
+                    bot=self.bot,
+                    host=try_node.host,
+                    port=try_node.port,
+                    password=try_node.password,
+                    identifier=try_node.identifier,
+                    secure=try_node.secure,
+                )
                 try:
-                    _node = await self.node_pool.create_node(
-                        bot=self.bot,
-                        host=node.host,
-                        port=node.port,
-                        password=node.password,
-                        identifier=node.identifier,
-                        secure=node.secure,
-                    )
-                    logging.info("Connected to Lavalink node: %s", _node._identifier)
+                    await node.connect()
+                    self.node_pool.nodes[node._identifier] = node
+                    logging.info("Connected to Lavalink node: %s", node._identifier)
                 except Exception as e:
-                    node_id = node.identifier
+                    # manual cleanup
+                    with contextlib.suppress(Exception):
+                        await node._session.close()
+                    with contextlib.suppress(Exception):
+                        await node._websocket.close()
+
+                    node_id = try_node.identifier
                     if retry_attempt < max_retries:
                         logging.warning(
                             "Failed to connect to node %s (attempt %d/%d): %s",
@@ -126,7 +136,7 @@ class MusicCommands(commands.GroupCog, name="music"):
                             max_retries + 1,
                             e,
                         )
-                        pending_nodes.append(node)
+                        pending_nodes.append(try_node)
                     else:
                         logging.error(
                             "Failed to connect to node %s after %d attempts: %s",

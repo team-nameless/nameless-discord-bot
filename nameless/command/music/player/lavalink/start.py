@@ -164,8 +164,8 @@ async def start():
     """Start the Lavalink server from /bin folder."""
     global proc
     while not stop_event.is_set():
-        if not DEFAULT_LAVALINK_CONFIG.exists():
-            shutil.copyfile(DEFAULT_LAVALINK_CONFIG, DEFAULT_LAVALINK_CONFIG.with_name("application.yml"))
+        if not LAVALINK_CONFIG.exists():
+            shutil.copyfile(DEFAULT_LAVALINK_CONFIG, LAVALINK_CONFIG)
 
         proc = await asyncio.create_subprocess_exec(
             "java",

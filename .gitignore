@@ -12,4 +12,4 @@ nameless.cache
 
 # Ignore lavalink stuffs
 **/bin/*
-!application.yml
+!application.example.yml

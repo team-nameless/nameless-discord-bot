@@ -272,6 +272,7 @@ def _parser_youtube_music_related_tracks(item: Mapping[str, Any]) -> str | None:
     return f"https://www.youtube.com/watch?v={video_id}"
 
 
+@track_info_cache
 async def get_youtube_music_related_tracks(current_track_id: str) -> list[str]:
     body = {
         "context": {
@@ -410,6 +411,7 @@ class CustomPlayer(pomice.Player):
 
         self._previous: pomice.Track | None = None
         self._max_play_errors: int = 4
+        self._youtube_refresh_token: str | None = None
 
     @property
     def is_current_track_autoplay(self) -> bool:

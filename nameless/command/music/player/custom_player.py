@@ -409,7 +409,7 @@ class CustomPlayer(pomice.Player):
         ## eq
         self.eq_bands: dict[int, float] = {}
 
-        self._autoplay_extraction_track: pomice.Track | None = None
+        self._previous: pomice.Track | None = None
         self._max_play_errors: int = 4
 
     @property
@@ -447,12 +447,6 @@ class CustomPlayer(pomice.Player):
     @property
     def rate(self) -> float:
         return self._rate
-
-    @override
-    async def stop(self) -> None:
-        if self._autoplay_enabled and not self._auto_queue:
-            self._autoplay_extraction_track = self.current
-        return await super().stop()
 
     def toggle_play_now(self) -> None:
         self.np_message_allowed = not self.np_message_allowed
@@ -571,8 +565,14 @@ class CustomPlayer(pomice.Player):
         self._autoplay_enabled = not self._autoplay_enabled
         return self._autoplay_enabled
 
-    async def refresh_auto_queue(self) -> None:
-        current = self.current or self._autoplay_extraction_track
+    async def refresh_auto_queue(self, *, replace: bool = False, track: pomice.Track | None = None) -> None:
+        """
+        :param replace: replace existing auto_queue instead of extending it
+        :type replace: bool
+        :param track: track to base recommendations on; defaults to current track
+        :type track: pomice.Track | None
+        """
+        current = track or self.current or self._previous
         if not current:
             self._auto_queue.clear()
             return
@@ -581,6 +581,9 @@ class CustomPlayer(pomice.Player):
         if not related_result:
             self._auto_queue.clear()
             return
+
+        if replace:
+            self._auto_queue.clear()
 
         if isinstance(related_result, list):
             self._auto_queue.extend(related_result)
@@ -688,6 +691,12 @@ class CustomPlayer(pomice.Player):
             return tracks.tracks[0]
         return tracks[0]
 
+    @override
+    async def play(self, track: pomice.Track, *, start: int = 0, end: int = 0, ignore_if_playing: bool = False):
+        current = await super().play(track, start=start, end=end, ignore_if_playing=ignore_if_playing)
+        self._previous = current
+        return current
+
     async def _play_with_retries(self, track: pomice.Track, *args: Any, **kwargs: Any) -> bool:
         for attempt in range(self._max_play_errors):
             try:
@@ -732,9 +741,6 @@ class CustomPlayer(pomice.Player):
         return None
 
     async def do_next(self):
-        if self.current:
-            self._history.appendleft(self.current)
-
         while not self.queue.is_empty:
             try:
                 next_track = self.queue.get()

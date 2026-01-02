@@ -6,8 +6,6 @@ import discord
 import pomice
 from discord.ui import Button, View
 
-from .options import PlayerOptionsMenuView
-
 if TYPE_CHECKING:
     from ..player import CustomPlayer
 
@@ -100,15 +98,28 @@ class MusicControlView(View):
         self.player.queue.shuffle()
         await interaction.followup.send("🔀 Queue shuffled", ephemeral=True)
 
-    @discord.ui.button(label="Options", emoji="⚙️", style=discord.ButtonStyle.secondary, custom_id="options", row=1)
-    async def show_options(self, interaction: discord.Interaction, _: Button[Self]):
-        menu_view = PlayerOptionsMenuView(self.player)
-        embed = discord.Embed(
-            title="⚙️ Player Options",
-            description="Choose an option below to configure the player.",
-            color=discord.Color.blue(),
-        )
-        await interaction.response.send_message(embed=embed, view=menu_view, ephemeral=True)
+    # @discord.ui.button(label="Options", emoji="⚙️", style=discord.ButtonStyle.secondary, custom_id="options", row=1)
+    # async def show_options(self, interaction: discord.Interaction, _: Button[Self]):
+    #     menu_view = PlayerOptionsMenuView(self.player)
+    #     embed = discord.Embed(
+    #         title="⚙️ Player Options",
+    #         description="Choose an option below to configure the player.",
+    #         color=discord.Color.blue(),
+    #     )
+    #     await interaction.response.send_message(embed=embed, view=menu_view, ephemeral=True)
+
+    @discord.ui.button(
+        label="Refresh Auto-Queue",
+        emoji="🦊",
+        style=discord.ButtonStyle.secondary,
+        custom_id="refresh_auto_queue",
+        row=1,
+    )
+    async def refresh_auto_queue(self, interaction: discord.Interaction, _: Button[Self]):
+        await interaction.response.defer(ephemeral=True)
+        await self.player.refresh_auto_queue(replace=True, track=self.player.current)
+        if interaction.message:
+            await self.player.update_now_playing_embed(interaction.message, interaction.user)
 
     @discord.ui.button(label="Disconnect", emoji="🔌", style=discord.ButtonStyle.danger, custom_id="disconnect", row=1)
     async def disconnect(self, interaction: discord.Interaction, _: Button[Self]):

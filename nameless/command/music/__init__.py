@@ -115,6 +115,7 @@ class MusicCommands(commands.GroupCog, name="music"):
                     password=try_node.password,
                     identifier=try_node.identifier,
                     secure=try_node.secure,
+                    fallback=True,
                 )
                 try:
                     await node.connect()
@@ -823,17 +824,12 @@ class MusicCommands(commands.GroupCog, name="music"):
 
 
 async def setup(bot: Nameless):
-    autostart_lavalink = False
-    autoupdate_lavalink = False
+    lavalink_host_settings = nameless_config.lavalink_host_settings
+    autostart_lavalink = lavalink_host_settings.auto_start
+    autoupdate_lavalink = lavalink_host_settings.auto_update
 
     lavalinks = nameless_config.lavalinks
-    if lavalinks:
-        for node in lavalinks:
-            if node.auto_start:
-                autostart_lavalink = True
-                autoupdate_lavalink = node.auto_update
-                break
-    else:
+    if not lavalinks:
         default_node = LavalinkNode(
             host="localhost",
             port=18233,
@@ -860,15 +856,13 @@ async def setup(bot: Nameless):
 
 
 async def teardown(bot: Nameless):
-    lavalinks = nameless_config.lavalinks
-    for node in lavalinks:
-        if node.auto_start:
-            try:
-                logging.info("Stopping Lavalink node...")
-                await lavalink.stop()
-            except Exception as e:
-                logging.error("Error stopping lavalink: %s", e, exc_info=True)
-            break
+    lavalink_host_settings = nameless_config.lavalink_host_settings
+    if lavalink_host_settings.auto_start:
+        try:
+            logging.info("Stopping Lavalink node...")
+            await lavalink.stop()
+        except Exception as e:
+            logging.error("Error stopping lavalink: %s", e, exc_info=True)
 
     await bot.remove_cog("music")
     logging.info("Music commands unloaded!")

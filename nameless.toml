@@ -1,13 +1,44 @@
+# General bot settings
+# :version | str: The version of the bot
+# :description | str: A short description of the bot
+# :support_server | str: The invite link to the support server
 [nameless]
 version = "2026.01.01"
 description = "Just a normal bot."
 support_server = ""
 
+# Command settings
+# :prefixes | list[str]: A list of prefixes the bot will respond to
+# :ignores | list[str]: A list of command names to ignore (not load)
 [command]
 prefixes = ["n."]
 ignores = ["maimai", "crossover", "honeypot"]
 
+# Development settings
+# :enabled | bool: Whether development mode is enabled
+# :debug | bool: Whether debug mode is enabled
+# :server_sync_ids | list[int]: A list of server IDs to sync commands to in development mode
 [dev]
 enabled = true
 debug = false
-server_sync_ids = [890026104277057577]
+server_sync_ids = []
+
+# Automatically spin up our own Lavalink nodes
+# :auto_start | bool: Whether to automatically start the Lavalink nodes on bot startup
+# :auto_update | bool: Whether to automatically update the Lavalink jar files on bot startup
+[lavalink_host_settings]
+auto_start = true
+auto_update = true
+
+# Lavalink nodes configuration
+# This is an example configuration. Replace with your own Lavalink nodes.
+# Note: You can have multiple [[lavalinks]] sections.
+# :host | str: The hostname or IP address of the Lavalink server
+# :port | int: The port number of the Lavalink server
+# :password | str: The password for the Lavalink server
+# :secure | bool: Whether to use SSL/TLS to connect to the Lavalink server
+# [[lavalinks]]
+# host = "lavalink.namelessdev.xyz"
+# port = 443
+# password = "this-server-is-not-real"
+# secure = true

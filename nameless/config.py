@@ -36,6 +36,12 @@ class NamelessBlacklist:
 
 
 @dataclass(eq=False, repr=False, slots=True)
+class LavalinkHostSettings:
+    auto_start: bool = field(default=False)
+    auto_update: bool = field(default=False)
+
+
+@dataclass(eq=False, repr=False, slots=True)
 class LavalinkNode:
     host: str
     port: int
@@ -43,8 +49,6 @@ class LavalinkNode:
     identifier: str = field(default="")
     secure: bool = False
     region: str | None = None
-    auto_start: bool = field(default=False)
-    auto_update: bool = field(default=False)
 
     def __post_init__(self):
         if not self.identifier:
@@ -66,6 +70,7 @@ class NamelessConfig:
     runtime: NamelessRuntime = field(default_factory=NamelessRuntime)
     blacklist: NamelessBlacklist = field(default_factory=NamelessBlacklist)
     lavalinks: list[LavalinkNode] = field(default_factory=list[LavalinkNode])
+    lavalink_host_settings: LavalinkHostSettings = field(default_factory=LavalinkHostSettings)
 
     def __post_init__(self):
         for key_name, value_type in self.__annotations__.items():

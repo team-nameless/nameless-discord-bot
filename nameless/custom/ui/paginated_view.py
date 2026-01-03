@@ -125,7 +125,10 @@ class NavigationButton(Button[NamelessPaginatedView]):
             case self.GO_TO_LAST_PAGE_ID:
                 await self.view.go_to_last_page()
             case self.GO_TO_PAGE_ID:
-                modal = JumpToPageModal()
+                modal = JumpToPageModal(
+                    title="Go to Page",
+                    timeout=30,
+                )
                 await interaction.response.send_modal(modal)
                 if await modal.wait():
                     return

@@ -835,8 +835,6 @@ async def setup(bot: Nameless):
             host="localhost",
             port=18233,
             password="youshallnotpass",  # noqa  default password
-            auto_start=True,
-            auto_update=True,
             identifier="default-node",
         )
         lavalinks.append(default_node)

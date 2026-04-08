@@ -32,7 +32,7 @@ dev = [
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
 include = ["nameless"]
-exclude = ["**/__pycache__", ".venv"]
+exclude = ["**/__pycache__", ".venv", "**/.*", "venv", "**/node_modules"]
 
 reportUnusedImport = false
 reportUnusedVariable = false

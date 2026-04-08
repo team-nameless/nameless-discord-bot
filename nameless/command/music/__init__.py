@@ -65,6 +65,7 @@ class MusicCommands(commands.GroupCog, name="music"):
         "bot",
         "cache",
         "is_ready",
+        "node_pool",
         "player_manager",
         "track_selector",
     )
@@ -829,7 +830,7 @@ async def setup(bot: Nameless):
     autoupdate_lavalink = lavalink_host_settings.auto_update
 
     lavalinks = nameless_config.lavalinks
-    if not lavalinks:
+    if autostart_lavalink:
         default_node = LavalinkNode(
             host="localhost",
             port=18233,
@@ -839,9 +840,6 @@ async def setup(bot: Nameless):
             identifier="default-node",
         )
         lavalinks.append(default_node)
-        logging.warning("No Lavalink nodes configured. Added default node.")
-        autostart_lavalink = True
-        autoupdate_lavalink = True
 
     if autostart_lavalink:
         try:
@@ -850,6 +848,8 @@ async def setup(bot: Nameless):
             logging.warning("Could not import lavalink module. Lavalink auto-start disabled.")
         except Exception as e:
             logging.error("Failed to start lavalink: %s", e)
+    elif not lavalinks:
+        logging.warning("No lavalink nodes configured and auto-start is disabled. Music commands will not work.")
 
     await bot.add_cog(MusicCommands(bot))
     logging.info("Enhanced music commands loaded successfully!")

@@ -178,7 +178,8 @@ class MusicCommands(commands.GroupCog, name="music"):
         )
         reason = reason.lower()
         # https://lavalink.dev/api/websocket.html#track-end-reason
-        if reason in ("finished", "loadfailed"):
+        # https://github.com/lavalink-devs/Lavalink/blob/71cde9161ffd4fdbeba99e0f2d8d766904056926/protocol/src/commonMain/kotlin/dev/arbjerg/lavalink/protocol/v4/messages.kt#L164-L200
+        if reason in ("finished", "loadfailed", "stopped"):
             await player.do_next()
 
     @commands.Cog.listener()

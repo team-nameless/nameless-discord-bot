@@ -176,7 +176,10 @@ class MusicCommands(commands.GroupCog, name="music"):
             reason,
             track.title,
         )
-        await player.do_next()
+        reason = reason.lower()
+        # https://lavalink.dev/api/websocket.html#track-end-reason
+        if reason in ("finished", "loadfailed"):
+            await player.do_next()
 
     @commands.Cog.listener()
     async def on_pomice_track_stuck(self, player: CustomPlayer, track: pomice.Track, _threshold: int):

@@ -207,8 +207,8 @@ class MusicCommands(commands.GroupCog, name="music"):
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member: discord.Member, _: discord.VoiceState, after: discord.VoiceState):
-        if self.bot.user and member.id == self.bot.user.id and not after.deaf:
-            await member.edit(deafen=True)
+        # TODO: handle something more useful here, like auto-pausing when everyone leaves or something
+        ...
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx: commands.Context[Nameless], error: commands.CommandError):
@@ -858,13 +858,12 @@ async def setup(bot: Nameless):
 
 
 async def teardown(bot: Nameless):
-    lavalink_host_settings = nameless_config.lavalink_host_settings
-    if lavalink_host_settings.auto_start:
+    await bot.remove_cog("music")
+    logging.info("Music commands unloaded!")
+
+    if nameless_config.lavalink_host_settings.auto_start:
         try:
             logging.info("Stopping Lavalink node...")
             await lavalink.stop()
         except Exception as e:
             logging.error("Error stopping lavalink: %s", e, exc_info=True)
-
-    await bot.remove_cog("music")
-    logging.info("Music commands unloaded!")

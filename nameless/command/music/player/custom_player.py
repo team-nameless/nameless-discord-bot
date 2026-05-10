@@ -492,7 +492,7 @@ class CustomPlayer(pomice.Player):
 
         if not value:
             self.cancel_disconnect_timer()
-        else:
+        elif not self.is_playing and not self.is_paused:
             self.start_disconnect_timer()
 
     def _get_track_id(self, track: pomice.Track) -> str:

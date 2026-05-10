@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import signal
+import zipfile
 from pathlib import Path
 
 import aiohttp
@@ -55,6 +56,19 @@ async def _monitor_lavalink_output(stream: asyncio.StreamReader) -> None:
             logging.debug("Failed to parse Lavalink output: %s", e)
 
 
+def _test_jar(file: Path) -> bool:
+    """Test if the provided file is a valid Lavalink.jar by checking for the presence of application.yml inside it."""
+    try:
+        with zipfile.ZipFile(file, "r") as zip_ref:
+            return zip_ref.testzip() is None
+    except zipfile.BadZipFile:
+        return False
+
+
+async def test_jar(file: Path) -> bool:
+    return await asyncio.to_thread(_test_jar, file)
+
+
 async def check_plugin_version(auto_update: bool = False) -> bool:
     """
     Check for latest version of Lavalink plugin.
@@ -72,13 +86,18 @@ async def check_plugin_version(auto_update: bool = False) -> bool:
         logging.error("Failed to check Lavalink plugin version. Version not found.")
         return True  # Assume true to not block startup
 
+    plugin_jar = CWD / "plugins" / f"youtube-plugin-{version}.jar"
+    if not check_file(plugin_jar) or not await test_jar(plugin_jar):
+        logging.warning("Lavalink youtube-source plugin not found or invalid. It will be redownloaded on startup.")
+        plugin_jar.unlink(missing_ok=True)  # remove invalid for lavalink to redownload
+
     async with (
         aiohttp.ClientSession() as session,
         session.get("https://api.github.com/repos/lavalink-devs/youtube-source/releases/latest") as git_req,
     ):
         if git_req.status != 200:
             logging.error("Failed to check Lavalink plugin version. Request failed.")
-            return True  # Assume true to not block startup
+            return True
         latest_version: str = (await git_req.json()).get("tag_name", "0.0.0")
 
     if version == latest_version:
@@ -208,10 +227,10 @@ async def stop():
         task = None
 
 
-def check_file():
+def check_file(path: Path | str) -> bool:
     """Check if the Lavalink.jar file exists."""
     try:
-        return LAVALINK_BIN.exists()
+        return Path(path).exists()
     except FileNotFoundError:
         return False
 
@@ -235,9 +254,9 @@ async def main(loop: asyncio.AbstractEventLoop | None, auto_update: bool = False
     loop = loop or asyncio.get_event_loop()
 
     if not LAVALINK_CONFIG.exists():
-        shutil.copyfile(DEFAULT_LAVALINK_CONFIG, LAVALINK_CONFIG)
+        await asyncio.to_thread(shutil.copyfile, DEFAULT_LAVALINK_CONFIG, LAVALINK_CONFIG)
 
-    if not check_file():
+    if not check_file(LAVALINK_BIN) or not await test_jar(LAVALINK_BIN):
         logging.warning("Lavalink.jar not found Downloading...")
         await download_lavalink()
     elif not await check_lavalink_version():

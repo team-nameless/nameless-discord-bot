@@ -206,9 +206,37 @@ class MusicCommands(commands.GroupCog, name="music"):
             await player.send_to_trigger_channel(embed=embed, make_controller=False)
 
     @commands.Cog.listener()
-    async def on_voice_state_update(self, member: discord.Member, _: discord.VoiceState, after: discord.VoiceState):
-        # TODO: handle something more useful here, like auto-pausing when everyone leaves or something
-        ...
+    async def on_voice_state_update(
+        self,
+        member: discord.Member,
+        before: discord.VoiceState,
+        after: discord.VoiceState,
+    ):
+        if not member.guild:
+            return
+
+        player = await self.player_manager.get_player_by_guild_id(member.guild.id)
+        if not player:
+            return
+
+        assert self.bot.user is not None  # for type checking
+        if not after.channel:
+            if member.id == self.bot.user.id and player.is_playing:
+                await player.destroy()
+                player.cleanup()
+            embed = create_info_embed("Disconnected", "I have been disconnected from the voice channel.")
+            await player.send_to_trigger_channel(embed=embed, make_controller=False)
+        else:
+            vc_members = filter(lambda m: not m.bot, after.channel.members)
+            if not any(m.id != self.bot.user.id for m in vc_members):
+                # TODO: add a config option for auto-pause instead of hardcoding it here
+                await player.set_pause(True)
+                embed = create_info_embed(
+                    "Auto-Paused",
+                    "Playback has been auto-paused because everyone left the voice channel. "
+                    "It will automatically resume when someone joins.",
+                )
+                await player.send_to_trigger_channel(embed=embed, make_controller=False)
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx: commands.Context[Nameless], error: commands.CommandError):
@@ -858,9 +886,12 @@ async def setup(bot: Nameless):
 
 
 async def teardown(bot: Nameless):
+    # unloaded the cog first to trigger the cog_unload and
+    # disconnect from lavalink nodes before we lose access to the node pool
     await bot.remove_cog("music")
     logging.info("Music commands unloaded!")
 
+    # lavalink should be unloaded last for cleaner shutdown and to ensure we can disconnect properly
     if nameless_config.lavalink_host_settings.auto_start:
         try:
             logging.info("Stopping Lavalink node...")

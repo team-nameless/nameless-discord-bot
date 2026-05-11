@@ -48,14 +48,14 @@ async def _monitor_lavalink_output(stream: asyncio.StreamReader) -> None:
                     logging.info(
                         "Remember to save your OAuth2 credentials in .env to avoid reauthorization on restart."
                     )
-                elif "Invalid status code for oauth2 token fetch" in decoded:
-                    logging.error("Lavalink YouTube OAuth2: %s", message)
-                    logging.error(
-                        "Lavalink will not restart until this is resolved. Please check your network connection and ensure your credentials are correct.",
-                    )
-                    stop_event.set()
                 else:
                     logging.info("Lavalink YouTube OAuth2: %s", message)
+            elif "status code for oauth2 token fetch" in decoded:
+                logging.error("Lavalink YouTube OAuth2: %s", decoded)
+                logging.error(
+                    "Lavalink will not restart until this is resolved. Please check your network connection and ensure your credentials are correct.",
+                )
+                stop_event.set()
         except Exception as e:
             logging.debug("Failed to parse Lavalink output: %s", e)
 
@@ -279,4 +279,15 @@ async def main(loop: asyncio.AbstractEventLoop | None, auto_update: bool = False
 
 
 if __name__ == "__main__":
-    asyncio.run(main(None, auto_update=True))
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="[%(asctime)s] %(levelname)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+    async def wrapper():
+        await main(None, auto_update=True)
+        if task:
+            await task
+
+    asyncio.run(wrapper())

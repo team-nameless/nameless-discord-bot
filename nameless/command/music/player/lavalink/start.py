@@ -50,6 +50,12 @@ async def _monitor_lavalink_output(stream: asyncio.StreamReader) -> None:
                     logging.info(
                         "Remember to save your OAuth2 credentials in .env to avoid reauthorization on restart."
                     )
+                elif "Invalid status code for oauth2 token fetch" in decoded:
+                    logging.error("Lavalink YouTube OAuth2: %s", message)
+                    logging.error(
+                        "Lavalink will not restart until this is resolved. Please check your network connection and ensure your credentials are correct.",
+                    )
+                    stop_event.set()
                 else:
                     logging.info("Lavalink YouTube OAuth2: %s", message)
         except Exception as e:
@@ -126,7 +132,9 @@ async def check_lavalink_version() -> bool:
         bool: True if the version is the latest, False otherwise
     """
     try:
-        proc = await asyncio.create_subprocess_exec("java", "-jar", "Lavalink.jar", "-v", cwd=CWD, stdout=-1, stderr=-1)
+        proc = await asyncio.create_subprocess_exec(
+            "java", "-jar", LAVALINK_BIN.name, "-v", cwd=CWD, stdout=-1, stderr=-1
+        )
         status_code = await proc.wait()
         if status_code != 0:
             logging.error("Failed to check Lavalink version.")
@@ -184,7 +192,7 @@ async def start():
         proc = await asyncio.create_subprocess_exec(
             "java",
             "-jar",
-            "Lavalink.jar",
+            LAVALINK_BIN.name,
             cwd=CWD,
             stdout=asyncio.subprocess.PIPE,
             stdin=asyncio.subprocess.DEVNULL,

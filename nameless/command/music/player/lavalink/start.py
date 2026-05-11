@@ -10,8 +10,6 @@ from pathlib import Path
 
 import aiohttp
 
-from nameless.config import nameless_config
-
 CWD = Path(__file__).parent / "bin"
 LAVALINK_URL = "https://github.com/lavalink-devs/Lavalink/releases/latest/download/Lavalink.jar"
 LAVALINK_BIN = CWD / "Lavalink.jar"
@@ -204,7 +202,7 @@ async def start():
             monitor_tasks.append(asyncio.create_task(_monitor_lavalink_output(proc.stdout)))
 
         await proc.wait()
-        if nameless_config.runtime.is_shutting_down or stop_event.is_set():
+        if stop_event.is_set():
             break
 
         logging.warning("Lavalink server stopped. Restarting in 5 seconds...")

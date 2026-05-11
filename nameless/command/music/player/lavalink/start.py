@@ -150,11 +150,11 @@ async def check_lavalink_version() -> bool:
 
         async with aiohttp.ClientSession() as session:
             git_req = await session.get("https://api.github.com/repos/lavalink-devs/Lavalink/releases/latest")
-        latest_version: str = (await git_req.json()).get("tag_name", "0.0.0")
-        if git_req.status != 200:
-            logging.error("Failed to check Lavalink plugin version. Request failed.")
-            return True  # Assume true to not block startup
+            if git_req.status != 200:
+                logging.error("Failed to check Lavalink plugin version. Request failed.")
+                return True  # Assume true to not block startup
 
+        latest_version: str = (await git_req.json()).get("tag_name", "0.0.0")
         if version == latest_version:
             return True
 
@@ -228,7 +228,7 @@ async def stop():
 
 
 def check_file(path: Path | str) -> bool:
-    """Check if the Lavalink.jar file exists."""
+    """Check if the file exists."""
     try:
         return Path(path).exists()
     except FileNotFoundError:

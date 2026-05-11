@@ -64,7 +64,6 @@ class MusicCommands(commands.GroupCog, name="music"):
         "_lavalink_nodes",
         "bot",
         "cache",
-        "is_ready",
         "node_pool",
         "player_manager",
         "track_selector",
@@ -78,7 +77,6 @@ class MusicCommands(commands.GroupCog, name="music"):
 
     def __init__(self, bot: Nameless):
         self.bot = bot
-        self.is_ready = asyncio.Event()
 
         self.player_manager = PlayerManager(bot)
         self.track_selector = TrackSelector()
@@ -130,6 +128,7 @@ class MusicCommands(commands.GroupCog, name="music"):
                         await node._websocket.close()
 
                     node_id = try_node.identifier
+                    pending_nodes.append(try_node)
                     if retry_attempt < max_retries:
                         logging.warning(
                             "Failed to connect to node %s (attempt %d/%d): %s",
@@ -138,7 +137,6 @@ class MusicCommands(commands.GroupCog, name="music"):
                             max_retries + 1,
                             e,
                         )
-                        pending_nodes.append(try_node)
                     else:
                         logging.error(
                             "Failed to connect to node %s after %d attempts: %s",
@@ -153,7 +151,6 @@ class MusicCommands(commands.GroupCog, name="music"):
         else:
             logging.info("Successfully connected to all Lavalink nodes")
 
-        self.is_ready.set()
         if self._connect_task:
             self._connect_task = None
 

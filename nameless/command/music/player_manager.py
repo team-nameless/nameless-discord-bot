@@ -10,8 +10,6 @@ from .exceptions import ConnectionFailedError, NotInVoiceError
 from .player import CustomPlayer
 
 if TYPE_CHECKING:
-    import pomice
-
     from nameless.nameless import Nameless
 
 

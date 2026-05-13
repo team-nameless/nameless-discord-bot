@@ -213,15 +213,27 @@ async def stop():
     """Stop the Lavalink server."""
     global proc, task
 
+    def _stop(proc: asyncio.subprocess.Process | None) -> None:
+        assert proc is not None
+        if os.name != "nt":
+            proc.send_signal(signal.SIGINT)
+        else:
+            proc.send_signal(signal.CTRL_C_EVENT)
+
     stop_event.set()
     with contextlib.suppress(ProcessLookupError, ConnectionResetError, ConnectionRefusedError):
-        if proc and proc.returncode is None:
-            if os.name != "nt":
-                proc.send_signal(signal.SIGINT)
-            else:
-                proc.send_signal(signal.CTRL_C_EVENT)
-            await proc.wait()
-            proc = None
+        if not proc:
+            return
+        if proc.returncode is not None:
+            return
+
+        for cb, timeout in [(lambda: _stop(proc), 10), (proc.terminate, 10), (proc.kill, 1)]:
+            cb()
+            with contextlib.suppress(asyncio.TimeoutError):
+                await asyncio.wait_for(proc.wait(), timeout=timeout)
+            if proc.returncode is not None:
+                break
+        proc = None
 
     for monitor_task in monitor_tasks:
         if not monitor_task.done():

@@ -10,6 +10,8 @@ from .exceptions import ConnectionFailedError, NotInVoiceError
 from .player import CustomPlayer
 
 if TYPE_CHECKING:
+    import pomice
+
     from nameless.nameless import Nameless
 
 
@@ -93,6 +95,16 @@ class PlayerManager:
             return await self.connect_to_voice(ctx)
 
         return None
+
+    async def get_player_by_guild_id(self, guild_id: int) -> CustomPlayer | None:
+        guild = self.bot.get_guild(guild_id)
+        if not guild or not guild.voice_client:
+            return None
+
+        if not isinstance(guild.voice_client, self._get_custom_player_class()):
+            raise ValueError("Voice client is not a CustomPlayer instance!")
+
+        return guild.voice_client
 
     async def get_or_create_player(self, ctx: commands.Context[Nameless]) -> CustomPlayer:
         player = await self.get_player(ctx, connect_if_needed=True, raise_on_unconnected=False)

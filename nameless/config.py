@@ -1,3 +1,5 @@
+# pyright: reportUnknownVariableType=false
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -23,7 +25,7 @@ class NamelessRuntime:
 @dataclass(eq=False, repr=False, slots=True)
 class NamelessCommands:
     prefixes: set[str]
-    ignores: list[str] = field(default_factory=list)
+    ignores: list[str] = field(default_factory=list[str])
 
     def __post_init__(self):
         self.prefixes = set(self.prefixes)
@@ -31,8 +33,8 @@ class NamelessCommands:
 
 @dataclass(eq=False, repr=False, slots=True)
 class NamelessBlacklist:
-    users: list[int] = field(default_factory=list)
-    guilds: list[int] = field(default_factory=list)
+    users: list[int] = field(default_factory=list[int])
+    guilds: list[int] = field(default_factory=list[int])
 
 
 @dataclass(eq=False, repr=False, slots=True)

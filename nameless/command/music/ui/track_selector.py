@@ -1,32 +1,58 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Self, final, override
+from typing import TYPE_CHECKING, Protocol, Self, final, override
 
 import discord.ui
 from discord.ui import Button, Select, View
 
 if TYPE_CHECKING:
-    import pomice
+    from collections.abc import Sequence
+
     from discord.ext import commands
 
     from nameless.nameless import Nameless
 
 
+class TrackLike(Protocol):
+    @property
+    def title(self) -> str: ...
+
+    @property
+    def author(self) -> str: ...
+
+    @property
+    def length(self) -> int | None: ...
+
+
 class TrackSelector:
     @staticmethod
-    async def select_tracks(ctx: commands.Context[Nameless], tracks: list[pomice.Track]) -> list[pomice.Track]:
-        if len(tracks) == 1:
-            return tracks
+    async def select_tracks[TrackItem: TrackLike](
+        ctx: commands.Context[Nameless],
+        tracks: Sequence[TrackItem],
+        *,
+        title: str | None = None,
+        timeout: float = 60,
+        timeout_message: str | None = None,
+    ) -> list[TrackItem]:
+        tracks_list = list(tracks)
+        if len(tracks_list) == 1:
+            return tracks_list
 
-        if len(tracks) > 25:
-            tracks = tracks[:25]
+        if len(tracks_list) > 25:
+            tracks_list = tracks_list[:25]
 
-        view = TrackSelectionView(tracks, ctx.author.id)
-        message = await ctx.send("🎵 **Multiple tracks found!** Please select the ones you want:", view=view)
+        view: TrackSelectionView[TrackItem] = TrackSelectionView(tracks_list, ctx.author.id)
+        message = await ctx.send(
+            title or "**Multiple tracks found!** Please select the ones you want:",
+            view=view,
+        )
 
         timeout = await view.wait()
         if timeout:
-            await message.edit(content="⏰ Selection timed out! Please try again.", view=None)
+            await message.edit(
+                content=timeout_message or "Selection timed out! Please try again.",
+                view=None,
+            )
             return []
 
         await message.delete()
@@ -34,18 +60,18 @@ class TrackSelector:
 
 
 @final
-class TrackSelectionView(View):
-    def __init__(self, tracks: list[pomice.Track], user_id: int):
-        super().__init__(timeout=60)
+class TrackSelectionView[TrackItem: TrackLike](View):
+    def __init__(self, tracks: list[TrackItem], user_id: int, *, timeout: float = 60) -> None:
+        super().__init__(timeout=timeout)
         self.tracks = tracks
-        self.selected_tracks: list[pomice.Track] = []
+        self.selected_tracks: list[TrackItem] = []
         self.user_id = user_id
 
-        self._dropdown = TrackDropdown(tracks)
+        self._dropdown: TrackDropdown[TrackItem] = TrackDropdown(tracks)
         self.add_item(self._dropdown)
 
     @discord.ui.button(label="Confirm Selection", style=discord.ButtonStyle.success, emoji="✅")
-    async def confirm(self, interaction: discord.Interaction, _: Button[Self]):
+    async def confirm(self, interaction: discord.Interaction, _: Button[Self]) -> None:
         if interaction.user.id != self.user_id:
             await interaction.response.send_message("❌ You cannot interact with this selection.", ephemeral=True)
             return
@@ -58,14 +84,14 @@ class TrackSelectionView(View):
         self.stop()
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.danger, emoji="❌")
-    async def cancel(self, interaction: discord.Interaction, _: Button[Self]):
+    async def cancel(self, interaction: discord.Interaction, _: Button[Self]) -> None:
         self.selected_tracks = []
         await interaction.response.defer()
         self.stop()
 
 
-class TrackDropdown(Select[TrackSelectionView]):
-    def __init__(self, tracks: list[pomice.Track]):
+class TrackDropdown[TrackItem: TrackLike](Select[TrackSelectionView[TrackItem]]):
+    def __init__(self, tracks: list[TrackItem]) -> None:
         options: list[discord.SelectOption] = []
 
         for i, track in enumerate(tracks[:25]):
@@ -93,7 +119,7 @@ class TrackDropdown(Select[TrackSelectionView]):
         )
 
     @override
-    async def callback(self, interaction: discord.Interaction):
+    async def callback(self, interaction: discord.Interaction) -> None:
         view = self.view
         if view and hasattr(view, "children") and self.values:
             for item in view.children:

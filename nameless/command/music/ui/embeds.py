@@ -9,6 +9,8 @@ import pomice
 from discord.utils import escape_markdown
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from nameless.command.music.player import CustomPlayer
 
 
@@ -156,7 +158,7 @@ def create_queue_embed(
     return embed
 
 
-def create_added_embed(tracks: list[pomice.Track], count: int) -> discord.Embed:
+def create_added_embed(tracks: Sequence[pomice.Track], count: int) -> discord.Embed:
     if count == 1 and tracks:
         track = tracks[0]
         embed = discord.Embed(

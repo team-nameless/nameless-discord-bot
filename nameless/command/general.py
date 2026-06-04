@@ -32,7 +32,7 @@ class GeneralCommand(commands.Cog):
         """
         await ctx.defer()
 
-        member = member if member else cast("discord.Member", ctx.author)
+        member = member or cast("discord.Member", ctx.author)
 
         account_create_date = member.created_at
         join_date = member.joined_at

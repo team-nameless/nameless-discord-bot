@@ -114,7 +114,15 @@ class NamelessConfig:
                     setattr(self, key_name, value_type(**value))
 
 
-_cfg_path: Path = Path(__file__).parent.parent.absolute() / "nameless.toml"
+_base_path: Path = Path(__file__).parent.parent.absolute()
+_cfg_path: Path = _base_path / "nameless.toml"
+_example_cfg_path: Path = _base_path / "nameless.example.toml"
+if not _cfg_path.exists():
+    if not _example_cfg_path.exists():
+        raise FileNotFoundError("Neither nameless.toml nor nameless.example.toml was found.")
+    else:
+        raise FileNotFoundError("nameless.toml was not found. Please create one based on nameless.example.toml.")
+
 with _cfg_path.open(encoding="utf-8") as f:
     _content: str = f.read()
 

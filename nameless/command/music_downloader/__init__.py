@@ -241,6 +241,10 @@ class Status:
             return f"Uploading to {name}: {self._upload_progress:.1f}%"
         elif self._uploading_state == StatusState.COMPLETED:
             if self._download_url:
+                urls = self._download_url.split("\n")
+                if len(urls) > 1:
+                    links = [f"[Link {i}]({url})" for i, url in enumerate(urls, 1)]
+                    return f"Download links ({name}): " + ", ".join(links)
                 return f"Download link ({name}): [Click here to download]({self._download_url})"
             return "Upload completed."
         else:
@@ -635,8 +639,8 @@ class MusicDownloaderCommand(commands.Cog):
             status.failed_tracks = failed_count
             status.download_progress = 100.0
 
-        upload_path, is_zip = await package_downloaded_files(output_dir, ctx, controller)
-        file_size = (await upload_path.stat()).st_size
+        zip_if_multiple = provider != "telegram"
+        upload_paths, is_zip = await package_downloaded_files(output_dir, ctx, controller, zip_if_multiple)
 
         title = ("Uploading album..." if is_album else "Uploading playlist...") if is_zip else "Uploading track..."
         await controller.update_title(title)
@@ -645,8 +649,7 @@ class MusicDownloaderCommand(commands.Cog):
             await upload_via_external_provider(
                 self.session,
                 self._tg_client,
-                upload_path,
-                file_size,
+                upload_paths,
                 controller,
                 provider,
             )
@@ -657,7 +660,7 @@ class MusicDownloaderCommand(commands.Cog):
             await controller.set_failed(f"Upload failed: {exc}")
             return
         finally:
-            await cleanup_download_files(output_dir, upload_path, is_zip)
+            await cleanup_download_files(output_dir, upload_paths, is_zip)
 
 
 async def setup(bot: Nameless) -> None:

@@ -65,6 +65,23 @@ class NamelessDevConfig:
 
 
 @dataclass(eq=False, repr=False, slots=True)
+class NamelessWebRadio:
+    enabled: bool = False
+    dummy_guild_id: int | None = None
+    category_tracker_id: int | None = None
+    command_channel_id: int | None = None
+
+
+@dataclass(eq=False, repr=False, slots=True)
+class NamelessTelegramConfig:
+    enabled: bool = False
+    api_id: int = 0
+    api_hash: str = ""
+    bot_token: str = ""
+    chat_id: int | str = 0
+
+
+@dataclass(eq=False, repr=False, slots=True)
 class NamelessConfig:
     nameless: NamelessMetadata
     command: NamelessCommands
@@ -73,6 +90,8 @@ class NamelessConfig:
     blacklist: NamelessBlacklist = field(default_factory=NamelessBlacklist)
     lavalinks: list[LavalinkNode] = field(default_factory=list[LavalinkNode])
     lavalink_host_settings: LavalinkHostSettings = field(default_factory=LavalinkHostSettings)
+    webradio: NamelessWebRadio = field(default_factory=NamelessWebRadio)
+    telegram: NamelessTelegramConfig = field(default_factory=NamelessTelegramConfig)
 
     def __post_init__(self):
         for key_name, value_type in self.__annotations__.items():

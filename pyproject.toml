@@ -39,6 +39,8 @@ test = [
 ]
 download = [
     "SpotiFLAC==0.5.1",
+    "pyrofork>=2.3.69",
+    "tgcrypto-pyrofork>=1.2.8",
 ]
 
 [tool.pyright]

@@ -3,12 +3,19 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 from sqlmodel import col, func, select
 
 from .crud import create, delete, get_by_pk, update
-from .models import BaseModel, CrossChatConnection, CrossChatMessage, CrossChatRoom, Guild, User
+from .models import (
+    BaseModel,
+    CrossChatConnection,
+    CrossChatMessage,
+    CrossChatRoom,
+    Guild,
+    User,
+)
 
 if TYPE_CHECKING:
     from typing import Any
@@ -118,7 +125,7 @@ class BaseRepository[T: BaseModel]:
         await self.session.refresh(instance)
         return instance
 
-    async def __aenter__(self) -> BaseRepository[T]:
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:  # noqa

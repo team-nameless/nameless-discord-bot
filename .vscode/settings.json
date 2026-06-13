@@ -19,5 +19,5 @@
         "**/__pycache__/": true,
         "**/.ruff_cache/": true,
     },
-    "python.analysis.autoImportCompletions": false
+    "python.analysis.autoImportCompletions": false,
 }

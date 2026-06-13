@@ -38,9 +38,12 @@ test = [
     "jishaku>=2.6.3",
 ]
 download = [
-    "SpotiFLAC==0.5.1",
     "pyrofork>=2.3.69",
     "tgcrypto-pyrofork>=1.2.8",
+    "quickjs-ng",
+    "mutagen",
+    "requests",
+    "cryptography>=48.0.1",
 ]
 
 [tool.pyright]

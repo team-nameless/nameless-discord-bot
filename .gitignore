@@ -13,3 +13,6 @@ nameless.cache
 # Ignore lavalink stuffs
 **/bin/*
 !application.example.yml
+
+.cache/
+.pytest_cache/

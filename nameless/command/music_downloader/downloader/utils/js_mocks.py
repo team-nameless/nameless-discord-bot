@@ -14,6 +14,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from urllib.parse import parse_qs, urlparse
 
 import mutagen
 import requests
@@ -26,6 +27,7 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger("JsMocks")
+logger.setLevel(logging.DEBUG)
 
 session = requests.Session()
 session.headers.update(
@@ -38,8 +40,33 @@ session.headers.update(
 )
 
 
+class UrlMock:
+    def parse_url(self, url_str: str) -> str:
+        logger.debug("parse_url has been called with url_str=%s", url_str)
+        parsed = urlparse(url_str)
+        return json.dumps(
+            {
+                "href": url_str,
+                "origin": f"{parsed.scheme}://{parsed.netloc}",
+                "protocol": parsed.scheme + ":" if parsed.scheme else "",
+                "host": parsed.netloc,
+                "hostname": parsed.hostname or "",
+                "port": str(parsed.port) if parsed.port else "",
+                "pathname": parsed.path,
+                "search": f"?{parsed.query}" if parsed.query else "",
+                "hash": f"#{parsed.fragment}" if parsed.fragment else "",
+            }
+        )
+
+    def parse_search_params(self, query_str: str):
+        logger.debug("parse_search_params has been called with query_str=%s", query_str)
+        parsed = parse_qs(query_str.lstrip("?"), keep_blank_values=True)
+        return json.dumps({k: v[0] if len(v) == 1 else v for k, v in parsed.items()})
+
+
 class HttpMock:
     def get(self, url: str, headers_json: Any = None) -> str:
+        logger.debug("get has been called with url=%s, headers_json=%s", url, headers_json)
         headers_dict: dict[str, str] = json.loads(headers_json) if headers_json else {}
         try:
             r = session.get(url, headers=headers_dict, timeout=30)
@@ -57,6 +84,7 @@ class HttpMock:
             return json.dumps({"statusCode": 0, "status": 0, "ok": False, "body": "", "headers": {}, "error": str(e)})
 
     def post(self, url: str, body: Any = None, headers_json: Any = None) -> str:
+        logger.debug("post has been called with url=%s, body=%s, headers_json=%s", url, body, headers_json)
         headers_dict: dict[str, str] = json.loads(headers_json) if headers_json else {}
         try:
             r = session.post(url, data=body, headers=headers_dict, timeout=30)
@@ -74,17 +102,21 @@ class HttpMock:
             return json.dumps({"statusCode": 0, "status": 0, "ok": False, "body": "", "headers": {}, "error": str(e)})
 
     def clear_cookies(self) -> None:
+        logger.debug("clear_cookies has been called")
         session.cookies.clear()
 
 
 class FileMock:
     def __init__(self, ctx: JsContext) -> None:
+        logger.debug("FileMock.__init__ has been called with ctx=%s", ctx)
         self.ctx = ctx
 
     def exists(self, path: str) -> bool:
+        logger.debug("exists has been called with path=%s", path)
         return Path(path).exists()
 
     def get_size(self, path: str) -> str:
+        logger.debug("get_size has been called with path=%s", path)
         try:
             p = Path(path)
             if p.exists():
@@ -94,6 +126,7 @@ class FileMock:
             return json.dumps({"success": False, "error": str(e)})
 
     def delete(self, path: str) -> str:
+        logger.debug("delete has been called with path=%s", path)
         try:
             p = Path(path)
             if p.exists():
@@ -103,6 +136,7 @@ class FileMock:
             return json.dumps({"success": False, "error": str(e)})
 
     def read_bytes(self, path: str, options_json: Any = None) -> str:
+        logger.debug("read_bytes has been called with path=%s, options_json=%s", path, options_json)
         opts: dict[str, Any] = json.loads(options_json) if options_json else {}
         offset = opts.get("offset", 0)
         length = opts.get("length", -1)
@@ -119,6 +153,7 @@ class FileMock:
             return json.dumps({"success": False, "error": str(e)})
 
     def write_bytes(self, path: str, data_b64: str, options_json: Any = None) -> str:
+        logger.debug("write_bytes has been called with path=%s,  options_json=%s", path, options_json)
         opts: dict[str, Any] = json.loads(options_json) if options_json else {}
         mode = "ab" if opts.get("append") else "wb"
         try:
@@ -129,6 +164,13 @@ class FileMock:
             return json.dumps({"success": False, "error": str(e)})
 
     def download(self, url: str, output_path: str, options_json: Any = None, progress_id: str | None = None) -> str:
+        logger.debug(
+            "download has been called with url=%s, output_path=%s, options_json=%s, progress_id=%s",
+            url,
+            output_path,
+            options_json,
+            progress_id,
+        )
         opts: dict[str, Any] = json.loads(options_json) if options_json else {}
         headers_dict: dict[str, str] = dict(opts.get("headers") or {})
 
@@ -157,9 +199,11 @@ class FileMock:
 
 class GoBackendMock:
     def sanitize_filename(self, filename: str) -> str:
+        logger.debug("sanitize_filename has been called with filename=%s", filename)
         return re.sub(r'[<>:"/\\|?*]', "_", filename.strip())
 
     def get_audio_quality(self, path: str) -> str:
+        logger.debug("get_audio_quality has been called with path=%s", path)
         try:
             audio = mutagen.File(path)
             if audio is None:
@@ -178,6 +222,7 @@ class GoBackendMock:
             return json.dumps({"error": str(e)})
 
     def check_isrc_exists(self, output_dir: str, isrc: str) -> str:
+        logger.debug("check_isrc_exists has been called with output_dir=%s, isrc=%s", output_dir, isrc)
         target_isrc = isrc.upper().strip()
         with contextlib.suppress(Exception):
             for p in Path(output_dir).glob("*"):
@@ -204,6 +249,7 @@ class GoBackendMock:
         return json.dumps({"exists": False})
 
     def get_local_time(self) -> str:
+        logger.debug("get_local_time has been called")
         now = datetime.now().astimezone()
         offset = now.utcoffset()
         offset_min = -int(offset.total_seconds() / 60) if offset else 0
@@ -223,18 +269,29 @@ class GoBackendMock:
         )
 
     def get_lyrics_lrc(self, spotify_id: str, title: str, artist: str, album: str, duration_ms: int) -> str:
+        logger.debug(
+            "get_lyrics_lrc has been called with spotify_id=%s, title=%s, artist=%s, album=%s, duration_ms=%s",
+            spotify_id,
+            title,
+            artist,
+            album,
+            duration_ms,
+        )
         # FIXME: implement this
         return json.dumps({"error": "not implemented", "lyrics": ""})
 
 
 class UtilsMock:
     def __init__(self, manifest: ProviderManifest):
+        logger.debug("UtilsMock.__init__ has been called with manifest=%s", manifest)
         self._manifest = manifest
 
     def app_user_agent(self) -> str:
+        logger.debug("app_user_agent has been called")
         return f"SpotiFLAC-Mobile/{self.app_version()}"
 
     def random_user_agent(self) -> str:
+        logger.debug("random_user_agent has been called")
         ua_list = [
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
             "(KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
@@ -245,18 +302,23 @@ class UtilsMock:
         return random.choice(ua_list)  # noqa
 
     def app_version(self) -> str:
+        logger.debug("app_version has been called")
         return self._manifest.get("minAppVersion", "1.0.0")
 
     def base64_decode(self, val: str) -> str:
+        logger.debug("base64_decode has been called with val=%s", val)
         return base64.b64decode(val).decode("utf-8")
 
     def base64_encode(self, val: str) -> str:
+        logger.debug("base64_encode has been called with val=%s", val)
         return base64.b64encode(val.encode("utf-8")).decode("utf-8")
 
     def is_download_cancelled(self) -> bool:
+        logger.debug("is_download_cancelled has been called")
         return False
 
     def hmac_sha1(self, key_json: str, data_json: str) -> str:
+        logger.debug("hmac_sha1 has been called with key_json=%s, data_json=%s", key_json, data_json)
         try:
             key_val = json.loads(key_json)
             data_val = json.loads(data_json)
@@ -277,20 +339,25 @@ class UtilsMock:
             return "[]"
 
     def md5(self, val: str) -> str:
+        logger.debug("md5 has been called with val=%s", val)
         return hashlib.md5(val.encode("utf-8")).hexdigest()
 
     def sha256(self, val: str) -> str:
+        logger.debug("sha256 has been called with val=%s", val)
         return hashlib.sha256(val.encode("utf-8")).hexdigest()
 
     def hmac_sha256(self, message: str, key: str) -> str:
+        logger.debug("hmac_sha256 has been called with message=%s, key=%s", message, key)
         mac = hmac.new(key.encode("utf-8"), message.encode("utf-8"), hashlib.sha256)
         return mac.hexdigest()
 
     def hmac_sha256_base64(self, message: str, key: str) -> str:
+        logger.debug("hmac_sha256_base64 has been called with message=%s, key=%s", message, key)
         mac = hmac.new(key.encode("utf-8"), message.encode("utf-8"), hashlib.sha256)
         return base64.b64encode(mac.digest()).decode("utf-8")
 
     def encrypt_block_cipher(self, data_b64: str, options_json: str) -> str:
+        logger.debug("encrypt_block_cipher has been called with data_b64=%s, options_json=%s", data_b64, options_json)
         try:
             opts: dict[str, Any] = json.loads(options_json)
             algorithm = opts.get("algorithm", "").lower()
@@ -340,6 +407,7 @@ class UtilsMock:
             return json.dumps({"success": False, "error": str(e)})
 
     def decrypt_block_cipher(self, data_b64: str, options_json: str) -> str:
+        logger.debug("decrypt_block_cipher has been called with data_b64=%s, options_json=%s", data_b64, options_json)
         try:
             opts: dict[str, Any] = json.loads(options_json)
             algorithm = opts.get("algorithm", "").lower()
@@ -389,12 +457,14 @@ class UtilsMock:
             return json.dumps({"success": False, "error": str(e)})
 
     def sleep(self, ms: int) -> bool:
+        logger.debug("sleep has been called with ms=%s", ms)
         time.sleep(ms / 1000.0)
         return True
 
 
 class StorageMock:
     def __init__(self, data_dir: Path) -> None:
+        logger.debug("StorageMock.__init__ has been called with data_dir=%s", data_dir)
         self.file_path = data_dir / "storage.json"
         self.data: dict[str, Any] = {}
         self._load()
@@ -416,10 +486,12 @@ class StorageMock:
             logger.exception("failed to save storage data")
 
     def get(self, key: str) -> str:
+        logger.debug("StorageMock.get has been called with key=%s", key)
         val = self.data.get(key)
         return json.dumps(val)
 
     def set(self, key: str, value_json: str) -> None:
+        logger.debug("set has been called with key=%s, value_json=%s", key, value_json)
         try:
             self.data[key] = json.loads(value_json)
             self._save()
@@ -427,6 +499,7 @@ class StorageMock:
             logger.exception("failed to set storage key: %s", key)
 
     def remove(self, key: str) -> None:
+        logger.debug("StorageMock.remove has been called with key=%s", key)
         if key in self.data:
             del self.data[key]
             self._save()
@@ -434,6 +507,7 @@ class StorageMock:
 
 class CredentialsMock:
     def __init__(self, data_dir: Path) -> None:
+        logger.debug("CredentialsMock.__init__ has been called with data_dir=%s", data_dir)
         self.file_path = data_dir / "credentials.json"
         self.data: dict[str, Any] = {}
         self._load()
@@ -455,6 +529,7 @@ class CredentialsMock:
             logger.exception("failed to save credentials data")
 
     def store(self, key: str, value_json: str) -> None:
+        logger.debug("store has been called with key=%s, value_json=%s", key, value_json)
         try:
             self.data[key] = json.loads(value_json)
             self._save()
@@ -462,13 +537,16 @@ class CredentialsMock:
             logger.exception("failed to store credentials key: %s", key)
 
     def get(self, key: str) -> str:
+        logger.debug("CredentialsMock.get has been called with key=%s", key)
         val = self.data.get(key)
         return json.dumps(val)
 
     def has(self, key: str) -> bool:
+        logger.debug("has has been called with key=%s", key)
         return key in self.data
 
     def remove(self, key: str) -> None:
+        logger.debug("CredentialsMock.remove has been called with key=%s", key)
         if key in self.data:
             del self.data[key]
             self._save()
@@ -476,6 +554,7 @@ class CredentialsMock:
 
 class AuthMock:
     def __init__(self, data_dir: Path) -> None:
+        logger.debug("AuthMock.__init__ has been called with data_dir=%s", data_dir)
         self.file_path = data_dir / "auth.json"
         self.data: dict[str, Any] = {}
         self._load()
@@ -497,12 +576,14 @@ class AuthMock:
             logger.exception("failed to save auth data")
 
     def open_auth_url(self, auth_url: str, callback_url: str) -> None:
-        logger.info("auth.openAuthUrl called with url: %s, callback: %s", auth_url, callback_url)
+        logger.debug("auth.openAuthUrl called with url: %s, callback: %s", auth_url, callback_url)
 
     def get_auth_code(self) -> str:
+        logger.debug("get_auth_code has been called")
         return self.data.get("code") or ""
 
     def set_auth_code(self, tokens_json: str) -> None:
+        logger.debug("set_auth_code has been called with tokens_json=%s", tokens_json)
         try:
             tokens = json.loads(tokens_json)
             self.data.update(tokens)
@@ -511,9 +592,11 @@ class AuthMock:
             logger.exception("failed to set auth code")
 
     def is_authenticated(self) -> bool:
+        logger.debug("is_authenticated has been called")
         return self.data.get("is_authenticated") or bool(self.data.get("access_token"))
 
     def get_tokens(self) -> str:
+        logger.debug("get_tokens has been called")
         tokens = {
             "access_token": self.data.get("access_token") or "",
             "refresh_token": self.data.get("refresh_token") or "",
@@ -524,12 +607,14 @@ class AuthMock:
         return json.dumps(tokens)
 
     def clear_auth(self) -> None:
+        logger.debug("clear_auth has been called")
         self.data = {}
         self._save()
 
 
 class MatchingMock:
     def compare_strings(self, a: str, b: str) -> float:
+        logger.debug("compare_strings has been called with a=%s, b=%s", a, b)
         a_norm = self.normalize_string(a)
         b_norm = self.normalize_string(b)
         if a_norm == b_norm:
@@ -544,9 +629,11 @@ class MatchingMock:
         return len(intersection) / max(len(words_a), len(words_b))
 
     def compare_duration(self, a: float, b: float, tolerance: float) -> bool:
+        logger.debug("compare_duration has been called with a=%s, b=%s, tolerance=%s", a, b, tolerance)
         return abs(a - b) <= tolerance
 
     def normalize_string(self, s: str) -> str:
+        logger.debug("normalize_string has been called with s=%s", s)
         s = s.lower().strip()
         s = re.sub(r"\([^)]*\)", "", s)
         s = re.sub(r"\[[^\]]*\]", "", s)
@@ -569,6 +656,7 @@ class LogMock:
 
 
 def register_mocks_in_context(ctx: JsContext, data_dir: Path, manifest: ProviderManifest) -> None:
+    url_mock = UrlMock()
     http_mock = HttpMock()
     file_mock = FileMock(ctx)
     backend_mock = GoBackendMock()
@@ -578,6 +666,9 @@ def register_mocks_in_context(ctx: JsContext, data_dir: Path, manifest: Provider
     auth_mock = AuthMock(data_dir)
     matching_mock = MatchingMock()
     log_mock = LogMock()
+
+    ctx.add_callable("__url_parse", url_mock.parse_url)
+    ctx.add_callable("__url_parseSearchParams", url_mock.parse_search_params)
 
     ctx.add_callable("__http_get", http_mock.get)
     ctx.add_callable("__http_post", http_mock.post)
@@ -636,223 +727,45 @@ def register_mocks_in_context(ctx: JsContext, data_dir: Path, manifest: Provider
     ctx.add_callable("__log_error", log_mock.error)
     ctx.add_callable("__log_warn", log_mock.warn)
 
-    ctx.eval("""
-    var global = this;
-    var window = this;
+    with (Path(__file__).parent / "mocks.js").open(mode="r", encoding="utf-8") as f:
+        mocks_js = f.read()
+        ctx.eval(mocks_js)
 
-    var http = {
-        get: function(url, headers) {
-            var res = __http_get(url, headers ? JSON.stringify(headers) : null);
-            return JSON.parse(res);
-        },
-        post: function(url, body, headers) {
-            var res = __http_post(url, body, headers ? JSON.stringify(headers) : null);
-            return JSON.parse(res);
-        },
-        clearCookies: __http_clearCookies
-    };
 
-    var file = {
-        exists: __file_exists,
-        getSize: function(path) {
-            var res = __file_getSize(path);
-            return JSON.parse(res);
-        },
-        delete: function(path) {
-            var res = __file_delete(path);
-            return JSON.parse(res);
-        },
-        readBytes: function(path, options) {
-            var res = __file_readBytes(path, options ? JSON.stringify(options) : null);
-            return JSON.parse(res);
-        },
-        writeBytes: function(path, data, options) {
-            var res = __file_writeBytes(path, data, options ? JSON.stringify(options) : null);
-            return JSON.parse(res);
-        },
-        download: function(url, outputPath, options) {
-            options = options || {};
-            var hasProgress = typeof options.onProgress === 'function';
-            if (!hasProgress && typeof global.__active_download_progress === 'function') {
-                options.onProgress = global.__active_download_progress;
-                hasProgress = true;
-            }
-            var progressId = null;
-            if (hasProgress) {
-                progressId = "dl_" + Math.random().toString(36).substring(2);
-                __progress_callbacks[progressId] = options.onProgress;
-            }
+def setup_test():
+    from typing import cast  # noqa
 
-            var cleanOpts = {};
-            if (options.headers) cleanOpts.headers = options.headers;
+    import quickjs  # noqa
 
-            var res = __file_download(url, outputPath, JSON.stringify(cleanOpts), progressId);
-            if (progressId) {
-                delete __progress_callbacks[progressId];
-            }
-            return JSON.parse(res);
-        }
-    };
+    ctx = cast("JsContext", quickjs.Context())
 
-    var gobackend = {
-        sanitizeFilename: __gobackend_sanitizeFilename,
-        getAudioQuality: function(path) {
-            var res = __gobackend_getAudioQuality(path);
-            return JSON.parse(res);
-        },
-        checkISRCExists: function(outputDir, isrc) {
-            var res = __gobackend_checkISRCExists(outputDir, isrc);
-            return JSON.parse(res);
-        },
-        getLocalTime: function() {
-            var res = __gobackend_getLocalTime();
-            return JSON.parse(res);
-        },
-        getLyricsLRC: function(spotifyId, title, artist, album, durationMs) {
-            var res = __gobackend_getLyricsLRC(
-                spotifyId || "",
-                title || "",
-                artist || "",
-                album || "",
-                Number(durationMs || 0)
-            );
-            return JSON.parse(res);
-        }
-    };
+    url_mock = UrlMock()
+    http_mock = HttpMock()
+    file_mock = FileMock(ctx)
+    backend_mock = GoBackendMock()
 
-    var utils = {
-        appUserAgent: __utils_appUserAgent,
-        randomUserAgent: __utils_randomUserAgent,
-        appVersion: __utils_appVersion,
-        base64Decode: __utils_base64Decode,
-        base64Encode: __utils_base64Encode,
-        isDownloadCancelled: __utils_isDownloadCancelled,
-        hmacSHA1: function(key, data) {
-            var res = __utils_hmacSHA1(JSON.stringify(key), JSON.stringify(data));
-            return JSON.parse(res);
-        },
-        parseJSON: function(s) {
-            return JSON.parse(s);
-        },
-        stringifyJSON: function(obj) {
-            return JSON.stringify(obj);
-        },
-        md5: __utils_md5,
-        sha256: __utils_sha256,
-        hmacSHA256: __utils_hmacSHA256,
-        hmacSHA256Base64: __utils_hmacSHA256Base64,
-        encryptBlockCipher: function(data, options) {
-            var res = __utils_encryptBlockCipher(data, JSON.stringify(options));
-            return JSON.parse(res);
-        },
-        decryptBlockCipher: function(data, options) {
-            var res = __utils_decryptBlockCipher(data, JSON.stringify(options));
-            return JSON.parse(res);
-        },
-        sleep: __utils_sleep
-    };
+    ctx.add_callable("__url_parse", url_mock.parse_url)
+    ctx.add_callable("__url_parseSearchParams", url_mock.parse_search_params)
 
-    var storage = {
-        get: function(key) {
-            var res = __storage_get(key);
-            return JSON.parse(res);
-        },
-        set: function(key, value) {
-            __storage_set(key, JSON.stringify(value));
-        },
-        remove: __storage_remove
-    };
+    ctx.add_callable("__http_get", http_mock.get)
+    ctx.add_callable("__http_post", http_mock.post)
+    ctx.add_callable("__http_clearCookies", http_mock.clear_cookies)
 
-    var credentials = {
-        store: function(key, value) {
-            __credentials_store(key, JSON.stringify(value));
-        },
-        get: function(key) {
-            var res = __credentials_get(key);
-            return JSON.parse(res);
-        },
-        has: __credentials_has,
-        remove: __credentials_remove
-    };
+    ctx.add_callable("__file_exists", file_mock.exists)
+    ctx.add_callable("__file_getSize", file_mock.get_size)
+    ctx.add_callable("__file_delete", file_mock.delete)
+    ctx.add_callable("__file_readBytes", file_mock.read_bytes)
+    ctx.add_callable("__file_writeBytes", file_mock.write_bytes)
+    ctx.add_callable("__file_download", file_mock.download)
 
-    var auth = {
-        openAuthUrl: __auth_openAuthUrl,
-        getAuthCode: __auth_getAuthCode,
-        setAuthCode: function(tokens) {
-            __auth_setAuthCode(JSON.stringify(tokens));
-        },
-        isAuthenticated: __auth_isAuthenticated,
-        getTokens: function() {
-            var res = __auth_getTokens();
-            return JSON.parse(res);
-        },
-        clearAuth: __auth_clearAuth
-    };
+    ctx.add_callable("__gobackend_sanitizeFilename", backend_mock.sanitize_filename)
+    ctx.add_callable("__gobackend_getAudioQuality", backend_mock.get_audio_quality)
+    ctx.add_callable("__gobackend_checkISRCExists", backend_mock.check_isrc_exists)
+    ctx.add_callable("__gobackend_getLocalTime", backend_mock.get_local_time)
+    ctx.add_callable("__gobackend_getLyricsLRC", backend_mock.get_lyrics_lrc)
 
-    var matching = {
-        compareStrings: __matching_compareStrings,
-        compareDuration: __matching_compareDuration,
-        normalizeString: __matching_normalizeString
-    };
+    with Path(r"nameless\command\music_downloader\downloader\utils\mocks.js").open(mode="r", encoding="utf-8") as f:
+        mocks_js = f.read()
+        ctx.eval(mocks_js)
 
-    var log = {
-        info: function() { __log_info(Array.prototype.join.call(arguments, ' ')); },
-        debug: function() { __log_debug(Array.prototype.join.call(arguments, ' ')); },
-        error: function() { __log_error(Array.prototype.join.call(arguments, ' ')); },
-        warn: function() { __log_warn(Array.prototype.join.call(arguments, ' ')); }
-    };
-    var console = log;
-
-    var __progress_callbacks = {};
-    function __trigger_progress(progressId, written, total) {
-        var cb = __progress_callbacks[progressId];
-        if (cb) {
-            try {
-                cb(written, total);
-            } catch(e) {}
-        }
-    }
-
-    // does quickjs support fetch natively?
-    function fetch(url, options) {
-        options = options || {};
-        var method = (options.method || 'GET').toUpperCase();
-        var headers = options.headers || {};
-        var body = options.body || null;
-
-        var response;
-        if (method === 'GET' || method === 'HEAD') {
-            response = http.get(url, headers);
-        } else if (method === 'POST') {
-            response = http.post(url, body, headers);
-        } else {
-            throw new Error('Unsupported HTTP method: ' + method);
-        }
-
-        var responseObj = {
-            ok: response.ok || false,
-            status: response.status || response.statusCode || 0,
-            statusText: response.status >= 200 && response.status < 300 ? 'OK' : 'ERROR',
-            headers: response.headers || {},
-            body: response.body || '',
-            text: function() {
-                return this.body;
-            },
-            json: function() {
-                try {
-                    return JSON.parse(this.body);
-                } catch(e) {
-                    throw new Error('Invalid JSON response');
-                }
-            },
-            arrayBuffer: function() {
-                return this.body;
-            },
-            blob: function() {
-                return this.body;
-            }
-        };
-
-        return responseObj;
-    }
-    """)
+    return ctx

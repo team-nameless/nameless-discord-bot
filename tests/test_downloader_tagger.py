@@ -312,7 +312,7 @@ def test_uploader_registry_resolution():
     assert isinstance(rokket, PomfUploader)
     assert rokket.config.url == "https://rokket.space/"
 
-    telegram = UPLOADER_REGISTRY["telegram"](tg_client=mock_client, chat_id=123456)
+    telegram = UPLOADER_REGISTRY["telegram"](session=mock_session, tg_client=mock_client, chat_id=123456)
     assert isinstance(telegram, TelegramUploader)
 
 
@@ -379,6 +379,7 @@ def test_build_upload_progress_line_multi_links():
 async def test_telegram_uploader_metadata():
     import tempfile
     import os
+    from io import BytesIO
     from nameless.command.music_downloader.uploader.telegram.telegram import TelegramUploader
 
     mock_client = MagicMock()
@@ -397,7 +398,14 @@ async def test_telegram_uploader_metadata():
         return mock_msg
     mock_client.send_audio = mock_send_audio
 
-    uploader = TelegramUploader(client=mock_client, chat_id=12345)
+    from unittest.mock import AsyncMock
+    mock_session = MagicMock()
+    mock_response = AsyncMock()
+    mock_response.status = 200
+    mock_response.read.return_value = b"\x89PNG\r\n\x1a\npng_bytes"
+    mock_session.get = AsyncMock(return_value=mock_response)
+
+    uploader = TelegramUploader(session=mock_session, client=mock_client, chat_id=12345)
 
     metadata = {
         "title": "My Track",
@@ -406,17 +414,14 @@ async def test_telegram_uploader_metadata():
         "cover_url": "https://example.com/cover.png",
     }
 
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.content = b"\x89PNG\r\n\x1a\npng_bytes"
-
-    captured_thumb_path = None
+    captured_thumb = None
     original_send_audio = mock_client.send_audio
     async def wrap_send_audio(**kwargs):
-        nonlocal captured_thumb_path
-        captured_thumb_path = kwargs.get("thumb")
-        if captured_thumb_path:
-            assert os.path.exists(captured_thumb_path)
+        nonlocal captured_thumb
+        captured_thumb = kwargs.get("thumb")
+        if captured_thumb:
+            assert isinstance(captured_thumb, BytesIO)
+            assert captured_thumb.getvalue() == b"\x89PNG\r\n\x1a\npng_bytes"
         return await original_send_audio(**kwargs)
 
     mock_client.send_audio = wrap_send_audio
@@ -428,20 +433,17 @@ async def test_telegram_uploader_metadata():
         async def on_ready(url):
             pass
 
-        with patch("requests.get", return_value=mock_response):
-            res = await uploader.upload_file(
-                str(dummy_file),
-                on_ready=on_ready,
-                metadata=metadata,
-            )
+        res = await uploader.upload_file(
+            str(dummy_file),
+            on_ready=on_ready,
+            metadata=metadata,
+        )
 
         assert res == "https://t.me/c/123/456"
         assert send_audio_called["title"] == "My Track"
         assert send_audio_called["performer"] == "My Artist"
         assert send_audio_called["duration"] == 180
-        assert captured_thumb_path is not None
-        assert captured_thumb_path.endswith(".png")
-        assert not os.path.exists(captured_thumb_path)
+        assert captured_thumb is not None
 
 
 @pytest.mark.anyio

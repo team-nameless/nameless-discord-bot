@@ -155,6 +155,7 @@ class CatboxUploader(BaseUploader):
         *,
         on_ready: Callable[[str], Awaitable[None]],
         on_progress: Callable[[int, int], Awaitable[None]] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str | None:
         path = anyio.Path(filepath)
         if not self.validate_file_name(path.name):

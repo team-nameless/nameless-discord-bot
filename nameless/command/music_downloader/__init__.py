@@ -652,6 +652,7 @@ class MusicDownloaderCommand(commands.Cog):
                 upload_paths,
                 controller,
                 provider,
+                tracks=selected_tracks,
             )
             await controller.update_title("Completed")
 

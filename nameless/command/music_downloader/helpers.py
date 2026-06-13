@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
     from nameless.nameless import Nameless
 
-    from . import DownloadEmbedController
+    from . import DownloadEmbedController, TrackMetadata
 
 logger = logging.getLogger("MusicDownloaderHelpers")
 
@@ -67,6 +67,7 @@ async def upload_via_external_provider(
     upload_paths: list[AsyncPath],
     controller: DownloadEmbedController,
     provider: Literal["catbox", "litterbox", "uguu", "rokket", "telegram"],
+    tracks: list[TrackMetadata] | None = None,
 ) -> str | None:
     factory = UPLOADER_REGISTRY.get(provider)
     if not factory:
@@ -137,10 +138,33 @@ async def upload_via_external_provider(
             async with controller.status_context() as status:
                 status.upload_progress = pct
 
+        metadata_dict = None
+        if tracks:
+            matched = None
+            stem = Path(path).stem
+            for track in tracks:
+                clean_title = "".join(c for c in track.title if c not in r'<>:"/\|?*').strip()
+                clean_artist = "".join(c for c in track.artists if c not in r'<>:"/\|?*').strip()
+                filename_base = f"{clean_title} - {clean_artist}"
+                if len(filename_base) > 180:
+                    filename_base = filename_base[:180].strip()
+                if filename_base == stem:
+                    matched = track
+                    break
+
+            if matched:
+                metadata_dict = {
+                    "title": matched.title,
+                    "artists": matched.artists,
+                    "duration_ms": matched.duration_ms,
+                    "cover_url": matched.cover_url,
+                }
+
         await uploader.upload_file(
             str(path),
             on_ready=on_ready,
             on_progress=on_progress,
+            metadata=metadata_dict,
         )
 
     async with controller.status_context() as status:

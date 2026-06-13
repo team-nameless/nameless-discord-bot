@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import pathlib
@@ -20,6 +20,7 @@ class BaseUploader(ABC):
         *,
         on_ready: Callable[[str], Awaitable[None]],
         on_progress: Callable[[int, int], Awaitable[None]] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str | None:
         """Upload a file and return the resulting URL."""
 

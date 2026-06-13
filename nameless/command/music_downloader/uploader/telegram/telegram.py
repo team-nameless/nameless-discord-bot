@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, override
+from io import BytesIO
+from typing import TYPE_CHECKING, Any, override
 
 import anyio
 from pyrogram.enums import MessagesFilter
@@ -12,12 +13,14 @@ if TYPE_CHECKING:
     import pathlib
     from collections.abc import Awaitable, Callable
 
+    import aiohttp
     from pyrogram import Client
     from pyrogram.types import Message
 
 
 class TelegramUploader(BaseUploader):
-    def __init__(self, client: Client, chat_id: int | str) -> None:
+    def __init__(self, session: aiohttp.ClientSession, client: Client, chat_id: int | str) -> None:
+        self.session = session
         self.client = client
         self.chat_id = chat_id
         self.logger = logging.getLogger("TelegramUploader")
@@ -56,6 +59,7 @@ class TelegramUploader(BaseUploader):
         *,
         on_ready: Callable[[str], Awaitable[None]],
         on_progress: Callable[[int, int], Awaitable[None]] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str | None:
         path = anyio.Path(filepath)
         path_str = str(path)
@@ -64,8 +68,8 @@ class TelegramUploader(BaseUploader):
             if on_progress is not None:
                 await on_progress(current, total)
 
-        # error occurs properly for when we using a bot account
         if path_str.endswith(".zip"):
+            # error occurs properly for when we using a bot account
             try:
                 msg = await self.check_file_exists(path_str)
             except Exception:
@@ -84,11 +88,32 @@ class TelegramUploader(BaseUploader):
                 msg = None
 
             if msg is None:
-                msg = await self.client.send_audio(
-                    chat_id=self.chat_id,
-                    audio=path_str,
-                    progress=progress_callback,
-                )
+                send_kwargs = {
+                    "chat_id": self.chat_id,
+                    "audio": path_str,
+                    "progress": progress_callback,
+                }
+                if metadata:
+                    if metadata.get("title"):
+                        send_kwargs["title"] = metadata["title"]
+                    if metadata.get("artists"):
+                        send_kwargs["performer"] = metadata["artists"]
+                    if metadata.get("duration_ms"):
+                        send_kwargs["duration"] = int(metadata["duration_ms"] / 1000)
+                    cover_url = metadata.get("cover_url")
+                    if cover_url:
+                        headers = {
+                            "User-Agent": (
+                                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                                "(KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
+                            )
+                        }
+                        r = await self.session.get(cover_url, headers=headers)
+                        if r.status == 200:
+                            cover_bytes = BytesIO(await r.read())
+                            send_kwargs["thumb"] = cover_bytes  # type: ignore
+
+                msg = await self.client.send_audio(**send_kwargs)  # type: ignore
 
         if msg is not None and msg.link:
             await on_ready(msg.link)

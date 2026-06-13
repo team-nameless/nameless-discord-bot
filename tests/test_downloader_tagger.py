@@ -373,3 +373,139 @@ def test_build_upload_progress_line_multi_links():
     status._download_url = "https://t.me/c/1234/5678\nhttps://t.me/c/1234/5679"
     line = status.build_upload_progress_line()
     assert line == "Download links (Telegram): [Link 1](https://t.me/c/1234/5678), [Link 2](https://t.me/c/1234/5679)"
+
+
+@pytest.mark.anyio
+async def test_telegram_uploader_metadata():
+    import tempfile
+    import os
+    from nameless.command.music_downloader.uploader.telegram.telegram import TelegramUploader
+
+    mock_client = MagicMock()
+
+    async def mock_search(*args, **kwargs):
+        if False:
+            yield
+    mock_client.search_messages = mock_search
+
+    mock_msg = MagicMock()
+    mock_msg.link = "https://t.me/c/123/456"
+
+    send_audio_called = {}
+    async def mock_send_audio(**kwargs):
+        send_audio_called.update(kwargs)
+        return mock_msg
+    mock_client.send_audio = mock_send_audio
+
+    uploader = TelegramUploader(client=mock_client, chat_id=12345)
+
+    metadata = {
+        "title": "My Track",
+        "artists": "My Artist",
+        "duration_ms": 180000,
+        "cover_url": "https://example.com/cover.png",
+    }
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.content = b"\x89PNG\r\n\x1a\npng_bytes"
+
+    captured_thumb_path = None
+    original_send_audio = mock_client.send_audio
+    async def wrap_send_audio(**kwargs):
+        nonlocal captured_thumb_path
+        captured_thumb_path = kwargs.get("thumb")
+        if captured_thumb_path:
+            assert os.path.exists(captured_thumb_path)
+        return await original_send_audio(**kwargs)
+
+    mock_client.send_audio = wrap_send_audio
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        dummy_file = Path(tmpdir) / "track.mp3"
+        dummy_file.write_bytes(b"audio_bytes")
+
+        async def on_ready(url):
+            pass
+
+        with patch("requests.get", return_value=mock_response):
+            res = await uploader.upload_file(
+                str(dummy_file),
+                on_ready=on_ready,
+                metadata=metadata,
+            )
+
+        assert res == "https://t.me/c/123/456"
+        assert send_audio_called["title"] == "My Track"
+        assert send_audio_called["performer"] == "My Artist"
+        assert send_audio_called["duration"] == 180
+        assert captured_thumb_path is not None
+        assert captured_thumb_path.endswith(".png")
+        assert not os.path.exists(captured_thumb_path)
+
+
+@pytest.mark.anyio
+async def test_upload_via_external_provider_metadata_matching():
+    import tempfile
+    import contextlib
+    from anyio import Path as AsyncPath
+    from unittest.mock import AsyncMock
+    from nameless.command.music_downloader import TrackMetadata
+    from nameless.command.music_downloader.helpers import upload_via_external_provider
+
+    mock_session = MagicMock()
+    mock_tg_client = MagicMock()
+    mock_controller = MagicMock()
+
+    mock_status = MagicMock()
+    @contextlib.asynccontextmanager
+    async def mock_status_ctx(*args, **kwargs):
+        yield mock_status
+    mock_controller.status_context = mock_status_ctx
+
+    mock_uploader = MagicMock()
+    mock_uploader.upload_file = AsyncMock()
+    mock_uploader.get_max_file_size.return_value = None
+    mock_uploader.is_supported_file_extension.return_value = True
+    mock_uploader.get_service_name.return_value = "MockUploader"
+
+    mock_factory = MagicMock(return_value=mock_uploader)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        clean_title = "Clean Title  Test"
+        clean_artist = "Artist"
+        filename_base = f"{clean_title} - {clean_artist}"
+
+        file_path = Path(tmpdir) / f"{filename_base}.mp3"
+        file_path.write_bytes(b"dummy")
+
+        track = TrackMetadata(
+            id="1",
+            title="Clean: Title / Test",
+            artists="Artist*?",
+            album="Album",
+            album_artist="Album Artist",
+            cover_url="https://example.com/cover.png",
+            isrc="ISRC",
+            duration_ms=120000,
+        )
+
+        with patch.dict("nameless.command.music_downloader.helpers.UPLOADER_REGISTRY", {"telegram": mock_factory}):
+            await upload_via_external_provider(
+                session=mock_session,
+                tg_client=mock_tg_client,
+                upload_paths=[AsyncPath(file_path)],
+                controller=mock_controller,
+                provider="telegram",
+                tracks=[track],
+            )
+
+        mock_uploader.upload_file.assert_called_once()
+        args, kwargs = mock_uploader.upload_file.call_args
+        assert args[0] == str(file_path)
+        metadata = kwargs["metadata"]
+        assert metadata is not None
+        assert metadata["title"] == "Clean: Title / Test"
+        assert metadata["artists"] == "Artist*?"
+        assert metadata["duration_ms"] == 120000
+        assert metadata["cover_url"] == "https://example.com/cover.png"

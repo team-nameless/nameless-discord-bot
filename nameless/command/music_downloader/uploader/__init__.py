@@ -33,10 +33,15 @@ def create_rokket(session: aiohttp.ClientSession, **kwargs: Any) -> PomfUploader
     return PomfUploader(config=ServerConfig.rokket_config(), session=session)
 
 
-def create_telegram(tg_client: Client | None, chat_id: int | str, **kwargs: Any) -> TelegramUploader:
+def create_telegram(
+    session: aiohttp.ClientSession,
+    tg_client: Client | None,
+    chat_id: int | str,
+    **kwargs: Any,
+) -> TelegramUploader:
     if not tg_client:
         raise RuntimeError("Telegram client is not configured.")
-    return TelegramUploader(tg_client, chat_id)
+    return TelegramUploader(session, tg_client, chat_id)
 
 
 UPLOADER_REGISTRY: dict[str, UploaderFactory] = {

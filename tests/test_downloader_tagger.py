@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
 from mutagen.flac import FLAC
 from mutagen.flac import Picture as FLACPicture
 from mutagen.mp3 import MP3
@@ -329,3 +330,46 @@ def test_resolve_collection_flags():
     is_album, is_playlist = resolve_collection_flags({"type": "artist"})
     assert is_album is False
     assert is_playlist is True
+
+
+@pytest.mark.anyio
+async def test_package_downloaded_files_no_zip():
+    import tempfile
+    from unittest.mock import MagicMock
+
+    from nameless.command.music_downloader.helpers import package_downloaded_files
+
+    mock_ctx = MagicMock()
+    mock_ctx.author.id = 123456
+
+    mock_controller = MagicMock()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        output_dir = Path(tmpdir)
+        file1 = output_dir / "track1.flac"
+        file2 = output_dir / "track2.flac"
+        file1.write_bytes(b"data1")
+        file2.write_bytes(b"data2")
+
+        files, is_zip = await package_downloaded_files(output_dir, mock_ctx, mock_controller, zip_if_multiple=False)
+        assert is_zip is False
+        assert len(files) == 2
+        assert files[0].name == "track1.flac"
+        assert files[1].name == "track2.flac"
+
+
+def test_build_upload_progress_line_multi_links():
+    from nameless.command.music_downloader import Status
+    from nameless.command.music_downloader.enums import StatusState
+
+    status = Status()
+    status._provider = "telegram"
+    status._uploading_state = StatusState.COMPLETED
+
+    status._download_url = "https://t.me/c/1234/5678"
+    line = status.build_upload_progress_line()
+    assert line == "Download link (Telegram): [Click here to download](https://t.me/c/1234/5678)"
+
+    status._download_url = "https://t.me/c/1234/5678\nhttps://t.me/c/1234/5679"
+    line = status.build_upload_progress_line()
+    assert line == "Download links (Telegram): [Link 1](https://t.me/c/1234/5678), [Link 2](https://t.me/c/1234/5679)"

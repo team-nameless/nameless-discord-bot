@@ -812,4 +812,47 @@ def register_mocks_in_context(ctx: JsContext, data_dir: Path, manifest: Provider
             } catch(e) {}
         }
     }
+
+    // does quickjs support fetch natively?
+    function fetch(url, options) {
+        options = options || {};
+        var method = (options.method || 'GET').toUpperCase();
+        var headers = options.headers || {};
+        var body = options.body || null;
+
+        var response;
+        if (method === 'GET' || method === 'HEAD') {
+            response = http.get(url, headers);
+        } else if (method === 'POST') {
+            response = http.post(url, body, headers);
+        } else {
+            throw new Error('Unsupported HTTP method: ' + method);
+        }
+
+        var responseObj = {
+            ok: response.ok || false,
+            status: response.status || response.statusCode || 0,
+            statusText: response.status >= 200 && response.status < 300 ? 'OK' : 'ERROR',
+            headers: response.headers || {},
+            body: response.body || '',
+            text: function() {
+                return this.body;
+            },
+            json: function() {
+                try {
+                    return JSON.parse(this.body);
+                } catch(e) {
+                    throw new Error('Invalid JSON response');
+                }
+            },
+            arrayBuffer: function() {
+                return this.body;
+            },
+            blob: function() {
+                return this.body;
+            }
+        };
+
+        return responseObj;
+    }
     """)

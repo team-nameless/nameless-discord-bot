@@ -7,7 +7,8 @@
 # Files should not not be exposed to the public
 .env
 .python-version
-nameless.sqlite
+nameless.toml
+nameless.db
 nameless.cache
 
 # Ignore lavalink stuffs

@@ -14,7 +14,7 @@ REGISTRY_URL = "https://raw.githubusercontent.com/zarzet/SpotiFLAC-Extension/mai
 
 
 def get_cache_assets_dir() -> Path:
-    # TODO: update this when changing project structure
+    # update this when changing project structure
     root = Path(__file__).resolve().parents[5]
     assets_dir = root / ".cache" / "assets"
     assets_dir.mkdir(parents=True, exist_ok=True)

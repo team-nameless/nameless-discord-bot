@@ -22,12 +22,14 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from .._quickjs_types import Context as JsContext
     from ..providers._manifest import ProviderManifest
 
 
 logger = logging.getLogger("JsMocks")
-logger.setLevel(logging.DEBUG)
+# logger.setLevel(logging.DEBUG)
 
 session = requests.Session()
 session.headers.update(
@@ -198,6 +200,9 @@ class FileMock:
 
 
 class GoBackendMock:
+    def __init__(self, lyrics_getter: Callable[[str, str], str | None] | None = None):
+        self.lyrics_getter = lyrics_getter
+
     def sanitize_filename(self, filename: str) -> str:
         logger.debug("sanitize_filename has been called with filename=%s", filename)
         return re.sub(r'[<>:"/\\|?*]', "_", filename.strip())
@@ -277,7 +282,10 @@ class GoBackendMock:
             album,
             duration_ms,
         )
-        # FIXME: implement this
+        if self.lyrics_getter:
+            lyrics = self.lyrics_getter(title, artist)
+            if lyrics:
+                return json.dumps({"error": None, "lyrics": lyrics})
         return json.dumps({"error": "not implemented", "lyrics": ""})
 
 
@@ -655,11 +663,16 @@ class LogMock:
         logger.warning(str(msg))
 
 
-def register_mocks_in_context(ctx: JsContext, data_dir: Path, manifest: ProviderManifest) -> None:
+def register_mocks_in_context(
+    ctx: JsContext,
+    data_dir: Path,
+    manifest: ProviderManifest,
+    lyrics_getter: Callable[[str, str], str | None] | None = None,
+) -> None:
     url_mock = UrlMock()
     http_mock = HttpMock()
     file_mock = FileMock(ctx)
-    backend_mock = GoBackendMock()
+    backend_mock = GoBackendMock(lyrics_getter)
     utils_mock = UtilsMock(manifest)
     storage_mock = StorageMock(data_dir)
     credentials_mock = CredentialsMock(data_dir)

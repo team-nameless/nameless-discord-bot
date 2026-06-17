@@ -60,7 +60,7 @@ jobs:
 
       - name: Run pytest
         run: |
-          uv run pytest
+          uv run pytest --skip-ffmpeg
 
       - name: Push the formatted code if needed.
         uses: stefanzweifel/git-auto-commit-action@v5

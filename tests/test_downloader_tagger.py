@@ -82,7 +82,7 @@ def test_container_conversion_codec_selection():
         assert cmd[idx + 1] == "flac"
 
 
-def test_tagging_formats():
+def test_tagging_formats(requires_ffmpeg: bool):
     metadata = {
         "title": "Song Title",
         "artists": "Song Artist",
@@ -378,8 +378,8 @@ def test_build_upload_progress_line_multi_links():
 @pytest.mark.anyio
 async def test_telegram_uploader_metadata():
     import tempfile
-    import os
     from io import BytesIO
+
     from nameless.command.music_downloader.uploader.telegram.telegram import TelegramUploader
 
     mock_client = MagicMock()
@@ -387,18 +387,22 @@ async def test_telegram_uploader_metadata():
     async def mock_search(*args, **kwargs):
         if False:
             yield
+
     mock_client.search_messages = mock_search
 
     mock_msg = MagicMock()
     mock_msg.link = "https://t.me/c/123/456"
 
     send_audio_called = {}
+
     async def mock_send_audio(**kwargs):
         send_audio_called.update(kwargs)
         return mock_msg
+
     mock_client.send_audio = mock_send_audio
 
     from unittest.mock import AsyncMock
+
     mock_session = MagicMock()
     mock_response = AsyncMock()
     mock_response.status = 200
@@ -416,6 +420,7 @@ async def test_telegram_uploader_metadata():
 
     captured_thumb = None
     original_send_audio = mock_client.send_audio
+
     async def wrap_send_audio(**kwargs):
         nonlocal captured_thumb
         captured_thumb = kwargs.get("thumb")
@@ -448,10 +453,11 @@ async def test_telegram_uploader_metadata():
 
 @pytest.mark.anyio
 async def test_upload_via_external_provider_metadata_matching():
-    import tempfile
     import contextlib
-    from anyio import Path as AsyncPath
+    import tempfile
     from unittest.mock import AsyncMock
+
+    from anyio import Path as AsyncPath
     from nameless.command.music_downloader import TrackMetadata
     from nameless.command.music_downloader.helpers import upload_via_external_provider
 
@@ -460,9 +466,11 @@ async def test_upload_via_external_provider_metadata_matching():
     mock_controller = MagicMock()
 
     mock_status = MagicMock()
+
     @contextlib.asynccontextmanager
     async def mock_status_ctx(*args, **kwargs):
         yield mock_status
+
     mock_controller.status_context = mock_status_ctx
 
     mock_uploader = MagicMock()

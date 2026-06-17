@@ -68,7 +68,8 @@ class LyricsBase:
         self.title = title
         self.artist = artist
         self.logger = logging.getLogger(f"lyrics:{self.name}")
-        self.session = session or Session(headers=self.HEADERS)
+        self.session = session or Session()
+        self.session.headers.update(self.HEADERS)
 
     def get_synced(self) -> str | None:
         raise NotImplementedError("Subclasses must implement this method")

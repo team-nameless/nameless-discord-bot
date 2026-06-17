@@ -124,6 +124,9 @@ select = [
     # type checking
     "TCH",    # flake8-type-checking (TYPE_CHECKING blocks)
     "FA",     # flake8-future-annotations
+
+    # todo, fixme, etc.
+    "FIX",
 ]
 
 ignore = [

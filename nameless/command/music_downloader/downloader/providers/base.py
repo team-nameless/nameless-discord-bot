@@ -8,6 +8,7 @@ import quickjs
 
 from nameless.command.music_downloader.downloader.utils.extension_manager import check_and_update_extension
 from nameless.command.music_downloader.downloader.utils.js_mocks import register_mocks_in_context
+from nameless.command.music_downloader.lyrics import get_lyrics
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -15,9 +16,6 @@ if TYPE_CHECKING:
 
     from .._quickjs_types import Context as JsContext
     from ._manifest import ProviderManifest
-
-
-logger = logging.getLogger("BaseProvider")
 
 
 class BaseProvider:
@@ -29,6 +27,7 @@ class BaseProvider:
         self._ctx: JsContext | None = None
         self._manifest_data: ProviderManifest | None = None
         self._progress_cb: Callable[[int, int], None] | None = None
+        self._logger = logging.getLogger(f"downloader:{self.name}")
 
         self._load_extension(options=kwargs)
 
@@ -79,7 +78,7 @@ class BaseProvider:
             self._ctx.eval("var registeredExtension = null;")
             self._ctx.eval("function registerExtension(ext) { registeredExtension = ext; }")
 
-            register_mocks_in_context(self._ctx, self._script_path.parent, self.manifest)
+            register_mocks_in_context(self._ctx, self._script_path.parent, self.manifest, get_lyrics)
 
             with self._script_path.open(encoding="utf-8") as f:
                 js_code = f.read()
@@ -96,9 +95,9 @@ class BaseProvider:
 
             init_js = f"registeredExtension.initialize({json.dumps(default_settings)});"
             self._ctx.eval(init_js)
-            logger.info("loaded and initialized JS provider %s successfully", self.name)
+            self._logger.info("loaded and initialized JS provider %s successfully", self.name)
         except Exception as e:
-            logger.error("failed to load JS provider %s: %s", self.name, e)
+            self._logger.error("failed to load JS provider %s: %s", self.name, e)
             raise
 
     def resolve_url(self, url: str) -> dict[str, Any]:
@@ -153,7 +152,7 @@ class BaseProvider:
 
         res_str = self._ctx.eval(f"JSON.stringify(registeredExtension.checkAvailability({args_str}))")
         res = json.loads(res_str)
-        logger.info("checkAvailability result for %s - %s (ISRC: %s): %s", artists, title, isrc, res)
+        self._logger.info("checkAvailability result for %s - %s (ISRC: %s): %s", artists, title, isrc, res)
         if res and res.get("available"):
             return res.get("track_id")
 
@@ -188,7 +187,7 @@ class BaseProvider:
                         t = 100
                     self._progress_cb(w, t)
                 except Exception as e:
-                    logger.debug("error in trigger_py_progress: %s", e)
+                    self._logger.debug("error in trigger_py_progress: %s", e)
 
         self._ctx.add_callable("__trigger_py_progress", trigger_py_progress)
 

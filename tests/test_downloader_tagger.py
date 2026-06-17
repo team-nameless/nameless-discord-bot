@@ -1,9 +1,11 @@
 # ruff: noqa: S607, PLC0415, S603
+from __future__ import annotations
 
 import base64
 import subprocess
 import tempfile
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -12,13 +14,16 @@ from mutagen.flac import Picture as FLACPicture
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4
 from mutagen.oggopus import OggOpus
-from nameless.command.music_downloader.downloader.downloader import MusicDownloader, TrackMetadata
+from nameless.command.music_downloader.downloader.downloader import MusicDownloader
 from nameless.command.music_downloader.downloader.tagger import (
     tag_flac,
     tag_mp3,
     tag_mp4,
     tag_opus,
 )
+
+if TYPE_CHECKING:
+    from nameless.command.music_downloader import TrackMetadata
 
 
 def test_container_conversion_codec_selection():

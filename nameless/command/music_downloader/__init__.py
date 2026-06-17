@@ -7,7 +7,7 @@ import time
 from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, NotRequired, TypedDict, cast
+from typing import TYPE_CHECKING, Literal, NotRequired, TypedDict
 
 import aiohttp
 import discord
@@ -451,9 +451,7 @@ class MusicDownloaderCommand(commands.Cog):
                     if not res:
                         raise ValueError("unsupported URL")
                     collection_name = res["name"]
-                    tracks_data = cast(
-                        "list[TrackMetadata]", res["tracks"]
-                    )  # upstream already normalized, might add stronger type hint in upper level
+                    tracks_data = res["tracks"]
                     info = {"type": res["type"], "service": res["service"]}
                 else:
                     tracks_data = await asyncio.to_thread(downloader.search_tracks, query)

@@ -1,5 +1,6 @@
 # pyright: reportUnknownVariableType=false
 
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -121,7 +122,9 @@ if not _cfg_path.exists():
     if not _example_cfg_path.exists():
         raise FileNotFoundError("Neither nameless.toml nor nameless.example.toml was found.")
     else:
-        raise FileNotFoundError("nameless.toml was not found. Please create one based on nameless.example.toml.")
+        logging.warning("nameless.toml not found, using nameless.example.toml as fallback.")
+        logging.warning("Please copy nameless.example.toml to nameless.toml and edit it with your settings.")
+        _cfg_path = _example_cfg_path
 
 with _cfg_path.open(encoding="utf-8") as f:
     _content: str = f.read()

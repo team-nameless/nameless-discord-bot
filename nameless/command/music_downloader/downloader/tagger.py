@@ -1,5 +1,6 @@
 import base64
 import logging
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -16,7 +17,7 @@ from mutagen.oggopus import OggOpus
 logger = logging.getLogger("Tagger")
 
 
-def tag_flac(file_path: str, metadata: dict[str, Any], cover_bytes: bytes | None = None) -> None:
+def tag_flac(file_path: str, metadata: Mapping[str, Any], cover_bytes: bytes | None = None) -> None:
     audio = FLAC(file_path)
     audio.clear_pictures()
 
@@ -54,7 +55,7 @@ def tag_flac(file_path: str, metadata: dict[str, Any], cover_bytes: bytes | None
     audio.save()
 
 
-def tag_mp4(file_path: str, metadata: dict[str, Any], cover_bytes: bytes | None = None) -> None:
+def tag_mp4(file_path: str, metadata: Mapping[str, Any], cover_bytes: bytes | None = None) -> None:
     audio = MP4(file_path)
 
     audio["\xa9nam"] = metadata.get("title", "")
@@ -94,7 +95,7 @@ def tag_mp4(file_path: str, metadata: dict[str, Any], cover_bytes: bytes | None 
     audio.save()
 
 
-def tag_mp3(file_path: str, metadata: dict[str, Any], cover_bytes: bytes | None = None) -> None:
+def tag_mp3(file_path: str, metadata: Mapping[str, Any], cover_bytes: bytes | None = None) -> None:
     audio = EasyMP3(file_path)
 
     audio["title"] = metadata.get("title", "")
@@ -141,7 +142,7 @@ def tag_mp3(file_path: str, metadata: dict[str, Any], cover_bytes: bytes | None 
     id3.save()
 
 
-def tag_opus(file_path: str, metadata: dict[str, Any], cover_bytes: bytes | None = None) -> None:
+def tag_opus(file_path: str, metadata: Mapping[str, Any], cover_bytes: bytes | None = None) -> None:
     audio = OggOpus(file_path)
 
     audio["title"] = metadata.get("title", "")
@@ -180,7 +181,7 @@ def tag_opus(file_path: str, metadata: dict[str, Any], cover_bytes: bytes | None
     audio.save()
 
 
-def embed_metadata(file_path: str, metadata: dict[str, Any]) -> None:
+def embed_metadata(file_path: str, metadata: Mapping[str, Any]) -> None:
     cover_url: str | list[str] | dict[str, str] | None = metadata.get("cover_url")
     if isinstance(cover_url, list) and cover_url:
         first = cover_url[0]

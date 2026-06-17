@@ -7,7 +7,7 @@ import time
 from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, NotRequired, TypedDict, cast
 
 import aiohttp
 import discord
@@ -32,8 +32,7 @@ if TYPE_CHECKING:
     from nameless.nameless import Nameless
 
 
-@dataclass
-class TrackMetadata:
+class TrackMetadata(TypedDict):
     id: str
     title: str
     artists: str
@@ -42,11 +41,19 @@ class TrackMetadata:
     cover_url: str
     isrc: str
     duration_ms: int
-    release_date: str = ""
-    track_number: int = 0
-    disc_number: int = 1
-    copyright: str = ""
-    service: str = ""
+    release_date: NotRequired[str]
+    track_number: NotRequired[int]
+    disc_number: NotRequired[int]
+    copyright: NotRequired[str]
+    service: NotRequired[str]
+    enriched_title: NotRequired[str]
+    enriched_artist: NotRequired[str]
+    deezer_id: NotRequired[str]
+    spotify_id: NotRequired[str]
+    tidal_id: NotRequired[str]
+    qobuz_id: NotRequired[str]
+    external_links: NotRequired[dict[str, str]]
+    _is_normalized: NotRequired[bool]
 
 
 @dataclass(eq=False, repr=False, slots=True)
@@ -380,9 +387,9 @@ class DownloadTrackOption:
     def from_metadata(cls, metadata: TrackMetadata) -> DownloadTrackOption:
         return cls(
             metadata=metadata,
-            title=metadata.title,
-            author=metadata.artists,
-            length=metadata.duration_ms or None,
+            title=metadata["title"],
+            author=metadata["artists"],
+            length=metadata["duration_ms"] or None,
         )
 
 
@@ -444,7 +451,9 @@ class MusicDownloaderCommand(commands.Cog):
                     if not res:
                         raise ValueError("unsupported URL")
                     collection_name = res["name"]
-                    tracks_data = res["tracks"]
+                    tracks_data = cast(
+                        "list[TrackMetadata]", res["tracks"]
+                    )  # upstream already normalized, might add stronger type hint in upper level
                     info = {"type": res["type"], "service": res["service"]}
                 else:
                     tracks_data = await asyncio.to_thread(downloader.search_tracks, query)
@@ -521,8 +530,8 @@ class MusicDownloaderCommand(commands.Cog):
                 status.failed_tracks = failed
                 status.downloading_state = StatusState.STARTED
                 status.download_progress = 0.0
-                status.current_track_title = track.title
-                status.current_track_artists = track.artists
+                status.current_track_title = track["title"]
+                status.current_track_artists = track["artists"]
                 status.current_service = ""
 
             def progress(current: int, total_bytes: int) -> None:
@@ -535,28 +544,13 @@ class MusicDownloaderCommand(commands.Cog):
             last_error = None
             for service in services_cascade:
                 try:
-                    self.logger.info("Attempting download of track '%s' on service: %s", track.title, service)
+                    self.logger.info("Attempting download of track '%s' on service: %s", track["title"], service)
                     async with controller.status_context() as status:
                         status.current_service = service
 
-                    track_dict = {
-                        "id": track.id,
-                        "title": track.title,
-                        "artists": track.artists,
-                        "album": track.album,
-                        "album_artist": track.album_artist,
-                        "cover_url": track.cover_url,
-                        "release_date": track.release_date,
-                        "track_number": track.track_number,
-                        "disc_number": track.disc_number,
-                        "isrc": track.isrc,
-                        "duration_ms": track.duration_ms,
-                        "copyright": track.copyright,
-                        "service": info.get("service"),
-                    }
                     await asyncio.to_thread(
                         downloader.download_track,
-                        track_meta=track_dict,
+                        track_meta=track,
                         target_service=service,
                         output_dir=str(output_dir),
                         quality="LOSSLESS",
@@ -567,13 +561,15 @@ class MusicDownloaderCommand(commands.Cog):
                     break
                 except Exception as e:
                     last_error = e
-                    self.logger.warning("Download failed for track '%s' on %s: %s", track.title, service, e)
+                    self.logger.warning("Download failed for track '%s' on %s: %s", track["title"], service, e)
 
             if success:
                 downloaded += 1
             else:
                 self.logger.error(
-                    "Download failed for track '%s' on all attempted services. Last error: %s", track.title, last_error
+                    "Download failed for track '%s' on all attempted services. Last error: %s",
+                    track["title"],
+                    last_error,
                 )
                 failed_tracks.append(track)
                 failed += 1

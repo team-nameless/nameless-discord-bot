@@ -143,8 +143,8 @@ async def upload_via_external_provider(
             matched = None
             stem = Path(path).stem
             for track in tracks:
-                clean_title = "".join(c for c in track.title if c not in r'<>:"/\|?*').strip()
-                clean_artist = "".join(c for c in track.artists if c not in r'<>:"/\|?*').strip()
+                clean_title = "".join(c for c in track["title"] if c not in r'<>:"/\|?*').strip()
+                clean_artist = "".join(c for c in track["artists"] if c not in r'<>:"/\|?*').strip()
                 filename_base = f"{clean_title} - {clean_artist}"
                 if len(filename_base) > 180:
                     filename_base = filename_base[:180].strip()
@@ -154,10 +154,10 @@ async def upload_via_external_provider(
 
             if matched:
                 metadata_dict = {
-                    "title": matched.title,
-                    "artists": matched.artists,
-                    "duration_ms": matched.duration_ms,
-                    "cover_url": matched.cover_url,
+                    "title": matched["title"],
+                    "artists": matched["artists"],
+                    "duration_ms": matched["duration_ms"],
+                    "cover_url": matched["cover_url"],
                 }
 
         await uploader.upload_file(

@@ -3,13 +3,17 @@ from __future__ import annotations
 import logging
 import subprocess
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 from nameless.command.music_downloader.downloader.providers import PROVIDER_CLASSES
 from nameless.command.music_downloader.downloader.tagger import embed_metadata
 from nameless.command.music_downloader.downloader.utils.health_check import check_service_health
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    from nameless.command.music_downloader import TrackMetadata
+
     from .providers.apple_music import (
         AppleMusicOptions,
         AppleMusicWebProvider,
@@ -81,6 +85,44 @@ class MusicDownloader:
         self._providers[service_name] = provider
         return provider
 
+    def normalize_track_metadata(self, track: Mapping[str, Any]) -> TrackMetadata:
+        if track.get("_is_normalized"):
+            return cast("TrackMetadata", track)
+
+        title = track.get("name") or track.get("title", "")
+        artists = track.get("artists", "")
+        if title == "Loading..." and "enriched_title" in track:
+            title = track["enriched_title"]
+        if not artists and "enriched_artist" in track:
+            artists = track["enriched_artist"]
+
+        return {
+            "id": track.get("id", ""),
+            "title": title,
+            "artists": artists,
+            "album": track.get("album_name") or track.get("album", ""),
+            "album_artist": track.get("album_artist", ""),
+            "cover_url": track.get("cover_url") or track.get("images", ""),
+            "release_date": track.get("release_date", ""),
+            "track_number": track.get("track_number", 0),
+            "disc_number": track.get("disc_number", 1),
+            "isrc": track.get("isrc", ""),
+            "duration_ms": track.get("duration_ms", 0),
+            "copyright": track.get("copyright", ""),
+            "service": track.get("service", ""),
+            "enriched_title": track.get("enriched_title", ""),
+            "enriched_artist": track.get("enriched_artist", ""),
+            "deezer_id": track.get("deezer_id", ""),
+            "spotify_id": track.get("spotify_id", ""),
+            "tidal_id": track.get("tidal_id", ""),
+            "qobuz_id": track.get("qobuz_id", ""),
+            "external_links": track.get("external_links", {}),
+            "_is_normalized": True,
+        }
+
+    def normalize_tracks_metadata(self, tracks: list[dict[str, Any]]) -> list[TrackMetadata]:
+        return [self.normalize_track_metadata(t) for t in tracks]
+
     def resolve_url(self, url: str) -> dict[str, Any] | None:
         matched_service = None
         for service in PROVIDER_CLASSES:
@@ -104,103 +146,73 @@ class MusicDownloader:
 
         provider = self.get_provider(matched_service)
         res = provider.resolve_url(url)
-
         if not res or res.get("success") is False:
             err = res.get("error") if res else "unknown error"
             raise ValueError(f"failed to parse URL with service {matched_service}: {err}")
 
         res_type = res.get("type")
         if res_type == "track" and "track" in res:
-            tracks = [res["track"]]
-            name = res["track"].get("name", "")
-            cover_url = res["track"].get("cover_url", "")
+            track_data = res["track"]
+            try:
+                track_data = self.normalize_track_metadata(provider.enrich_track(track_data))
+            except Exception as e:
+                logger.warning("failed to enrich track: %s", e)
+            tracks = [track_data]
+            name = track_data.get("name") or track_data.get("title", "")
+            cover_url = track_data.get("cover_url") or track_data.get("thumbnail", "")
+
         elif res_type in ("album", "playlist"):
             tracks = res.get("tracks", [])
             name = res.get("name", "")
             cover_url = res.get("cover_url", "")
+
         elif res_type == "artist" and "artist" in res:
             tracks = res["artist"].get("albums", [])
             name = res["artist"].get("name", "")
             cover_url = res["artist"].get("image_url", "")
+
         else:
             raise ValueError(f"unsupported response type from handleUrl: {res_type}")
-
-        # TODO: static typing
-        std_tracks = []
-        for t in tracks:
-            std_t = {
-                "id": t.get("id"),
-                "title": t.get("name") or t.get("title", ""),
-                "artists": t.get("artists", ""),
-                "album": t.get("album_name") or t.get("album", ""),
-                "album_artist": t.get("album_artist", ""),
-                "cover_url": t.get("cover_url") or t.get("images", ""),
-                "release_date": t.get("release_date", ""),
-                "track_number": t.get("track_number", 0),
-                "disc_number": t.get("disc_number", 1),
-                "isrc": t.get("isrc", ""),
-                "duration_ms": t.get("duration_ms", 0),
-                "copyright": t.get("copyright", ""),
-                "service": matched_service,
-            }
-            std_tracks.append(std_t)
 
         return {
             "type": res_type,
             "service": matched_service,
             "name": name,
             "cover_url": cover_url,
-            "tracks": std_tracks,
+            "tracks": self.normalize_tracks_metadata(tracks),  # type: ignore  # might want to add validation here.
         }
 
-    def search_tracks(self, query: str, limit: int = 20) -> list[dict[str, Any]]:
+    def search_tracks(self, query: str, limit: int = 20) -> list[TrackMetadata]:
         provider = self.get_provider("spoti")
         results = provider.search_tracks(query, limit)
 
-        std_tracks = []
+        std_tracks: list[TrackMetadata] = []
         for t in results:
             if t.get("item_type") != "track":
                 continue
-            std_t = {
-                "id": t.get("id"),
-                "title": t.get("name") or t.get("title", ""),
-                "artists": t.get("artists", ""),
-                "album": t.get("album_name") or t.get("album", ""),
-                "album_artist": t.get("album_artist", ""),
-                "cover_url": t.get("cover_url") or t.get("images", ""),
-                "release_date": t.get("release_date", ""),
-                "track_number": t.get("track_number", 0),
-                "disc_number": t.get("disc_number", 1),
-                "isrc": t.get("isrc", ""),
-                "duration_ms": t.get("duration_ms", 0),
-                "copyright": t.get("copyright", ""),
-                "service": "spoti",
-            }
+            std_t: TrackMetadata = self.normalize_track_metadata(t)
             std_tracks.append(std_t)
         return std_tracks
 
     def download_track(
         self,
-        track_meta: dict[str, Any],
+        track_meta: TrackMetadata,
         target_service: str,
         output_dir: str,
         quality: str = "LOSSLESS",
         progress_cb: Any = None,
     ) -> dict[str, Any]:
         provider = self.get_provider(target_service)
-
-        # enrich track metadata using the source provider if possible
         source_service: str = track_meta.get("service", "")
         if source_service:
             try:
                 source_provider = self.get_provider(source_service)
-                enriched_meta = source_provider.enrich_track(track_meta)
-                track_meta = {**track_meta, **enriched_meta}
+                track_meta = self.normalize_track_metadata(source_provider.enrich_track(track_meta))
             except Exception as e:
                 logger.warning("failed to enrich track: %s", e)
 
         # resolve track ID on target service
-        if str(track_meta["id"]).startswith(f"{target_service}:"):
+        if str(track_meta["id"]).startswith(f"{target_service}:") or track_meta.get("service") == target_service:
             track_id = track_meta["id"]
         else:
             options = {
@@ -239,6 +251,26 @@ class MusicDownloader:
             raise RuntimeError(f"download failed: {err}")
 
         actual_path = res["file_path"]
+
+        # remux webm to ogg container if needed
+        actual_path_obj = Path(actual_path)
+        if actual_path_obj.exists() and actual_path_obj.suffix.lower() == ".opus":
+            try:
+                with actual_path_obj.open("rb") as f:
+                    magic = f.read(4)
+                if magic == b"\x1aE\xdf\xa3":
+                    temp_ogg = actual_path_obj.with_suffix(".temp.ogg")
+                    cmd = ["ffmpeg", "-y", "-i", str(actual_path_obj), "-c:a", "copy", "-vn", str(temp_ogg)]
+                    subprocess.run(  # noqa: S603
+                        cmd,
+                        check=True,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                    actual_path_obj.unlink()
+                    temp_ogg.rename(actual_path_obj)
+            except Exception as e:
+                logger.warning("failed to remux webm to ogg container: %s", e)
 
         codec = (res.get("audio_codec") or res.get("actual_audio_codec") or "").lower()
 

@@ -10,7 +10,7 @@ from nameless.command.music_downloader.downloader.utils.extension_manager import
 from nameless.command.music_downloader.downloader.utils.js_mocks import register_mocks_in_context
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping
     from pathlib import Path
 
     from .._quickjs_types import Context as JsContext
@@ -159,7 +159,7 @@ class BaseProvider:
 
         return None
 
-    def enrich_track(self, track: dict[str, Any]) -> dict[str, Any]:
+    def enrich_track(self, track: Mapping[str, Any]) -> Mapping[str, Any]:
         if not self._ctx:
             raise RuntimeError("provider not initialized")
 

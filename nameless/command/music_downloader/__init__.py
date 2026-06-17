@@ -513,6 +513,8 @@ class MusicDownloaderCommand(commands.Cog):
         is_album: bool,
         is_playlist: bool,
         controller: DownloadEmbedController,
+        downloader_provider: str = "auto",
+        fetch_lyrics: bool = True,
     ) -> list[TrackMetadata]:
         await controller.update_title("Downloading tracks...")
         async with controller.status_context() as status:
@@ -525,13 +527,20 @@ class MusicDownloaderCommand(commands.Cog):
         downloaded = 0
         failed = 0
 
-        primary_service = info.get("service") or "tidal"
-        if primary_service == "spoti":
-            primary_service = "tidal"
-
-        services_cascade = [primary_service] + [
-            service for service in ("tidal", "qobuz", "deezer", "youtube") if service != primary_service
-        ]
+        if downloader_provider == "auto":
+            services_cascade = []
+            candidates = downloader._get_candidates()
+            for name in candidates:
+                try:
+                    downloader.get_provider(name, ignore_health=False)
+                    services_cascade.append(name)
+                except Exception as e:
+                    self.logger.debug("Provider %s is not healthy: %s", name, e)
+                    continue
+            if not services_cascade:
+                raise DownloadCommandError("No healthy download providers are currently available.")
+        else:
+            services_cascade = [downloader_provider]
 
         for track in selected_tracks:
             async with controller.status_context() as status:
@@ -564,6 +573,8 @@ class MusicDownloaderCommand(commands.Cog):
                         output_dir=str(output_dir),
                         quality="LOSSLESS",
                         progress_cb=progress,
+                        fetch_lyrics=fetch_lyrics,
+                        ignore_health=(downloader_provider != "auto"),
                     )
                     success = True
                     await controller.set_download_progress(100.0, force=True)
@@ -594,14 +605,18 @@ class MusicDownloaderCommand(commands.Cog):
     @commands.hybrid_command(name="download", aliases=["dl"])
     @app_commands.describe(
         query="The music URL or search query",
-        provider="The upload provider to use (catbox, litterbox, uguu, rokket, telegram)",
+        upload_to="The upload provider to use (catbox, litterbox, uguu, rokket, telegram)",
+        lyrics="Whether to fetch and embed lyrics in metadata",
+        provider="The downloader provider to use (auto or specific name)",
     )
     async def download(
         self,
         ctx: commands.Context[Nameless],
         *,
         query: str,
-        provider: Literal["catbox", "litterbox", "uguu", "rokket", "telegram"] = "catbox",
+        upload_to: Literal["catbox", "litterbox", "uguu", "rokket", "telegram"] = "telegram",
+        lyrics: bool = True,
+        provider: str = "auto",
     ) -> None:
         if not query:
             raise DownloadCommandError("URL is required.")
@@ -610,7 +625,7 @@ class MusicDownloaderCommand(commands.Cog):
 
         downloader = MusicDownloader()
 
-        controller = DownloadEmbedController(ctx, title="Checking tracks...", provider=provider)
+        controller = DownloadEmbedController(ctx, title="Checking tracks...", provider=upload_to)
         await controller.send_initial()
 
         collection_name, tracks, info = await self._resolve_metadata(downloader, query, controller)
@@ -635,6 +650,8 @@ class MusicDownloaderCommand(commands.Cog):
             is_album,
             is_playlist,
             controller,
+            downloader_provider=provider,
+            fetch_lyrics=lyrics,
         )
 
         failed_count = len(failed_tracks)
@@ -644,7 +661,7 @@ class MusicDownloaderCommand(commands.Cog):
             status.failed_tracks = failed_count
             status.download_progress = 100.0
 
-        zip_if_multiple = provider != "telegram"
+        zip_if_multiple = upload_to != "telegram"
         upload_paths, is_zip = await package_downloaded_files(output_dir, ctx, controller, zip_if_multiple)
 
         title = ("Uploading album..." if is_album else "Uploading playlist...") if is_zip else "Uploading track..."
@@ -656,7 +673,7 @@ class MusicDownloaderCommand(commands.Cog):
                 self._tg_client,
                 upload_paths,
                 controller,
-                provider,
+                upload_to,
                 tracks=selected_tracks,
             )
             await controller.update_title("Completed")

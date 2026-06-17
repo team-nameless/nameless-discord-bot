@@ -5,7 +5,7 @@ import base64
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -32,11 +32,10 @@ def test_container_conversion_codec_selection():
     mock_provider = MagicMock()
     mock_provider.manifest = {"capabilities": {"requiresNativeContainerConversion": True}}
 
-    def mock_get_provider(service_name: str):
+    def mock_get_provider(service_name: str, *args: Any, **kwargs: Any) -> MagicMock:
         return mock_provider
 
-    downloader.get_provider = mock_get_provider  # type: ignore
-
+    downloader.get_provider = mock_get_provider
     track_meta: TrackMetadata = {
         "id": "test:123",
         "title": "Test Title",
@@ -60,6 +59,10 @@ def test_container_conversion_codec_selection():
         patch("subprocess.run") as mock_run,
         patch("pathlib.Path.unlink") as mock_unlink,
         patch("nameless.command.music_downloader.downloader.downloader.embed_metadata") as mock_embed,
+        patch(
+            "nameless.command.music_downloader.downloader.downloader.get_lyrics",
+            return_value="[00:00.00] Mocked Lyrics",
+        ) as mock_get_lyrics,
     ):
         downloader.download_track(track_meta, "test", "dummy_dir")
 
@@ -81,6 +84,10 @@ def test_container_conversion_codec_selection():
         patch("subprocess.run") as mock_run,
         patch("pathlib.Path.unlink") as mock_unlink,  # noqa
         patch("nameless.command.music_downloader.downloader.downloader.embed_metadata") as mock_embed,  # noqa
+        patch(
+            "nameless.command.music_downloader.downloader.downloader.get_lyrics",
+            return_value="[00:00.00] Mocked Lyrics",
+        ) as mock_get_lyrics,
     ):
         downloader.download_track(track_meta, "test", "dummy_dir")
 
@@ -531,3 +538,105 @@ async def test_upload_via_external_provider_metadata_matching():
         assert metadata["artists"] == "Artist*?"
         assert metadata["duration_ms"] == 120000
         assert metadata["cover_url"] == "https://example.com/cover.png"
+
+
+def test_get_provider_auto_selection():
+    downloader = MusicDownloader()
+    MusicDownloader._sorted_candidates = None
+    mock_provider1 = MagicMock()
+    mock_provider2 = MagicMock()
+
+    # simulate provider name matching
+    mock_provider1.manifest = {"name": "qobuz", "type": ["download_provider"]}
+    mock_provider2.manifest = {"name": "tidal", "type": ["download_provider"]}
+
+    # mock PROVIDER_CLASSES to only have qobuz and tidal
+    with patch(
+        "nameless.command.music_downloader.downloader.downloader.PROVIDER_CLASSES",
+        {
+            "qobuz": MagicMock(return_value=mock_provider1),
+            "tidal": MagicMock(return_value=mock_provider2),
+        },
+    ):
+        # case 1: qobuz is unhealthy, tidal is healthy
+        with patch("nameless.command.music_downloader.downloader.downloader.check_service_health") as mock_health:
+
+            def side_effect(manifest: dict[str, Any], logger: Any = None) -> bool:
+                return manifest.get("name") == "tidal"
+
+            mock_health.side_effect = side_effect
+
+            provider = downloader.get_provider("auto")
+            assert provider == mock_provider2
+
+        # clear cached providers and sorted candidates cache
+        downloader._providers.clear()
+        MusicDownloader._sorted_candidates = None
+
+        # case 2: both qobuz and tidal are healthy, should select qobuz (higher rank)
+        with patch("nameless.command.music_downloader.downloader.downloader.check_service_health", return_value=True):
+            provider = downloader.get_provider("auto")
+            assert provider == mock_provider1
+
+
+def test_get_provider_ignore_health():
+    downloader = MusicDownloader()
+    mock_provider = MagicMock()
+    mock_provider.manifest = {"name": "deezer"}
+
+    with (
+        patch(
+            "nameless.command.music_downloader.downloader.downloader.PROVIDER_CLASSES",
+            {
+                "deezer": MagicMock(return_value=mock_provider),
+            },
+        ),
+        patch("nameless.command.music_downloader.downloader.downloader.check_service_health", return_value=False),
+    ):
+        # should raise error with ignore_health=False
+        with pytest.raises(RuntimeError):
+            downloader.get_provider("deezer", ignore_health=False)
+
+        # clear cache since the failed attempt didn't store it
+        downloader._providers.clear()
+
+        # should succeed with ignore_health=True
+        provider = downloader.get_provider("deezer", ignore_health=True)
+        assert provider == mock_provider
+
+
+def test_download_track_no_lyrics():
+    downloader = MusicDownloader()
+
+    mock_provider = MagicMock()
+    mock_provider.manifest = {"capabilities": {}}
+    mock_provider.name = "deezer"
+    mock_provider.download_track.return_value = {
+        "success": True,
+        "file_path": "dummy_path.flac",
+    }
+
+    downloader.get_provider = MagicMock(return_value=mock_provider)
+
+    track_meta: TrackMetadata = {
+        "id": "deezer:123",
+        "title": "Test Title",
+        "artists": "Test Artist",
+        "album": "Test Album",
+        "album_artist": "Test Album Artist",
+        "cover_url": "http://example.com/cover.jpg",
+        "isrc": "US123456789012",
+        "duration_ms": 180000,
+    }
+
+    with (
+        patch("nameless.command.music_downloader.downloader.downloader.embed_metadata"),
+        patch("nameless.command.music_downloader.downloader.downloader.get_lyrics") as mock_get_lyrics,
+    ):
+        downloader.download_track(track_meta, "deezer", "dummy_dir", fetch_lyrics=False)
+
+        # verify get_lyrics was not called
+        assert not mock_get_lyrics.called
+        # verify no lyrics are in the metadata passed to embed_metadata
+        assert "lyrics" not in track_meta
+        assert "lyrics_lrc" not in track_meta

@@ -32,46 +32,107 @@ logger = logging.getLogger("MusicDownloader")
 
 
 class MusicDownloader:
+    _sorted_candidates: list[str] | None = None
+
     def __init__(self) -> None:
         self._providers: dict[str, BaseProvider] = {}
+
+    def _get_candidates(self) -> list[str]:
+        if MusicDownloader._sorted_candidates is not None:
+            return MusicDownloader._sorted_candidates
+
+        candidates: list[tuple[str, int]] = []
+        for name in PROVIDER_CLASSES:
+            try:
+                provider = self.get_provider(name, ignore_health=True)
+                manifest = provider.manifest
+                if "download_provider" not in manifest.get("type", []):
+                    continue
+
+                capabilities = manifest.get("capabilities", {})
+                tier = capabilities.get("downloadFallbackTier", "low_res")
+
+                tier_scores = {"hi_res": 30, "lossless": 20, "low_res": 10}
+                score = tier_scores.get(tier, 10)
+
+                quality_options = manifest.get("qualityOptions", [])
+                opt_ids = {opt.get("id") for opt in quality_options if opt.get("id")}
+                if opt_ids & {"DOLBY_ATMOS", "HI_RES_LOSSLESS"}:
+                    score += 5
+                elif opt_ids & {"flac", "LOSSLESS"}:
+                    score += 3
+                else:
+                    score += 1
+
+                candidates.append((name, score))
+            except Exception as e:
+                logger.warning("failed to evaluate candidate %s: %s", name, e)
+
+        candidates.sort(key=lambda x: x[1], reverse=True)
+        MusicDownloader._sorted_candidates = [name for name, _ in candidates]
+        return MusicDownloader._sorted_candidates
 
     @overload
     def get_provider(
         self,
         service_name: Literal["apple"],
         options: AppleMusicOptions | None = None,
+        ignore_health: bool = False,
     ) -> AppleMusicWebProvider: ...
     @overload
     def get_provider(
         self,
         service_name: Literal["tidal"],
         options: TidalWebOptions | None = None,
+        ignore_health: bool = False,
     ) -> TidalWebProvider: ...
     @overload
     def get_provider(
         self,
         service_name: Literal["deezer"],
         options: DeezerOptions | None = None,
+        ignore_health: bool = False,
     ) -> DeezerWebProvider: ...
     @overload
     def get_provider(
         self,
         service_name: Literal["qobuz"],
         options: QobuzWebOptions | None = None,
+        ignore_health: bool = False,
     ) -> QobuzWebProvider: ...
     @overload
     def get_provider(
         self,
         service_name: Literal["youtube"],
         options: YoutubeMusicWebOptions | None = None,
+        ignore_health: bool = False,
     ) -> YoutubeMusicWebProvider: ...
     @overload
-    def get_provider(self, service_name: str, options: Any = None) -> BaseProvider: ...
+    def get_provider(
+        self,
+        service_name: str,
+        options: Any = None,
+        ignore_health: bool = False,
+    ) -> BaseProvider: ...
 
-    def get_provider(self, service_name: str, options: Any = None) -> BaseProvider:
+    def get_provider(
+        self,
+        service_name: str,
+        options: Any = None,
+        ignore_health: bool = False,
+    ) -> BaseProvider:
+        if service_name == "auto":
+            candidates = self._get_candidates()
+            for name in candidates:
+                try:
+                    return self.get_provider(name, options, ignore_health=False)
+                except Exception as e:
+                    logger.debug("auto-select: provider %s is unavailable or unhealthy: %s", name, e)
+            raise RuntimeError("no healthy download provider found")
+
         if service_name in self._providers:
             provider = self._providers[service_name]
-            if not check_service_health(provider.manifest):
+            if not ignore_health and not check_service_health(provider.manifest):
                 raise RuntimeError(f"service {service_name} is unhealthy/unavailable")
             return provider
 
@@ -80,7 +141,7 @@ class MusicDownloader:
             raise ValueError(f"unknown service name: {service_name}")
 
         provider = cls(options) if options else cls()
-        if not check_service_health(provider.manifest):
+        if not ignore_health and not check_service_health(provider.manifest):
             raise RuntimeError(f"service {service_name} is unhealthy/unavailable")
 
         self._providers[service_name] = provider
@@ -211,8 +272,11 @@ class MusicDownloader:
         output_dir: str,
         quality: str = "LOSSLESS",
         progress_cb: Any = None,
+        fetch_lyrics: bool = True,
+        ignore_health: bool = False,
     ) -> dict[str, Any]:
-        provider = self.get_provider(target_service)
+        provider = self.get_provider(target_service, ignore_health=ignore_health)
+        target_service = provider.name
         source_service: str = track_meta.get("service", "")
         if source_service:
             try:
@@ -317,11 +381,15 @@ class MusicDownloader:
             except Exception as e:
                 logger.warning("failed to convert container for %s: %s", actual_path, e)
 
-        if "lyrics" not in track_meta:
-            lyrics = get_lyrics(track_meta["title"], track_meta["artists"])
-            if lyrics:
-                track_meta["lyrics"] = lyrics
-                track_meta["lyrics_lrc"] = lyrics
+        if fetch_lyrics:
+            if "lyrics" not in track_meta:
+                lyrics = get_lyrics(track_meta["title"], track_meta["artists"])
+                if lyrics:
+                    track_meta["lyrics"] = lyrics
+                    track_meta["lyrics_lrc"] = lyrics
+        else:
+            track_meta.pop("lyrics", None)
+            track_meta.pop("lyrics_lrc", None)
         embed_metadata(actual_path, track_meta)
 
         return {"success": True, "file_path": actual_path}

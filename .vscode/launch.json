@@ -16,7 +16,6 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${cwd}/bootstrapper.py",
-            "justMyCode": false
         },
         {
             "name": "Run nameless* with Debug logging.",

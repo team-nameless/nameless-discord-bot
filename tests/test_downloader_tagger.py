@@ -12,7 +12,7 @@ from mutagen.flac import Picture as FLACPicture
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4
 from mutagen.oggopus import OggOpus
-from nameless.command.music_downloader.downloader.downloader import MusicDownloader
+from nameless.command.music_downloader.downloader.downloader import MusicDownloader, TrackMetadata
 from nameless.command.music_downloader.downloader.tagger import (
     tag_flac,
     tag_mp3,
@@ -32,11 +32,15 @@ def test_container_conversion_codec_selection():
 
     downloader.get_provider = mock_get_provider  # type: ignore
 
-    track_meta = {
+    track_meta: TrackMetadata = {
         "id": "test:123",
         "title": "Test Title",
         "artists": "Test Artist",
-        "service": "test",
+        "album": "Test Album",
+        "album_artist": "Test Album Artist",
+        "cover_url": "http://example.com/cover.jpg",
+        "isrc": "US123456789012",
+        "duration_ms": 180000,
     }
 
     # test Case 1: Codec is FLAC
@@ -83,11 +87,14 @@ def test_container_conversion_codec_selection():
 
 
 def test_tagging_formats(requires_ffmpeg: bool):
-    metadata = {
+    metadata: TrackMetadata = {
+        "id": "test:123",
         "title": "Song Title",
         "artists": "Song Artist",
         "album": "Song Album",
         "album_artist": "Album Artist",
+        "cover_url": "http://example.com/cover.jpg",
+        "duration_ms": 180000,
         "track_number": 3,
         "total_tracks": 10,
         "disc_number": 1,
@@ -435,7 +442,7 @@ async def test_telegram_uploader_metadata():
         dummy_file = Path(tmpdir) / "track.mp3"
         dummy_file.write_bytes(b"audio_bytes")
 
-        async def on_ready(url):
+        async def on_ready(url: str):
             pass
 
         res = await uploader.upload_file(

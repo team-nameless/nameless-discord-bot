@@ -44,15 +44,26 @@ class TrackMetadata(TypedDict):
     release_date: NotRequired[str]
     track_number: NotRequired[int]
     disc_number: NotRequired[int]
+    total_tracks: NotRequired[int]
+    total_discs: NotRequired[int]
     copyright: NotRequired[str]
     service: NotRequired[str]
     enriched_title: NotRequired[str]
     enriched_artist: NotRequired[str]
+    # external ids
     deezer_id: NotRequired[str]
     spotify_id: NotRequired[str]
     tidal_id: NotRequired[str]
     qobuz_id: NotRequired[str]
     external_links: NotRequired[dict[str, str]]
+    # lyrics
+    lyrics: NotRequired[str]
+    lyrics_lrc: NotRequired[str]
+    # repla
+    replaygain_track_gain: NotRequired[str]
+    replaygain_track_peak: NotRequired[str]
+    replaygain_album_gain: NotRequired[str]
+    replaygain_album_peak: NotRequired[str]
     _is_normalized: NotRequired[bool]
 
 

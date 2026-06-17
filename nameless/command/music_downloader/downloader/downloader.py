@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import subprocess
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast, overload
 
 from nameless.command.music_downloader.downloader.providers import PROVIDER_CLASSES
 from nameless.command.music_downloader.downloader.tagger import embed_metadata
@@ -123,7 +123,16 @@ class MusicDownloader:
     def normalize_tracks_metadata(self, tracks: list[dict[str, Any]]) -> list[TrackMetadata]:
         return [self.normalize_track_metadata(t) for t in tracks]
 
-    def resolve_url(self, url: str) -> dict[str, Any] | None:
+    if TYPE_CHECKING:
+
+        class _ResolveUrlResult(TypedDict):
+            type: Literal["track", "album", "playlist", "artist"]
+            service: str
+            name: str
+            cover_url: str | list[str] | dict[str, str] | None
+            tracks: list[TrackMetadata]
+
+    def resolve_url(self, url: str) -> _ResolveUrlResult | None:
         matched_service = None
         for service in PROVIDER_CLASSES:
             try:
@@ -242,7 +251,6 @@ class MusicDownloader:
         temp_dest = Path(output_dir) / f"{filename_base}.flac"  # placeholder extension
         temp_dest.parent.mkdir(parents=True, exist_ok=True)
 
-        # execute download via JS extension
         provider.set_progress_callback(progress_cb)
         res = provider.download_track(track_id, quality, str(temp_dest))
 
@@ -308,7 +316,5 @@ class MusicDownloader:
             except Exception as e:
                 logger.warning("failed to convert container for %s: %s", actual_path, e)
 
-        # embed metadata
         embed_metadata(actual_path, track_meta)
-
         return {"success": True, "file_path": actual_path}

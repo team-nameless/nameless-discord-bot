@@ -62,11 +62,12 @@ reportMissingParameterType = "information"
 reportUnknownParameterType = "information"
 reportUnknownVariableType  = "information"
 reportUnknownArgumentType  = "information"
-reportUnusedCallResult  = false
-reportUnknownMemberType = false
-reportMissingTypeStubs  = false
-reportPrivateUsage      = false
-reportCallIssue         = false
+reportCallIssue            = "information"
+reportUnusedCallResult      = false
+reportUnknownMemberType     = false
+reportMissingTypeStubs      = false
+reportPrivateUsage          = false
+reportUnnecessaryIsInstance = false
 
 [tool.ruff]
 line-length = 120

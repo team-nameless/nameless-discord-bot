@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast, overload
 from nameless.command.music_downloader.downloader.providers import PROVIDER_CLASSES
 from nameless.command.music_downloader.downloader.tagger import embed_metadata
 from nameless.command.music_downloader.downloader.utils.health_check import check_service_health
+from nameless.command.music_downloader.lyrics import get_lyrics
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -316,5 +317,11 @@ class MusicDownloader:
             except Exception as e:
                 logger.warning("failed to convert container for %s: %s", actual_path, e)
 
+        if "lyrics" not in track_meta:
+            lyrics = get_lyrics(track_meta["title"], track_meta["artists"])
+            if lyrics:
+                track_meta["lyrics"] = lyrics
+                track_meta["lyrics_lrc"] = lyrics
         embed_metadata(actual_path, track_meta)
+
         return {"success": True, "file_path": actual_path}

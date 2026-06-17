@@ -78,7 +78,7 @@ class BaseProvider:
             self._ctx.eval("var registeredExtension = null;")
             self._ctx.eval("function registerExtension(ext) { registeredExtension = ext; }")
 
-            register_mocks_in_context(self._ctx, self._script_path.parent, self.manifest, get_lyrics)
+            register_mocks_in_context(self._ctx, self._script_path.parent, self.manifest, lyrics_getter=get_lyrics)
 
             with self._script_path.open(encoding="utf-8") as f:
                 js_code = f.read()

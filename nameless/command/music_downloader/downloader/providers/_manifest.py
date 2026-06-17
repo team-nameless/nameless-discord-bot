@@ -83,4 +83,3 @@ class ProviderManifest(TypedDict):
     urlHandler: NotRequired[UrlHandlerManifest]
     serviceHealth: NotRequired[list[ServiceHealthManifest]]
     settings: NotRequired[list[ProviderSettingsManifest]]
-

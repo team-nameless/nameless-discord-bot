@@ -30,6 +30,8 @@ class LrcLibLyrics(LyricsBase):
         "Accept": "application/json",
     }
 
+    name: str = "LrcLib"
+
     def __init__(
         self,
         title: str,

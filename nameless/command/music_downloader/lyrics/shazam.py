@@ -91,6 +91,7 @@ if TYPE_CHECKING:
 
 
 class ShazamLyrics(LyricsBase):
+    name: str = "shazam"
     # BASE_URL = "https://www.shazam.com/services/search/v3/en-US/GB/web/search?query={query}&numResults=3&offset=0&types=songs"
     HEADERS: ClassVar = {
         "X-Shazam-Platform": "IPHONE",

@@ -14,6 +14,7 @@ class MusixMatchLyrics(LyricsBase):
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
     }
 
+    name: str = "musixmatch"
     token: ClassVar[str | None] = None
 
     def _get_token(self, force_refresh: bool = False) -> str | None:

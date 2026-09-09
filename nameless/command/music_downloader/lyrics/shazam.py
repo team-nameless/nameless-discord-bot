@@ -12,7 +12,7 @@ from .base import LyricsBase
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from requests import Response, Session
+    import httpx
 
 if TYPE_CHECKING:
     # albumName: "Splash!!"
@@ -93,30 +93,28 @@ if TYPE_CHECKING:
 class ShazamLyrics(LyricsBase):
     name: str = "shazam"
     # BASE_URL = "https://www.shazam.com/services/search/v3/en-US/GB/web/search?query={query}&numResults=3&offset=0&types=songs"
-    HEADERS: ClassVar = {
+    HEADERS: ClassVar[dict[str, str]] = {
         "X-Shazam-Platform": "IPHONE",
         "X-Shazam-AppVersion": "14.1.0",
-        "Accept": "*/*",
-        "Accept-Language": "en-US",
-        "Accept-Encoding": "gzip, deflate",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+        "accept": "*/*",
+        "accept-language": "en-US",
+        "cache-control": "no-cache",
+        "pragma": "no-cache",
+        "sec-ch-ua": '"Not;A=Brand";v="8", "Chromium";v="150", "Brave";v="150"',
+        "user-agent": "Mozilla/5.0",
+    }
+    COOKIES: ClassVar[dict[str, str]] = {
+        "geoip_country": "GB",
+        "_bszm": "2",
     }
 
-    def __init__(
-        self,
-        title: str,
-        artist: str,
-        session: Session | None = None,
-    ):
-        super().__init__(title, artist, session)
-        self._raw_data: tuple[str, bool, bool] | None = None
-
-    def _make_request(self, url: str) -> Response | None:
+    def _make_request(self, url: str) -> httpx.Response | None:
         try:
             response = self.session.get(
                 url,
                 headers=self.HEADERS,
-                allow_redirects=True,
+                cookies=self.COOKIES,
+                follow_redirects=True,
                 # timeout=10,
             )
             response.raise_for_status()
@@ -155,7 +153,7 @@ class ShazamLyrics(LyricsBase):
 
     def _search_for_id(
         self, query: str, language: str = "GB", *, short_circuit: bool = False
-    ) -> tuple[str, bool, bool]:
+    ) -> tuple[str, str, bool, bool]:
         resp = self._make_request(
             f"https://www.shazam.com/services/amapi/v1/catalog/{language}/search?types=songs&term={urllib.parse.quote(query)}&limit=3"
         )
@@ -185,17 +183,17 @@ class ShazamLyrics(LyricsBase):
             if ratio >= 0.7:
                 return (
                     song["id"],
+                    song["attributes"]["name"],
                     song["attributes"]["hasLyrics"],
                     song["attributes"]["hasTimeSyncedLyrics"],
                 )
 
         raise ValueError("No matching song found")
 
-    def _get_real_page(
-        self,
-        track_id: str,
-    ) -> str | None:
-        song_page = self._make_request(f"https://www.shazam.com/song/{track_id}")
+    def _get_real_page(self, track_id: str, track_name: str) -> str | None:
+        song_page = self._make_request(
+            f"https://www.shazam.com/song/{track_id}/{urllib.parse.quote(track_name.replace(' ', '-'))}"
+        )
         if song_page is None:
             return None
 
@@ -314,25 +312,27 @@ class ShazamLyrics(LyricsBase):
             return None
         return "\n".join(lines)
 
+    @property
     def raw_data(self) -> tuple[str, bool, bool]:
-        if not self._raw_data:
-            self._raw_data = self._get_data()
+        if not self.cache:
+            self.cache = self._get_data()
 
-        if self._raw_data is None:
+        if self.cache is None:
             return "", False, False
-        return self._raw_data
+        return self.cache
 
     def page_content(self) -> str:
-        return self.raw_data()[0]
+        return self.raw_data[0]
 
     def has_lyrics(self) -> bool:
-        return self.raw_data()[1]
+        return self.raw_data[1]
 
     def has_synced_lyrics(self) -> bool:
-        return self.raw_data()[2]
+        return self.raw_data[2]
 
     def _get_data(self) -> tuple[str, bool, bool] | None:
         track_id: str = ""
+        track_name: str = ""
         has_lyrics: bool = False
         has_synced_lyrics: bool = False
 
@@ -340,16 +340,16 @@ class ShazamLyrics(LyricsBase):
         query = f"{self.artist} {self.title}" if self.artist else self.title
         for language in ["GB", "JP"]:
             try:
-                track_id, has_lyrics, has_synced_lyrics = self._search_for_id(query, language)
+                track_id, track_name, has_lyrics, has_synced_lyrics = self._search_for_id(query, language)
             except ValueError as e:
                 self.logger.error(repr(e))
                 continue
 
-        if not track_id:
+        if not track_id or not track_name:
             self.logger.warning("No matching track found on Shazam.")
             return None
 
-        song_url = self._get_real_page(track_id)
+        song_url = self._get_real_page(track_id, track_name)
         if not song_url:
             self.logger.warning("Failed to retrieve the song page.")
             return None

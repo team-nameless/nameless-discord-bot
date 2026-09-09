@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import requests
+import httpx
 from mutagen.flac import FLAC, Picture
 
 # known issue: https://github.com/quodlibet/mutagen/issues/647
@@ -203,7 +203,8 @@ def embed_metadata(file_path: str, metadata: TrackMetadata) -> None:
                     "(KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
                 )
             }
-            r = requests.get(cover_url, headers=headers, timeout=15)
+            with httpx.Client(http2=True) as client:
+                r = client.get(cover_url, headers=headers, timeout=15)
             if r.status_code == 200:
                 cover_bytes = r.content
         except Exception as e:

@@ -16,8 +16,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qs, urlparse
 
+import httpx
 import mutagen
-import requests
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
@@ -31,14 +31,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger("JsMocks")
 # logger.setLevel(logging.DEBUG)
 
-session = requests.Session()
-session.headers.update(
-    {
+session = httpx.Client(
+    headers={
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
             "(KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
         )
-    }
+    },
+    http2=True,
 )
 
 
@@ -89,7 +89,13 @@ class HttpMock:
         logger.debug("post has been called with url=%s, body=%s, headers_json=%s", url, body, headers_json)
         headers_dict: dict[str, str] = json.loads(headers_json) if headers_json else {}
         try:
-            r = session.post(url, data=body, headers=headers_dict, timeout=30)
+            kwargs = {}
+            if body is not None:
+                if isinstance(body, dict):
+                    kwargs["data"] = body
+                else:
+                    kwargs["content"] = body
+            r = session.post(url, headers=headers_dict, timeout=30, **kwargs)
             return json.dumps(
                 {
                     "statusCode": r.status_code,
@@ -177,22 +183,21 @@ class FileMock:
         headers_dict: dict[str, str] = dict(opts.get("headers") or {})
 
         try:
-            r = session.get(url, headers=headers_dict, stream=True, timeout=30)
-            r.raise_for_status()
+            with session.stream("GET", url, headers=headers_dict, timeout=30) as r:
+                r.raise_for_status()
+                total = int(r.headers.get("content-length", 0))
+                written = 0
 
-            total = int(r.headers.get("content-length", 0))
-            written = 0
+                Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
-            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-
-            with Path(output_path).open("wb") as f:
-                for chunk in r.iter_content(chunk_size=1024 * 1024):
-                    if chunk:
-                        f.write(chunk)
-                        written += len(chunk)
-                        if progress_id:
-                            with contextlib.suppress(Exception):
-                                self.ctx.eval(f"__trigger_progress({json.dumps(progress_id)}, {written}, {total})")
+                with Path(output_path).open("wb") as f:
+                    for chunk in r.iter_bytes(chunk_size=1024 * 1024):
+                        if chunk:
+                            f.write(chunk)
+                            written += len(chunk)
+                            if progress_id:
+                                with contextlib.suppress(Exception):
+                                    self.ctx.eval(f"__trigger_progress({json.dumps(progress_id)}, {written}, {total})")
             return json.dumps({"success": True})
         except Exception as e:
             logger.warning("file.download failed for %s: %s", url, e)
@@ -200,7 +205,7 @@ class FileMock:
 
 
 class GoBackendMock:
-    def __init__(self, lyrics_getter: Callable[[str, str], str | None] | None = None):
+    def __init__(self, lyrics_getter: Callable[[str, str, str], str | None] | None = None):
         self.lyrics_getter = lyrics_getter
 
     def sanitize_filename(self, filename: str) -> str:
@@ -283,7 +288,7 @@ class GoBackendMock:
             duration_ms,
         )
         if self.lyrics_getter:
-            lyrics = self.lyrics_getter(title, artist)
+            lyrics = self.lyrics_getter(spotify_id, title, artist)
             if lyrics:
                 return json.dumps({"error": None, "lyrics": lyrics})
         return json.dumps({"error": "not implemented", "lyrics": ""})
@@ -667,7 +672,7 @@ def register_mocks_in_context(
     ctx: JsContext,
     data_dir: Path,
     manifest: ProviderManifest,
-    lyrics_getter: Callable[[str, str], str | None] | None = None,
+    lyrics_getter: Callable[[str, str, str], str | None] | None = None,
 ) -> None:
     url_mock = UrlMock()
     http_mock = HttpMock()

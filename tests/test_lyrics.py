@@ -1,8 +1,11 @@
+# ruff: noqa: E501
 from __future__ import annotations
 
 import json
+from typing import Any
 from unittest.mock import MagicMock, patch
 
+import httpx
 from nameless.command.music_downloader.lyrics import get_lyrics
 from nameless.command.music_downloader.lyrics.lrclib import LrcLibLyrics
 from nameless.command.music_downloader.lyrics.musixmatch import MusixMatchLyrics
@@ -155,3 +158,35 @@ def test_get_lyrics_fallback():
     with patch.dict("nameless.command.music_downloader.lyrics.PROVIDER_CLASSES", mock_classes, clear=True):
         res = get_lyrics("Title", "Artist")
         assert res == "MusixMatch Synced"
+
+
+def test_real_lyrics_api(run_lyrics_api: Any) -> None:
+    session = httpx.Client(http2=True)
+    success_providers = []
+
+    try:
+        lrclib_prov = LrcLibLyrics("Blinding Lights", "The Weeknd", session=session)
+        lyrics_lrc = lrclib_prov.get_synced() or lrclib_prov.get_unsynced()
+        if lyrics_lrc:
+            success_providers.append("LrcLib")
+    except Exception as e:
+        print(f"LrcLib real API call failed: {e}")
+
+    try:
+        musixmatch_prov = MusixMatchLyrics("Blinding Lights", "The Weeknd", session=session)
+        lyrics_mm = musixmatch_prov.get_synced() or musixmatch_prov.get_unsynced()
+        if lyrics_mm:
+            success_providers.append("MusixMatch")
+    except Exception as e:
+        print(f"MusixMatch real API call failed: {e}")
+
+    try:
+        shazam_prov = ShazamLyrics("Blinding Lights", "The Weeknd", session=session)
+        lyrics_shazam = shazam_prov.get_synced() or shazam_prov.get_unsynced()
+        if lyrics_shazam:
+            success_providers.append("Shazam")
+    except Exception as e:
+        print(f"Shazam real API call failed: {e}")
+
+    assert len(success_providers) > 0, "No lyrics providers returned results."
+    print(f"Successfully fetched lyrics from: {', '.join(success_providers)}")

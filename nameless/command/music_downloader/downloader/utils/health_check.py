@@ -9,7 +9,7 @@ import time
 import urllib.parse
 from typing import TYPE_CHECKING, Any
 
-import requests
+import httpx
 
 if TYPE_CHECKING:
     from ..providers._manifest import ProviderManifest, ServiceHealthManifest
@@ -97,10 +97,11 @@ def run_health_checks(
                 "Accept": "application/json",
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             }
-            if method == "GET":
-                r = requests.get(url_str, timeout=timeout_sec, headers=headers)
-            else:
-                r = requests.head(url_str, timeout=timeout_sec, headers=headers)
+            with httpx.Client(http2=True) as client:
+                if method == "GET":
+                    r = client.get(url_str, timeout=timeout_sec, headers=headers)
+                else:
+                    r = client.head(url_str, timeout=timeout_sec, headers=headers)
 
             if r.status_code < 200 or r.status_code >= 300:
                 check_status = "offline"

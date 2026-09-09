@@ -6,7 +6,7 @@ import logging
 import zipfile
 from pathlib import Path
 
-import requests
+import httpx
 
 logger = logging.getLogger("ExtensionManager")
 
@@ -39,9 +39,10 @@ def check_and_update_extension(extension_name: str) -> Path:
             logger.warning("failed to read local manifest for %s: %s", extension_name, e)
 
     try:
-        r = requests.get(REGISTRY_URL, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}, timeout=15)
-        r.raise_for_status()
-        registry_data = r.json()
+        with httpx.Client(http2=True) as client:
+            r = client.get(REGISTRY_URL, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}, timeout=15)
+            r.raise_for_status()
+            registry_data = r.json()
     except Exception as e:
         logger.warning("failed to fetch extension registry: %s", e)
         if script_path.exists():
@@ -65,11 +66,12 @@ def check_and_update_extension(extension_name: str) -> Path:
     if not current_version or current_version != remote_version or not script_path.exists():
         logger.info("updating extension %s: %s -> %s", extension_name, current_version, remote_version)
         try:
-            r = requests.get(
-                download_url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}, timeout=30
-            )
-            r.raise_for_status()
-            zip_data = r.content
+            with httpx.Client(http2=True) as client:
+                r = client.get(
+                    download_url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}, timeout=30
+                )
+                r.raise_for_status()
+                zip_data = r.content
 
             with zipfile.ZipFile(io.BytesIO(zip_data)) as zip_ref:
                 zip_ref.extractall(assets_dir)

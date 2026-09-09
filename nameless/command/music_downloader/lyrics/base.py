@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, Literal
 
-from requests import Session
+import httpx
 
 if TYPE_CHECKING:
     from typing import ClassVar
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 class InnerTubeBase:
     if TYPE_CHECKING:
-        session: Session
+        session: httpx.Client
 
     API_KEY = "AIzaSyDkZV5Q2b1e0Qf4Zc0wRjM3vW3rmpZ_mD0"
     INNER_TUBE_BASE = "https://music.youtube.com/youtubei/v1"
@@ -29,8 +29,8 @@ class InnerTubeBase:
         },
     }
 
-    def __init__(self, session: Session | None = None):
-        self.session = session or Session(headers=self.HEADERS)
+    def __init__(self, session: httpx.Client | None = None):
+        self.session = session or httpx.Client(headers=self.HEADERS, http2=True)
 
     def fetch(self, endpoint: Literal["next", "browse"], payload: dict[str, Any]) -> dict[str, Any]:
         url = f"{self.INNER_TUBE_BASE}/{endpoint}?key={self.API_KEY}"
@@ -50,6 +50,7 @@ class InnerTubeBase:
 
 class LyricsBase:
     if TYPE_CHECKING:
+        spotify_id: str
         title: str
         artist: str
 
@@ -61,15 +62,30 @@ class LyricsBase:
 
     def __init__(
         self,
+        spotify_id: str,
         title: str,
         artist: str,
-        session: Session | None = None,
+        session: httpx.Client | None = None,
     ):
+        self.spotify_id = spotify_id
         self.title = title
         self.artist = artist
         self.logger = logging.getLogger(f"lyrics:{self.name}")
-        self.session = session or Session()
+        self.session = session or httpx.Client(http2=True)
         self.session.headers.update(self.HEADERS)
+        self._cache: Any | None
+        self.post_init()
+
+    @property
+    def cache(self) -> Any:
+        return self._cache
+
+    @cache.setter
+    def cache(self, value: Any) -> None:
+        self._cache = value
+
+    def post_init(self) -> None:
+        pass
 
     def get_synced(self) -> str | None:
         raise NotImplementedError("Subclasses must implement this method")

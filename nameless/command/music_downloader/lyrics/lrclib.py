@@ -6,10 +6,6 @@ from typing import TYPE_CHECKING, ClassVar, TypedDict
 from .base import LyricsBase
 
 if TYPE_CHECKING:
-    from requests import Session
-
-
-if TYPE_CHECKING:
 
     class LrcLibResponse(TypedDict):
         id: str
@@ -32,14 +28,8 @@ class LrcLibLyrics(LyricsBase):
 
     name: str = "LrcLib"
 
-    def __init__(
-        self,
-        title: str,
-        artist: str,
-        session: Session | None = None,
-    ):
-        super().__init__(title, artist, session)
-        self._lyrics_data: LrcLibResponse | None = None
+    def post_init(self):
+        super().post_init()
         # retries = Retry(total=5, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
         # self.session.mount("https://", HTTPAdapter(max_retries=retries))
         # self.session.headers.update(self.HEADERS)
@@ -67,7 +57,9 @@ class LrcLibLyrics(LyricsBase):
             response.raise_for_status()
             data = response.json()
             for item in data:
-                if item.get("track_name") == track_name and item.get("artist_name") == artist_name:
+                got_track = item.get("track_name") or item.get("trackName")
+                got_artist = item.get("artist_name") or item.get("artistName")
+                if got_track == track_name and got_artist == artist_name:
                     return item
             return None
         except Exception as e:
@@ -75,14 +67,14 @@ class LrcLibLyrics(LyricsBase):
             return None
 
     def lyrics_data(self) -> LrcLibResponse | None:
-        if self._lyrics_data is None:
-            self._lyrics_data = self.find_lyrics(
+        if self.cache is None:
+            self.cache = self.find_lyrics(
                 track_name=self.title or "",
                 artist_name=self.artist or "",
                 # album_name=self.album,
             )
 
-        return self._lyrics_data
+        return self.cache
 
     def get_unsynced(self) -> str | None:
         data = self.lyrics_data()

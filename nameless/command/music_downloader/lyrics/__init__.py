@@ -18,8 +18,8 @@ PROVIDER_CLASSES = {
 }
 
 
-def get_lyrics(title: str, artist: str) -> str | None:
-    _providers = [v(title, artist) for v in PROVIDER_CLASSES.values()]
+def get_lyrics(spotify_id: str, title: str, artist: str) -> str | None:
+    _providers = [v(spotify_id, title, artist) for v in PROVIDER_CLASSES.values()]
     for provider in _providers:
         try:
             lyrics = provider.get_synced()

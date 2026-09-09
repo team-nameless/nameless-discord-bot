@@ -65,15 +65,18 @@ def test_service_health_check() -> None:
         "settings": [],
     }
 
-    # mock requests.get to return status 200 and json showing deezer is ok
+    # mock httpx.Client.get to return status 200 and json showing deezer is ok
+    mock_client = MagicMock()
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.content = b'{"status": "degraded", "services": {"deezer": {"ok": true, "status": 200}}}'
+    mock_client.get.return_value = mock_response
+    mock_client.__enter__.return_value = mock_client
 
-    with patch("requests.get", return_value=mock_response) as mock_get:
+    with patch("nameless.command.music_downloader.downloader.utils.health_check.httpx.Client", return_value=mock_client):
         res = check_service_health(manifest_healthy)  # type: ignore
         assert res is True
-        mock_get.assert_called_once_with(
+        mock_client.get.assert_called_once_with(
             "https://api.test.com/health",
             timeout=1.0,
             headers={
@@ -82,29 +85,36 @@ def test_service_health_check() -> None:
             },
         )
 
-    # cached result should return True without calling requests
-    with patch("requests.get") as mock_get_cached:
+    # cached result should return True without calling httpx
+    with patch("nameless.command.music_downloader.downloader.utils.health_check.httpx.Client") as mock_client_cls:
         res_cached = check_service_health(manifest_healthy)  # type: ignore
         assert res_cached is True
-        mock_get_cached.assert_not_called()
+        mock_client_cls.assert_not_called()
 
     # clear cache for unhealthy key test
     HEALTH_CACHE.clear()
 
-    # mock requests.get to return status 200 but deezer is not ok
+    # mock httpx to return status 200 but deezer is not ok
+    mock_unhealthy_client = MagicMock()
     mock_unhealthy_response = MagicMock()
     mock_unhealthy_response.status_code = 200
     mock_unhealthy_response.content = b'{"status": "degraded", "services": {"deezer": {"ok": false, "status": 500}}}'
+    mock_unhealthy_client.get.return_value = mock_unhealthy_response
+    mock_unhealthy_client.__enter__.return_value = mock_unhealthy_client
 
-    with patch("requests.get", return_value=mock_unhealthy_response):
+    with patch("nameless.command.music_downloader.downloader.utils.health_check.httpx.Client", return_value=mock_unhealthy_client):
         res_unhealthy = check_service_health(manifest_healthy)  # type: ignore
         assert res_unhealthy is False
 
     # clear cache for HTTP exception test
     HEALTH_CACHE.clear()
 
-    # mock requests.get to raise Exception
-    with patch("requests.get", side_effect=Exception("connection error")):
+    # mock httpx.Client to raise Exception
+    mock_exception_client = MagicMock()
+    mock_exception_client.get.side_effect = Exception("connection error")
+    mock_exception_client.__enter__.return_value = mock_exception_client
+
+    with patch("nameless.command.music_downloader.downloader.utils.health_check.httpx.Client", return_value=mock_exception_client):
         res_exception = check_service_health(manifest_healthy)  # type: ignore
         assert res_exception is False
 
@@ -128,7 +138,7 @@ def test_service_health_check() -> None:
         ],
         "settings": [],
     }
-    with patch("requests.get", side_effect=Exception("connection error")):
+    with patch("nameless.command.music_downloader.downloader.utils.health_check.httpx.Client", return_value=mock_exception_client):
         res_optional = check_service_health(manifest_optional)  # type: ignore
         assert res_optional is True
 

@@ -1,0 +1,63 @@
+# General bot settings
+# :version | str: The version of the bot
+# :description | str: A short description of the bot
+# :support_server | str: The invite link to the support server
+[nameless]
+version = "2026.06.13"
+description = "Just a normal bot."
+support_server = ""
+
+# Command settings
+# :prefixes | list[str]: A list of prefixes the bot will respond to
+# :ignores | list[str]: A list of command names to ignore (not load)
+[command]
+prefixes = ["n."]
+ignores = []
+
+# Development settings
+# :enabled | bool: Whether development mode is enabled
+# :debug | bool: Whether debug mode is enabled
+# :server_sync_ids | list[int]: A list of server IDs to sync commands to in development mode
+[dev]
+enabled = true
+debug = false
+server_sync_ids = [1201192781176131716, 348476624662036481, 1441095610760691795]
+
+# WebRadio settings
+# :enabled | bool: Whether the WebRadio feature is enabled
+# :dummy_guild_id | int | None: The guild ID to use for the dummy guild
+# :category_tracker_id | int | None: The category ID to track voice channels
+# :command_channel_id | int | None: The channel ID to watch for command from the master
+[webradio]
+enabled = true
+dummy_guild_id = 0
+category_tracker_id = 0
+command_channel_id = 0
+
+# Automatically spin up our own Lavalink nodes
+# :auto_start | bool: Whether to automatically start the Lavalink nodes on bot startup
+# :auto_update | bool: Whether to automatically update the Lavalink jar files on bot startup
+[lavalink_host_settings]
+auto_start = true
+auto_update = true
+
+# Lavalink nodes configuration
+# This is an example configuration. Replace with your own Lavalink nodes.
+# Note: You can have multiple [[lavalinks]] sections.
+# :host | str: The hostname or IP address of the Lavalink server
+# :port | int: The port number of the Lavalink server
+# :password | str: The password for the Lavalink server
+# :secure | bool: Whether to use SSL/TLS to connect to the Lavalink server
+# [[lavalinks]]
+# host = "lavalink.namelessdev.xyz"
+# port = 443
+# password = "this-server-is-not-real"
+# secure = true
+
+# docs update later
+[telegram]
+enabled = false
+api_id = 0
+api_hash = ""
+bot_token = ""
+chat_id = ""

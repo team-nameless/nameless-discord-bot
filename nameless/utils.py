@@ -1,6 +1,6 @@
-from urllib.parse import urlparse
+__all__ = ["create_cache_key"]
 
 
-def is_an_url(url: str) -> bool:
-    """Verifies if the provided string is a URL."""
-    return urlparse(url).netloc != ""
+def create_cache_key(*values: str) -> str:
+    """Create cache key."""
+    return f"({','.join(values)})"

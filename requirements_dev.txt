@@ -1,5 +1,0 @@
-pip-autoremove==0.10.0
-pytest==8.1.1
-pytest-cov==5.0.0
-ruff==0.5.7
-pyright==1.1.376

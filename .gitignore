@@ -1,17 +1,19 @@
-# Local workspace files.
-.idea
-.vscode
-
 # Python stuffs.
-*venv*/
-**/__pycache__/**
+**/.venv/
+**/venv/
+**/__pycache__/
+**/.ruff_cache/
 
 # Files should not not be exposed to the public
+.env
+.python-version
+nameless.toml
 nameless.db
-*.lck
-NamelessConfig.py
-nameless/internals.json
-nameless/internals.json.lck
+nameless.cache
 
-# Why?
-.coverage
+# Ignore lavalink stuffs
+**/bin/*
+!application.example.yml
+
+.cache/
+.pytest_cache/
